@@ -104,8 +104,11 @@ def check_biaxial(member: Member3D, S: SectionModels, f: MemberForces3D, p: EC2P
                 e, uy, uz = eta(My_c, Mz_c)
                 cands.append((e, uy, uz, My_c, Mz_c))
         stack = np.stack([cd[0] for cd in cands])
-        best = np.argmax(stack, axis=0)
-        e = np.max(stack, axis=0)
+        emax = np.max(stack, axis=0)
+        with np.errstate(invalid="ignore"):
+            near = stack >= emax[None] - 1e-9 * np.where(np.isfinite(emax), np.maximum(np.abs(emax), 1.0), 1.0)[None]
+        best = np.argmax(near, axis=0)          # first candidate within round-off of the worst: deterministic on ties
+        e = np.choose(best, [cd[0] for cd in cands])
         pick = lambda k: np.choose(best, [cd[k] for cd in cands])  # noqa: E731
         uy, uz, Myd, Mzd = pick(1), pick(2), pick(3), pick(4)
     else:
@@ -128,8 +131,8 @@ def check_biaxial(member: Member3D, S: SectionModels, f: MemberForces3D, p: EC2P
         notes.append("The axial force alone exceeds the section resistance.")
         capacity = cap
     else:
-        MRdy = S.rc_y.solve_state(NEd, flip=MyEd < 0).M
-        MRdz = S.rc_z.solve_state(NEd, flip=MzEd < 0).M
+        MRdy = S.rc_y.solve_state(NEd, flip=MyEd < -1e-9).M     # |M| ~ 0: positive direction (deterministic)
+        MRdz = S.rc_z.solve_state(NEd, flip=MzEd < -1e-9).M
         uyv = abs(MyEd / MRdy) if abs(MyEd) > 1e-12 else 0.0
         uzv = abs(MzEd / MRdz) if abs(MzEd) > 1e-12 else 0.0
         util_exact = (uyv ** av + uzv ** av) ** (1.0 / av)
@@ -295,7 +298,7 @@ def check_second_order(member: Member3D, S: SectionModels, f: MemberForces3D, p:
             uy = float(S.rc_y.utilisation(np.array([NEd]), np.array([Md["y"]]))[0])
             uz = float(S.rc_z.utilisation(np.array([NEd]), np.array([Md["z"]]))[0])
             e = math.inf if math.isinf(uy) or math.isinf(uz) else (uy ** a + uz ** a) ** (1 / a)
-            if best is None or e > best[0]:
+            if best is None or e > best[0] + 1e-9 * max(abs(best[0]), 1.0):
                 best = (e, imp, Md, uy, uz)
         rows.append((best[0], k, NEd, a, per, best))
     if not rows:

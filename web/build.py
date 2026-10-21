@@ -1,21 +1,43 @@
-"""Build the single-file browser app: inline the engine and the example models."""
+"""Build the single-file browser studio: the 3D building workspace and the 2D frame
+workspace in one page, with both engines and the example models inlined."""
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _parts_2d(html: str) -> tuple[str, str, str]:
+    """(css, markup, app script) of the 2D workspace template."""
+    css = re.search(r"<style>(.*?)</style>", html, re.S).group(1)
+    markup = html[html.index("</style>") + len("</style>"):html.index("<script>")].strip()
+    scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+    app = scripts[-1]
+    return css, markup, app
+
+
 def build(out: Path | None = None) -> Path:
-    html = (ROOT / "web" / "app.html").read_text(encoding="utf-8")
+    page = (ROOT / "web" / "app3d.html").read_text(encoding="utf-8")
+    css2d, markup2d, app2d = _parts_2d((ROOT / "web" / "app.html").read_text(encoding="utf-8"))
     engine = (ROOT / "web" / "engine.js").read_text(encoding="utf-8")
-    examples = {p.stem: json.loads(p.read_text()) for p in sorted((ROOT / "examples").glob("*.json"))}
-    html = html.replace("/*__ENGINE__*/", engine.replace("</script", "<\\/script"))
-    html = html.replace("/*__EXAMPLES__*/", "window.TRAGWERK_EXAMPLES = " + json.dumps(examples) + ";")
+    engine3d = (ROOT / "web" / "engine3d.js").read_text(encoding="utf-8")
+    ex2, ex3 = {}, {}
+    for p in sorted((ROOT / "examples").glob("*.json")):
+        data = json.loads(p.read_text())
+        (ex3 if data.get("schema") == "tragwerk3d/0.1" else ex2)[p.stem] = data
+    safe = lambda s: s.replace("</script", "<\\/script")  # noqa: E731
+    page = page.replace("/*__CSS2D__*/", css2d)
+    page = page.replace("<!--__MARKUP2D__-->", markup2d)
+    page = page.replace("/*__ENGINE__*/", safe(engine))
+    page = page.replace("/*__ENGINE3D__*/", safe(engine3d))
+    page = page.replace("/*__EXAMPLES__*/", safe("window.TRAGWERK_EXAMPLES = " + json.dumps(ex2) + ";\nwindow.TRAGWERK_EXAMPLES3D = " + json.dumps(ex3) + ";"))
+    page = page.replace("/*__APP2D__*/", safe(app2d))
+    assert "__" not in re.sub(r"(__proto__|__new|__init__|__version__)", "", "".join(re.findall(r"/\*__\w+__\*/|<!--__\w+__-->", page))), "unfilled placeholder"
     out = out or ROOT / "dist" / "tragwerk-studio.html"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(html, encoding="utf-8")
+    out.write_text(page, encoding="utf-8")
     return out
 
 

@@ -6,7 +6,7 @@
  */
 (function (root) {
   "use strict";
-  const VERSION = "0.1.0";
+  const VERSION = "0.2.0";
 
   // ---------------------------------------------------------------- model
   const LOAD_DIRECTIONS = ["global_x", "global_y", "local_x", "local_y"];
@@ -689,7 +689,7 @@
       this.sec = sec; this.p = p;
       this.c = concreteProps(sec.concrete, p); this.st = steelProps(sec.rebar, p);
       this.b = sec.b_mm; this.h = sec.h_mm;
-      const lay = sectionLayers(sec);
+      const lay = sec.layersList || sectionLayers(sec);
       this.As = lay.map((l) => l[0]); this.ys = lay.map((l) => l[1]); this.labels = lay.map((l) => l[2]);
       this.curves = {};
     }
@@ -1233,7 +1233,11 @@
         governing: gov ? { member: gov.member, check: gov.title, clause: gov.clause } : null, runtime_ms: t1 - t0 } };
   }
 
-  const api = { VERSION, parseModel, runProject, FrameAnalysis, generateCombinations, RCSection, makeParams, concreteProps, steelProps,
+  const _internal = { ModelError, StructureUnstable, req, num, layer, barArea, sectionLayers, layerDepth, GP, GW, shape, solveSmall,
+    mat, zeros, matvec, generateCombinations, makeParams, concreteProps, steelProps, RCSection, shearResistance, checkShear,
+    checkDetailing, checkSpanDepth, checkDeflection, fmt, step, check, statusU, argmax2, interp, combine, PSI, CATEGORY_LABEL,
+    PASS, FAIL, INFO, NOT_COVERED, VARIABLE_CATEGORIES, DESIGN_TYPES, DEFLECTION_SYSTEMS, checkMemberSIA };
+  const api = { _internal, VERSION, parseModel, runProject, FrameAnalysis, generateCombinations, RCSection, makeParams, concreteProps, steelProps,
     shearResistance, sectionLayers, PSI, CATEGORY_LABEL, ModelError, StructureUnstable, fmt, combine };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Tragwerk = api;

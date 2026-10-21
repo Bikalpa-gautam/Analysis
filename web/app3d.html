@@ -1,0 +1,1425 @@
+<title>Tragwerk Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/*__CSS2D__*/
+</style>
+<style>
+/* 3D studio: same drafting-room tokens as the 2D workspace. The building is the
+   hero; the checker's yellow highlighter marks the member under inspection. */
+.mode { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.modes { display: inline-flex; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; background: var(--sheet); flex: none; }
+.modes button { border: 0; background: transparent; padding: 0 12px; height: 30px; cursor: pointer; color: var(--ink-2); font-weight: 500; white-space: nowrap; }
+.modes button[aria-selected="true"] { background: var(--ink); color: var(--sheet); }
+.bench3 { grid-template-columns: minmax(290px, 330px) minmax(0, 1fr) minmax(330px, 410px); }
+.vtools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; width: 100%; }
+.vtools select { height: 28px; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); max-width: 230px; min-width: 0; }
+.vtools label { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+.seg button { border: 0; background: var(--sheet); padding: 0 9px; height: 26px; cursor: pointer; font-size: 12.5px; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--paper); color: var(--ink); font-weight: 600; }
+.seg button:disabled { opacity: .45; cursor: default; }
+.canvas3 { flex: 1; min-height: 340px; position: relative; overflow: hidden; background: var(--sheet); border-radius: 0 0 6px 6px; }
+.canvas3 canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.canvas3 canvas:active { cursor: grabbing; }
+.canvas3 svg.fallback { position: absolute; inset: 0; width: 100%; height: 100%; }
+.views { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 2px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: 2px; z-index: 2; }
+.views button { border: 0; background: transparent; padding: 3px 8px; font-size: 12px; cursor: pointer; border-radius: 3px; color: var(--ink-2); }
+.views button[aria-pressed="true"] { background: var(--paper); color: var(--ink); font-weight: 600; }
+.views button:hover { color: var(--ink); }
+.legend3 { position: absolute; left: 10px; top: 8px; max-width: min(430px, calc(100% - 20px)); font-size: 12px; color: var(--ink-2); pointer-events: none; background: color-mix(in srgb, var(--sheet) 82%, transparent); border-radius: 4px; padding: 4px 6px; z-index: 2; }
+.legend3 b { color: var(--ink); font-weight: 600; }
+.legend3 i.sw { display: inline-block; width: 14px; height: 8px; border-radius: 2px; vertical-align: 0; margin: 0 4px 0 8px; }
+.ramp { display: inline-block; width: 150px; height: 8px; border-radius: 4px; vertical-align: middle; margin: 0 6px; }
+.ramp-ticks { position: relative; height: 13px; width: 150px; margin-left: 6px; font: 500 10.5px var(--font-num); color: var(--ink-3); }
+.ramp-ticks span { position: absolute; top: 0; transform: translateX(-50%); }
+.ramp-ticks span:first-child { transform: none; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--sheet); font-size: 12px; padding: 4px 8px; border-radius: 4px; white-space: nowrap; z-index: 4; }
+.busy { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: var(--ink); color: var(--sheet); padding: 4px 12px; border-radius: 12px; font-size: 12px; z-index: 5; }
+.canvas3 .titleblock { z-index: 2; }
+.canvas3 .banner { z-index: 3; top: 44px; }
+.fieldrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: end; }
+.field input[aria-invalid="true"] { border-color: var(--bad); background: var(--bad-bg); }
+.stepper { display: inline-flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; height: 28px; }
+.stepper button { border: 0; background: var(--sheet); width: 28px; cursor: pointer; font-size: 15px; color: var(--ink-2); }
+.stepper button + button { border-left: 1px solid var(--rule); }
+.stepper button:hover { background: var(--paper); color: var(--ink); }
+.secgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; }
+.secgrid .lab { grid-column: 1 / -1; font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 12.5px; }
+.kv dt { color: var(--ink-3); } .kv dd { margin: 0; font-family: var(--font-num); font-size: 12px; }
+.mini { width: 100%; height: auto; display: block; }
+.mini text { font-family: var(--font-num); font-size: 10.5px; }
+.edrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule-2); font-size: 13px; }
+.edrow.inactive span { color: var(--ink-3); text-decoration: line-through; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.actions .btn { height: 30px; font-size: 13px; }
+.inline-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 6px; align-items: end; }
+.inline-form .btn { height: 28px; }
+.crit { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 74px 64px; gap: 8px; align-items: center; padding: 6px 12px; border: 0; border-bottom: 1px solid var(--rule-2); background: transparent; cursor: pointer; text-align: left; font-size: 13px; }
+.crit:hover { background: var(--paper); }
+.crit.sel { background: color-mix(in srgb, var(--mark) 22%, transparent); }
+.crit b { font: 600 13.5px var(--font-display); }
+.crit .meta { display: block; font-size: 11.5px; color: var(--ink-3); }
+.filters { display: flex; gap: 4px; padding: 8px 12px; flex-wrap: wrap; border-bottom: 1px solid var(--rule); }
+.mhead { padding: 12px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--rule); }
+.mhead h2 { font-size: 18px; }
+.mhead h2 mark { background: var(--mark); color: var(--mark-ink); padding: 0 5px; border-radius: 2px; }
+.diag { padding: 8px 12px 4px; border-bottom: 1px solid var(--rule); display: grid; gap: 4px; }
+.diag h3 { margin: 0; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+.diag h3 span { font: 400 11.5px var(--font-body); color: var(--ink-3); }
+@media (max-width: 1180px) { .bench3 { grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .canvas3 { flex: none; height: 56vh; min-height: 340px; }
+  .modes button { padding: 0 9px; }
+  .legend3 { max-width: calc(100% - 20px); }
+}
+</style>
+
+<div id="mode-3d" class="mode">
+<header class="bar">
+  <div class="brand"><b>Tragwerk</b><span id="b-ver">v0.2</span></div>
+  <div class="modes" role="tablist" aria-label="Workspace"><button role="tab" data-mode="3d" aria-selected="true">3D building</button><button role="tab" data-mode="2d" aria-selected="false">2D frame</button></div>
+  <input id="b-name" class="model-name" aria-label="Model name" value="">
+  <select id="b-preset" aria-label="Start from"></select>
+  <button id="b-json" class="btn">Model JSON</button>
+  <div class="verdict" id="b-verdict" aria-live="polite"></div>
+</header>
+
+<main class="bench bench3">
+  <section class="pane editor" aria-label="Build the model">
+    <div class="pane-hd">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-btab="grid" aria-selected="true">Grid</button>
+        <button class="tab" role="tab" data-btab="sections" aria-selected="false">Sections</button>
+        <button class="tab" role="tab" data-btab="loads" aria-selected="false">Loads</button>
+        <button class="tab" role="tab" data-btab="edits" aria-selected="false">Edits</button>
+      </div>
+    </div>
+    <div class="pane-bd" id="b-editor"></div>
+  </section>
+
+  <section class="pane draw" aria-label="3D model">
+    <div class="pane-hd">
+      <div class="chips" role="group" aria-label="What to show" id="b-show">
+        <button class="chip" data-show="model">Model</button>
+        <button class="chip" data-show="My">M<sub>y</sub></button>
+        <button class="chip" data-show="Mz">M<sub>z</sub></button>
+        <button class="chip" data-show="N">N</button>
+        <button class="chip" data-show="def">Deformed</button>
+        <button class="chip" data-show="util">Utilisation</button>
+      </div>
+      <div class="vtools">
+        <select id="b-source" aria-label="Results to show"></select>
+        <select id="b-level" aria-label="Levels to show"></select>
+        <span class="seg" role="group" aria-label="Member display"><button data-look="solid">Solid</button><button data-look="lines">Lines</button></span>
+        <label><input type="checkbox" id="b-slabs" checked> Slabs</label>
+      </div>
+    </div>
+    <div class="canvas3" id="b-canvas">
+      <div class="legend3" id="b-legend"></div>
+      <div class="views" role="group" aria-label="Camera">
+        <button data-cam="iso">3D</button><button data-cam="plan">Plan</button><button data-cam="xz">X–Z</button><button data-cam="yz">Y–Z</button><button data-cam="fit" title="Fit the model in view">Fit</button>
+      </div>
+      <div class="titleblock" id="b-title"></div>
+      <div class="tip" id="b-tip" hidden></div>
+      <div class="banner" id="b-banner" hidden></div>
+      <div class="busy" id="b-busy" hidden>Analysing…</div>
+    </div>
+  </section>
+
+  <section class="pane results" aria-label="Results">
+    <div id="b-summary"></div>
+    <div class="rtabs" role="tablist">
+      <button class="tab" role="tab" data-rtab="member" aria-selected="true">Member</button>
+      <button class="tab" role="tab" data-rtab="critical" aria-selected="false">Critical</button>
+      <button class="tab" role="tab" data-rtab="reactions" aria-selected="false">Reactions</button>
+      <button class="tab" role="tab" data-rtab="combos" aria-selected="false">Combinations</button>
+    </div>
+    <div class="pane-bd" id="b-results"></div>
+  </section>
+</main>
+
+<div class="drawer" id="b-drawer" hidden>
+  <div class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="b-drawer-title">
+    <div class="row" style="justify-content:space-between"><h2 id="b-drawer-title">Model JSON</h2><button class="btn" id="b-drawer-close">Close</button></div>
+    <p class="hint">The open <span class="num">tragwerk3d/0.1</span> format used by the Python package and the HTTP API, with your edits applied. Copy it to produce the full calculation report with <span class="num">tragwerk run building.json --pdf report.pdf</span>, or paste a 3D model here and load it.</p>
+    <textarea id="b-json-text" spellcheck="false" aria-label="Model JSON"></textarea>
+    <div class="row"><button class="btn primary" id="b-json-copy">Copy</button><button class="btn" id="b-json-load">Load pasted model</button><span class="hint" id="b-json-msg"></span></div>
+  </div>
+</div>
+</div>
+
+<div id="mode-2d" class="mode" hidden>
+<!--__MARKUP2D__-->
+</div>
+
+<script>
+/*__ENGINE__*/
+</script>
+<script>
+/*__ENGINE3D__*/
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/*__EXAMPLES__*/
+</script>
+<script>
+/*__APP2D__*/
+</script>
+<script>
+(function () {
+  "use strict";
+  const T = window.Tragwerk;
+  const ROOT = document.getElementById("mode-3d");
+  const $ = (s, el = ROOT) => el.querySelector(s);
+  const $$ = (s, el = ROOT) => Array.from(el.querySelectorAll(s));
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const mk = (s) => esc(s).replace(/_\{([^}]*)\}/g, "<sub>$1</sub>").replace(/\^\{([^}]*)\}/g, "<sup>$1</sup>");
+  const STATUS = { pass: "Pass", fail: "Fail", not_covered: "Not covered", info: "Info", warn: "Warning" };
+  const pill = (s) => `<span class="pill ${s}">${STATUS[s] || s}</span>`;
+  const f3 = (v) => (v == null || !isFinite(v) ? "–" : T.fmt(v));
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const r1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+  const CONCRETE = { 20: "C20/25", 25: "C25/30", 30: "C30/37", 35: "C35/45", 40: "C40/50", 45: "C45/55", 50: "C50/60", 55: "C55/67", 60: "C60/75" };
+  const CAT_NAMES = { A: "A, residential", B: "B, office", C: "C, assembly", D: "D, shopping", E: "E, storage", F: "F, vehicles ≤ 30 kN", G: "G, vehicles ≤ 160 kN" };
+  const QLABEL = { My: "M<sub>y</sub>", Mz: "M<sub>z</sub>", N: "N", Vz: "V<sub>z</sub>", Vy: "V<sub>y</sub>", T: "T" };
+  const QUNIT = { My: "kNm", Mz: "kNm", N: "kN", Vz: "kN", Vy: "kN", T: "kNm" };
+  const MAX_NODES = 2500, MAX_ULS = 1500;
+  const sec0 = (b, h, top, bottom, side, links, cover) => {
+    const s = { type: "rc_rect", b_mm: b, h_mm: h, concrete: "concrete", rebar: "B500B", cover_mm: cover, top: { n: top[0], dia_mm: top[1] }, bottom: { n: bottom[0], dia_mm: bottom[1] },
+      links: { dia_mm: links[0], legs: links[1], spacing_mm: links[2] } };
+    if (side) s.side = { n: side[0], dia_mm: side[1] };
+    return s;
+  };
+  const PRESETS = {
+    office: { label: "Office, 3 × 2 bays, 4 storeys", spec: {} },
+    tower: { label: "Residential tower, 10 storeys", spec: { name: "Residential tower, 2 × 2 bays, 10 storeys", spans_x: [5.4, 5.4], spans_y: [5.0, 5.0],
+      storeys: [3.2, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0], imposed: 2.0, imposed_category: "A", wind: 1.1, facade: 7.0, fck: 35,
+      column: sec0(500, 500, [4, 25], [4, 25], [2, 25], [10, 2, 250], 35), beam_x: sec0(300, 500, [4, 20], [3, 20], null, [8, 2, 200], 30),
+      beam_y: sec0(300, 500, [4, 20], [3, 20], null, [8, 2, 200], 30) } },
+    carpark: { label: "Car park, 3 × 2 bays, 8 m spans", spec: { name: "Car park, 3 × 2 bays, 3 decks", spans_x: [8.0, 8.0, 8.0], spans_y: [7.5, 7.5],
+      storeys: [3.0, 2.8, 2.8], imposed: 2.5, imposed_category: "F", finishes: 0.5, facade: 3.0, snow: 1.2, slab_mm: 250, wind: 0.7,
+      column: sec0(450, 450, [4, 25], [4, 25], [1, 25], [10, 2, 250], 35), beam_x: sec0(400, 750, [5, 25], [4, 25], null, [10, 2, 250], 35),
+      beam_y: sec0(400, 700, [5, 25], [4, 25], null, [10, 2, 250], 35) } },
+  };
+
+  const S = {
+    spec: null, base: null, extraSections: {}, edits: [], data: null, result: null, error: null,
+    btab: "grid", rtab: "member", show: "util", source: "env", level: "all", look: "solid", slabs: true,
+    sel: null, hover: null, openCheck: null, critFilter: "all", formLoad: { w: 5, caseId: null, dir: "global_z" }, defInfo: null,
+  };
+  try {
+    const st = JSON.parse(localStorage.getItem("tragwerk3d.view") || "{}");
+    if (st.show) S.show = st.show; if (st.look) S.look = st.look; if (typeof st.slabs === "boolean") S.slabs = st.slabs;
+  } catch (e) { /* storage unavailable */ }
+  const saveView = () => { try { localStorage.setItem("tragwerk3d.view", JSON.stringify({ show: S.show, look: S.look, slabs: S.slabs })); } catch (e) { /* storage unavailable */ } };
+  const sectionCache = new Map();
+
+  // ================================================================ model building
+  function concreteName(d) { const e = Object.entries(d.materials || {}).find(([, m]) => m.type === "concrete"); return e ? e[0] : null; }
+  function buildModel() {
+    const d = S.spec ? T.generateBuilding(S.spec) : clone(S.base);
+    const cn = concreteName(d);
+    for (const [name, def] of Object.entries(S.extraSections)) d.sections[name] = Object.assign(clone(def), cn ? { concrete: cn } : {});
+    for (const e of S.edits) e.active = applyEdit(d, e);
+    return d;
+  }
+  function applyEdit(d, e) {
+    const m = d.members.find((x) => x.id === e.member);
+    if (!m) return false;
+    if (e.op === "remove") {
+      d.members = d.members.filter((x) => x !== m);
+      for (const lc of d.load_cases) lc.loads = (lc.loads || []).filter((l) => l.member !== m.id);
+      const used = new Set();
+      for (const x of d.members) { used.add(x.i); used.add(x.j); }
+      const gone = new Set(d.nodes.filter((n) => !used.has(n.id)).map((n) => n.id));
+      if (gone.size) {
+        d.nodes = d.nodes.filter((n) => !gone.has(n.id));
+        d.supports = (d.supports || []).filter((s) => !gone.has(s.node));
+        for (const lc of d.load_cases) lc.loads = lc.loads.filter((l) => !(l.node && gone.has(l.node)));
+      }
+      return true;
+    }
+    if (e.op === "section") { if (!(e.section in d.sections)) return false; m.section = e.section; return true; }
+    if (e.op === "release") { m.releases = { i: true, j: true }; return true; }
+    if (e.op === "load") {
+      const lc = d.load_cases.find((c) => c.id === e.caseId);
+      if (!lc) return false;
+      lc.loads = (lc.loads || []).concat([{ type: "udl", member: m.id, w: e.w, direction: e.dir }]);
+      return true;
+    }
+    return false;
+  }
+  function editLabel(e) {
+    if (e.op === "remove") return `Removed ${e.member}`;
+    if (e.op === "section") return `${e.member}: section ${e.section}`;
+    if (e.op === "release") return `${e.member}: pinned at both ends`;
+    if (e.op === "load") return `${e.member}: ${f3(e.w)} kN/m ${e.dir.replace("global_", "along ").replace("local_", "local ")} in ${e.caseId}`;
+    return e.op;
+  }
+
+  // ================================================================ run
+  let timer = null;
+  function schedule(delay = 320) {
+    clearTimeout(timer);
+    $("#b-busy").hidden = false;
+    timer = setTimeout(runNow, delay);
+  }
+  function runNow() {
+    clearTimeout(timer);
+    try {
+      S.data = buildModel();
+      if (S.data.nodes.length > MAX_NODES) throw new Error(`${S.data.nodes.length} nodes: the browser studio handles up to ${MAX_NODES}. Use the Python package or the API for larger models.`);
+      S.result = T.runProject3d(S.data, { sectionCache, maxCombinations: MAX_ULS });
+      S.error = null;
+    } catch (e) { S.error = e.message; S.result = null; }
+    if (S.sel && !(S.data && S.data.members.some((m) => m.id === S.sel))) { S.sel = null; S.openCheck = null; }
+    $("#b-busy").hidden = true;
+    renderHeader(); renderSource(); renderLevels(); renderEditorHints(); renderResults();
+    V.rebuild(); V.refreshOverlay();
+  }
+  function load(opts) {
+    S.spec = opts.spec ? Object.assign(T.BUILDING_DEFAULTS(), clone(opts.spec)) : null;
+    S.base = opts.base ? clone(opts.base) : null;
+    S.extraSections = {}; S.edits = []; S.sel = null; S.openCheck = null; S.source = "env"; S.level = "all";
+    renderEditor();
+    runNow();
+    V.setCamera("iso", true);
+  }
+  function loadData(data) {
+    const meta = data.meta || {};
+    if (meta.generator === "tragwerk.building" && meta.spec) {
+      try { if (JSON.stringify(T.generateBuilding(meta.spec)) === JSON.stringify(data)) return load({ spec: meta.spec }); } catch (e) { /* fall through to a free-form model */ }
+    }
+    load({ base: data });
+  }
+
+  // ================================================================ header
+  function renderHeader() {
+    const name = $("#b-name");
+    if (document.activeElement !== name) name.value = (S.data && S.data.name) || "";
+    const v = $("#b-verdict"), r = S.result;
+    if (!r) { v.innerHTML = `<span class="lbl">${S.error ? "Cannot analyse" : "…"}</span>`; return; }
+    const s = r.summary;
+    v.innerHTML = `<span class="eta" style="color:${s.status === "fail" ? "var(--bad)" : s.status === "pass" ? "var(--ok)" : "var(--nc)"}">${s.max_utilisation != null ? s.max_utilisation.toFixed(2) : "–"}</span>
+      <span class="lbl">max η<br>${s.governing ? esc(s.governing.member) : ""}</span>${pill(s.status)}`;
+  }
+
+  // ================================================================ editor
+  const listText = (a) => a.map((v) => +(+v).toFixed(3)).join(", ");
+  function parseList(text) {
+    const parts = String(text).split(/[,;\s]+/).filter(Boolean);
+    if (!parts.length || parts.length > 40) return null;
+    const vals = parts.map(Number);
+    return vals.every((v) => isFinite(v) && v >= 1 && v <= 40) ? vals : null;
+  }
+  function renderEditor() {
+    $$("[data-btab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.btab === S.btab)));
+    const ed = $("#b-editor");
+    const custom = !S.spec;
+    if (S.btab === "grid") {
+      if (custom) {
+        ed.innerHTML = `<div class="tabpanel"><div class="group"><h3>Free-form model</h3><p class="hint">This model was loaded from JSON, so the building generator is off. Inspect and edit members in the 3D view, change sections in the Sections tab, or start a generated building.</p>
+          <div class="actions"><button class="btn" id="b-new">New generated building</button></div></div><div class="group" id="b-stats"></div></div>`;
+        $("#b-new").onclick = () => { $("#b-preset").value = "office"; load({ spec: PRESETS.office.spec }); };
+      } else {
+        const sp = S.spec;
+        ed.innerHTML = `<div class="tabpanel">
+          <div class="group"><div class="group-hd"><h3>Grid</h3><span class="hint">axes A, B, C … along X; 1, 2 … along Y</span></div>
+            <div class="fieldrow"><label class="field">Spans along X (m)<input data-list="spans_x" value="${listText(sp.spans_x)}" inputmode="decimal"></label><span class="stepper"><button data-step="spans_x:-1" aria-label="Remove a bay along X">−</button><button data-step="spans_x:1" aria-label="Add a bay along X">+</button></span></div>
+            <div class="fieldrow"><label class="field">Spans along Y (m)<input data-list="spans_y" value="${listText(sp.spans_y)}" inputmode="decimal"></label><span class="stepper"><button data-step="spans_y:-1" aria-label="Remove a bay along Y">−</button><button data-step="spans_y:1" aria-label="Add a bay along Y">+</button></span></div>
+            <div class="fieldrow"><label class="field">Storey heights, ground up (m)<input data-list="storeys" value="${listText(sp.storeys)}" inputmode="decimal"></label><span class="stepper"><button data-step="storeys:-1" aria-label="Remove the top storey">−</button><button data-step="storeys:1" aria-label="Add a storey">+</button></span></div>
+            <p class="hint" id="b-gridsum"></p>
+          </div>
+          <div class="group"><h3>Supports and stability</h3>
+            <div class="fields">
+              <label class="field">Column bases<select data-spec="base"><option value="fixed">Fixed</option><option value="pinned">Pinned</option></select></label>
+              <label class="field"><span>Column l<sub>0</sub>/L</span><input type="number" step="0.1" min="0.5" max="3" data-spec="column_l0_factor" value="${sp.column_l0_factor}"></label>
+              <label class="field">Combination<select data-spec="combination_rule"><option value="6.10">Eq. 6.10</option><option value="6.10ab">Eq. 6.10a/b</option></select></label>
+            </div>
+            <p class="hint">l<sub>0</sub>/L = 1.0 for a braced frame (cores or walls carry sway); about 2.0 if the frame itself must resist sway. Columns beyond the slenderness limit get the nominal curvature check (5.8.8).</p>
+          </div>
+          <div class="group" id="b-stats"></div>
+        </div>`;
+        $("[data-spec=base]", ed).value = sp.base;
+        $("[data-spec=combination_rule]", ed).value = sp.combination_rule;
+      }
+    } else if (S.btab === "sections") {
+      const secs = custom ? S.base.sections : { Column: S.spec.column, "Beam X": S.spec.beam_x, "Beam Y": S.spec.beam_y };
+      const all = Object.assign({}, secs, S.extraSections);
+      const fck = custom ? (S.base.materials[concreteName(S.base)] || {}).fck : S.spec.fck;
+      ed.innerHTML = `<div class="tabpanel">
+        <div class="fields"><label class="field">Concrete<select id="b-fck">${Object.entries(CONCRETE).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label><label class="field">Reinforcement<input value="B500B, f_yk 500 MPa" disabled></label></div>
+        ${Object.entries(all).map(([name, s]) => secCard(name, s, name in S.extraSections)).join("")}
+        <p class="hint">b is the width across the member's local y axis, h the depth along z (vertical for beams; for columns z is global X). Bars: n per face; side bars are per side face, between top and bottom rows.</p>
+      </div>`;
+      $("#b-fck").value = String(fck);
+    } else if (S.btab === "loads") {
+      if (custom) {
+        const lcs = S.base.load_cases || [];
+        ed.innerHTML = `<div class="tabpanel"><div class="group"><h3>Load cases from the model</h3><table class="data"><thead><tr><th>Id</th><th style="text-align:left">Name</th><th>Loads</th></tr></thead><tbody>
+          ${lcs.map((c) => `<tr><td>${esc(c.id)}</td><td style="text-align:left;font-family:var(--font-body)">${esc(c.name || "")} <span class="hint">${esc(c.type)}${c.category ? ", " + esc(c.category) : ""}</span></td><td>${(c.loads || []).length}${c.self_weight ? " + SW" : ""}</td></tr>`).join("")}</tbody></table>
+          <p class="hint">Add member loads from the Member tab after selecting a member. Edit the JSON for anything else.</p></div></div>`;
+      } else {
+        const sp = S.spec;
+        const num = (k, label, unit, step = 0.1, min = 0) => `<label class="field"><span>${label} <span class="hint">${unit}</span></span><input type="number" step="${step}" min="${min}" data-spec="${k}" value="${sp[k]}"></label>`;
+        ed.innerHTML = `<div class="tabpanel">
+          <div class="group"><h3>Permanent</h3><div class="fields">${num("slab_mm", "Slab", "mm", 10, 100)}${num("finishes", "Finishes", "kN/m²")}${num("facade", "Facade", "kN/m")}</div>
+            <p class="hint">Slab self weight at 25 kN/m³ and finishes act on every floor and the roof; the facade line load sits on the perimeter beams of every floor below the roof. Member self weight is added automatically.</p></div>
+          <div class="group"><h3>Imposed, snow, wind</h3><div class="fields">${num("imposed", "Imposed", "kN/m²")}
+            <label class="field">Category<select data-spec="imposed_category">${Object.entries(CAT_NAMES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>
+            ${num("snow", "Snow (roof)", "kN/m²")}${num("wind", "Wind pressure", "kN/m²")}</div>
+            <p class="hint">Wind acts in +X, −X, +Y and −Y as four mutually exclusive cases, applied at the floor nodes of the windward facade.</p></div>
+          <div class="group"><h3>Load path</h3><div class="fields" style="grid-template-columns:1fr">
+            <label class="field">Slabs span<select data-spec="distribution"><option value="two_way">Two-way, 45° yield lines</option><option value="one_way_x">One-way, onto beams along X</option><option value="one_way_y">One-way, onto beams along Y</option></select></label></div>
+            <label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink-2)"><input type="checkbox" data-spec="pattern_by_storey" ${sp.pattern_by_storey ? "checked" : ""}> One imposed load case per storey (pattern loading; more combinations)</label></div>
+        </div>`;
+        $("[data-spec=imposed_category]", ed).value = sp.imposed_category;
+        $("[data-spec=distribution]", ed).value = sp.distribution;
+      }
+    } else {
+      ed.innerHTML = `<div class="tabpanel"><div class="group"><div class="group-hd"><h3>Edits to the model</h3>${S.edits.length ? `<button class="link-btn" id="b-clear">Clear all</button>` : ""}</div>
+        <p class="hint">Select a member in the 3D view, then remove it, change its section, pin its ends or load it from the Member tab. Edits are kept when you change the grid, as long as the member still exists.</p>
+        ${S.edits.length ? S.edits.map((e, k) => `<div class="edrow${e.active === false ? " inactive" : ""}"><span>${esc(editLabel(e))}${e.active === false ? ` <span class="hint">(not applied: member gone)</span>` : ""}</span><button class="icon-btn" data-undo="${k}" aria-label="Undo this edit">×</button></div>`).join("") : `<p class="empty" style="padding:8px 0">No edits yet.</p>`}
+      </div></div>`;
+    }
+    bindEditor();
+    renderEditorHints();
+  }
+  function secCard(name, s, extra) {
+    const n = (lay) => (lay && lay.n) || 0, dia = (lay, d) => (lay && lay.dia_mm) || d;
+    const L = s.links || { dia_mm: 8, legs: 2, spacing_mm: 200 };
+    const inp = (k, v, step = 1, min = 0) => `<input type="number" step="${step}" min="${min}" data-sec="${esc(name)}" data-k="${k}" value="${v}">`;
+    return `<div class="card" data-card="${esc(name)}"><div class="group-hd"><h3 style="margin:0">${esc(name)}</h3>${extra ? `<button class="link-btn" data-delsec="${esc(name)}">Delete</button>` : ""}</div>
+      <div class="secgrid">
+        <label class="field">b mm${inp("b_mm", s.b_mm, 10, 150)}</label><label class="field">h mm${inp("h_mm", s.h_mm, 10, 150)}</label><label class="field">cover${inp("cover_mm", s.cover_mm, 5, 15)}</label><span></span>
+        <span class="lab">Bars, number × diameter (mm)</span>
+        <label class="field">top n${inp("top.n", n(s.top))}</label><label class="field">top Ø${inp("top.dia_mm", dia(s.top, 16), 2, 8)}</label>
+        <label class="field">bottom n${inp("bottom.n", n(s.bottom))}</label><label class="field">bottom Ø${inp("bottom.dia_mm", dia(s.bottom, 16), 2, 8)}</label>
+        <label class="field">side n${inp("side.n", n(s.side))}</label><label class="field">side Ø${inp("side.dia_mm", dia(s.side, 16), 2, 8)}</label><span></span><span></span>
+        <span class="lab">Links</span>
+        <label class="field">Ø${inp("links.dia_mm", L.dia_mm, 2, 6)}</label><label class="field">legs${inp("links.legs", L.legs, 1, 2)}</label><label class="field">spacing${inp("links.spacing_mm", L.spacing_mm, 25, 50)}</label><span></span>
+      </div><p class="hint" data-secnote="${esc(name)}"></p></div>`;
+  }
+  function secObj(name) {
+    if (name in S.extraSections) return S.extraSections[name];
+    if (!S.spec) return S.base.sections[name];
+    return { Column: S.spec.column, "Beam X": S.spec.beam_x, "Beam Y": S.spec.beam_y }[name];
+  }
+  function secNote(s) {
+    const a = (l) => (l && l.n ? l.n * Math.PI * l.dia_mm ** 2 / 4 : 0);
+    const As = a(s.top) + a(s.bottom) + 2 * a(s.side);
+    return `A<sub>s</sub> = ${Math.round(As).toLocaleString("en-US").replace(/,/g, " ")} mm², ρ = ${(100 * As / (s.b_mm * s.h_mm)).toFixed(2)} %. Used by ${S.data ? S.data.members.filter((m) => m.section === Object.keys(S.data.sections).find((k) => S.data.sections[k] && k === m.section) && sectionNameOf(s) === m.section).length : 0} members.`;
+  }
+  function sectionNameOf(s) {
+    for (const k of Object.keys(S.extraSections)) if (S.extraSections[k] === s) return k;
+    if (!S.spec) { for (const k of Object.keys(S.base.sections)) if (S.base.sections[k] === s) return k; return null; }
+    return s === S.spec.column ? "Column" : s === S.spec.beam_x ? "Beam X" : s === S.spec.beam_y ? "Beam Y" : null;
+  }
+  function renderEditorHints() {
+    const gs = $("#b-gridsum");
+    if (gs && S.spec) {
+      const sx = S.spec.spans_x.reduce((a, b) => a + b, 0), sy = S.spec.spans_y.reduce((a, b) => a + b, 0), hz = S.spec.storeys.reduce((a, b) => a + b, 0);
+      gs.textContent = `${S.spec.spans_x.length} × ${S.spec.spans_y.length} bays, ${r1(sx)} × ${r1(sy)} m on plan, ${S.spec.storeys.length} storeys, ${r1(hz)} m high.`;
+    }
+    const st = $("#b-stats");
+    if (st && S.data) {
+      const nCol = S.data.members.filter((m) => (m.design || {}).type === "column").length;
+      const r = S.result;
+      st.innerHTML = `<h3>Model</h3><dl class="kv"><dt>Nodes</dt><dd>${S.data.nodes.length}</dd><dt>Members</dt><dd>${S.data.members.length} (${nCol} columns)</dd>
+        <dt>Degrees of freedom</dt><dd>${S.data.nodes.length * 6}</dd><dt>Load cases</dt><dd>${S.data.load_cases.length}</dd>
+        ${r ? `<dt>Combinations</dt><dd>${r.combos.combos.filter((c) => c.kind === "ULS").length} ULS, ${r.combos.combos.filter((c) => c.kind !== "ULS").length} SLS</dd><dt>Analysis</dt><dd>${(r.summary.analysis_ms / 1000).toFixed(2)} s, checks ${((r.summary.runtime_ms - r.summary.analysis_ms) / 1000).toFixed(2)} s</dd>` : ""}</dl>`;
+    }
+    $$("[data-secnote]").forEach((p) => {
+      const s = secObj(p.dataset.secnote);
+      if (!s) return;
+      const a = (l) => (l && l.n ? l.n * Math.PI * l.dia_mm ** 2 / 4 : 0);
+      const As = a(s.top) + a(s.bottom) + 2 * a(s.side);
+      const used = S.data ? S.data.members.filter((m) => m.section === p.dataset.secnote).length : 0;
+      p.innerHTML = `A<sub>s</sub> = ${Math.round(As).toLocaleString("en-US").replace(/,/g, " ")} mm², ρ = ${(100 * As / (s.b_mm * s.h_mm)).toFixed(2)} %, ${used} member${used === 1 ? "" : "s"}.`;
+    });
+  }
+  function bindEditor() {
+    const ed = $("#b-editor");
+    $$("[data-list]", ed).forEach((inp) => inp.addEventListener("input", () => {
+      const v = parseList(inp.value);
+      inp.setAttribute("aria-invalid", String(!v));
+      if (v) { S.spec[inp.dataset.list] = v; renderEditorHints(); schedule(); }
+    }));
+    $$("[data-step]", ed).forEach((b) => b.onclick = () => {
+      const [k, dir] = b.dataset.step.split(":"), arr = S.spec[k];
+      if (+dir > 0 && arr.length < 40) arr.push(arr[arr.length - 1]);
+      if (+dir < 0 && arr.length > 1) arr.pop();
+      const inp = $(`[data-list="${k}"]`, ed); inp.value = listText(arr); inp.setAttribute("aria-invalid", "false");
+      renderEditorHints(); schedule(120);
+    });
+    $$("[data-spec]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
+      const k = el.dataset.spec;
+      if (el.type === "checkbox") S.spec[k] = el.checked;
+      else if (el.type === "number") { const v = Number(el.value); if (!isFinite(v) || el.value === "") return; S.spec[k] = v; }
+      else S.spec[k] = el.value;
+      schedule();
+    }));
+    const fck = $("#b-fck", ed);
+    if (fck) fck.onchange = () => {
+      const v = Number(fck.value);
+      if (S.spec) S.spec.fck = v; else { const cn = concreteName(S.base); S.base.materials[cn].fck = v; }
+      schedule(120);
+    };
+    $$("[data-sec]", ed).forEach((inp) => inp.addEventListener("input", () => {
+      const s = secObj(inp.dataset.sec), v = Number(inp.value);
+      if (!s || inp.value === "" || !isFinite(v)) return;
+      const [a, b] = inp.dataset.k.split(".");
+      if (b) {
+        if (!s[a]) s[a] = a === "links" ? { dia_mm: 8, legs: 2, spacing_mm: 200 } : { n: 0, dia_mm: 16 };
+        s[a][b] = b === "n" || b === "legs" ? Math.max(0, Math.round(v)) : v;
+      } else s[a] = v;
+      renderEditorHints(); schedule();
+    }));
+    $$("[data-delsec]", ed).forEach((b) => b.onclick = () => {
+      delete S.extraSections[b.dataset.delsec];
+      S.edits = S.edits.filter((e) => !(e.op === "section" && e.section === b.dataset.delsec));
+      renderEditor(); schedule(60);
+    });
+    $$("[data-undo]", ed).forEach((b) => b.onclick = () => { S.edits.splice(+b.dataset.undo, 1); renderEditor(); schedule(60); });
+    const clr = $("#b-clear", ed);
+    if (clr) clr.onclick = () => { S.edits = []; renderEditor(); schedule(60); };
+  }
+  function addEdit(e) {
+    S.edits = S.edits.filter((x) => !(x.member === e.member && x.op === e.op && e.op !== "load"));
+    S.edits.push(e);
+    if (S.btab === "edits") renderEditor();
+    schedule(60);
+  }
+
+  // ================================================================ results helpers
+  function memberUtil(mid) {
+    const lst = (S.result && S.result.checks[mid]) || [];
+    let u = null, st = "pass";
+    for (const c of lst) {
+      if (c.status === "fail") st = "fail"; else if (c.status === "not_covered" && st !== "fail") st = "not_covered";
+      if (c.utilisation != null && (c.status === "pass" || c.status === "fail")) u = Math.max(u ?? 0, isFinite(c.utilisation) ? c.utilisation : 9.99);
+    }
+    if (st === "fail" && u == null) u = 9.99;
+    return { u, st, n: lst.length };
+  }
+  function sourceFactors(src) {
+    const r = S.result;
+    if (!r || src === "env") return null;
+    if (src.startsWith("case:")) { const id = src.slice(5); return r.combos.caseIds.map((c) => (c === id ? 1 : 0)); }
+    const c = r.combos.combos.find((x) => x.id === src.slice(6));
+    return c ? c.factors : null;
+  }
+  function sourceLabel(src) {
+    const r = S.result;
+    if (src === "env") return "ULS envelope";
+    if (src.startsWith("case:")) { const lc = r.model.load_cases[src.slice(5)]; return lc ? `${lc.id}, ${lc.name}` : src; }
+    const c = r.combos.combos.find((x) => x.id === src.slice(6));
+    return c ? `${c.id}: ${c.label}` : src;
+  }
+  function series(mid, q, fac) {
+    const r = S.result, ids = r.combos.caseIds;
+    const rows = ids.map((c) => r.cases[c].members[mid][q]);
+    return rows[0].map((_, j) => fac.reduce((s, f, k) => s + f * rows[k][j], 0));
+  }
+  function deformFactors() {
+    const f = sourceFactors(S.source);
+    if (f) { S.defInfo = sourceLabel(S.source); return f; }
+    const r = S.result, ids = r.combos.caseIds, chars = r.combos.combos.filter((c) => c.kind === "SLS_char");
+    let best = chars[0], bv = -1;
+    for (const c of chars) {
+      let v = 0;
+      r.analysis.nodeIds.forEach((_, k) => {
+        let ux = 0, uy = 0, uz = 0;
+        c.factors.forEach((fv, q) => { const d = r.cases[ids[q]].displacements[k]; ux += fv * d[0]; uy += fv * d[1]; uz += fv * d[2]; });
+        v = Math.max(v, Math.hypot(ux, uy, uz));
+      });
+      if (v > bv) { bv = v; best = c; }
+    }
+    S.defInfo = `${best.id}, the characteristic combination that moves the most`;
+    return best.factors;
+  }
+
+  // ================================================================ source / level selects
+  function renderSource() {
+    const sel = $("#b-source"), r = S.result;
+    if (!r) { sel.innerHTML = `<option>–</option>`; sel.disabled = true; return; }
+    sel.disabled = S.show === "model" || S.show === "util";
+    const cases = Object.values(r.model.load_cases);
+    const combos = (k) => r.combos.combos.filter((c) => c.kind === k);
+    sel.innerHTML = `<option value="env">ULS envelope</option><optgroup label="Load cases (characteristic)">${cases.map((c) => `<option value="case:${esc(c.id)}">${esc(c.id)} · ${esc(c.name)}</option>`).join("")}</optgroup>
+      <optgroup label="Characteristic combinations">${combos("SLS_char").map((c) => `<option value="combo:${esc(c.id)}">${esc(c.id)} · ${esc(c.label)}</option>`).join("")}</optgroup>
+      <optgroup label="ULS combinations">${combos("ULS").slice(0, 400).map((c) => `<option value="combo:${esc(c.id)}">${esc(c.id)} · ${esc(c.label)}</option>`).join("")}</optgroup>`;
+    if (![...sel.options].some((o) => o.value === S.source)) S.source = "env";
+    sel.value = S.source;
+  }
+  function levelsOf(d) {
+    if (d && d.meta && d.meta.grid && d.meta.grid.levels) return d.meta.grid.levels;
+    const zs = Array.from(new Set((d ? d.nodes : []).map((n) => Math.round((n.z ?? 0) * 1000) / 1000))).sort((a, b) => a - b);
+    return zs;
+  }
+  function renderLevels() {
+    const sel = $("#b-level"), lv = levelsOf(S.data);
+    const opts = [`<option value="all">All levels</option>`];
+    lv.forEach((z, k) => { if (k > 0 && k < lv.length - 1) opts.push(`<option value="${k}">Up to L${k}, +${z.toFixed(2)} m</option>`); });
+    sel.innerHTML = opts.join("");
+    sel.disabled = opts.length === 1;
+    if (![...sel.options].some((o) => o.value === String(S.level))) S.level = "all";
+    sel.value = String(S.level);
+  }
+  function zCut() {
+    if (S.level === "all") return Infinity;
+    const lv = levelsOf(S.data);
+    return lv[+S.level] ?? Infinity;
+  }
+
+  // ================================================================ results pane
+  function ubar(u, st) {
+    if (u == null) return `<span class="ubar"><b class="num" style="font-weight:500">–</b></span>`;
+    const w = isFinite(u) ? Math.min(u, 1) * 100 : 100;
+    const col = st === "fail" ? "var(--bad)" : st === "pass" ? "var(--ok)" : "var(--nc)";
+    return `<span class="ubar">${u >= 9.99 ? "≫1" : u.toFixed(3)}<span><i style="width:${w}%;background:${col}"></i></span></span>`;
+  }
+  function detail(c) {
+    const where = [];
+    if (c.x != null) where.push(`at x = ${c.x.toFixed(2)} m from the start node`);
+    if (c.combination) where.push(`in ${esc(c.combination)}: ${esc(c.combination_label)}`);
+    return `<div class="detail">${where.length ? `<div class="where">Governing ${where.join(", ")}.</div>` : ""}
+      ${c.steps.length ? `<table class="steps"><tbody>${c.steps.map((s) => `<tr><td class="sym">${mk(s.symbol)}</td><td>${mk(s.expression)}${s.substituted ? `<span class="subst">= ${mk(s.substituted)}</span>` : ""}${s.clause ? `<span class="ref">${esc(s.clause)}</span>` : ""}</td><td class="val">${f3(s.value)} ${mk(s.unit)}</td></tr>`).join("")}</tbody></table>` : ""}
+      ${c.notes.length ? `<ul class="notes">${c.notes.map((n) => `<li>${mk(n)}</li>`).join("")}</ul>` : ""}</div>`;
+  }
+  function miniDiagram(x, mx, mn, q) {
+    const W = 340, H = 84, pl = 6, pr = 6, pt = 15, pb = 15, L = x[x.length - 1] || 1;
+    const amax = Math.max(1e-9, ...mx.map(Math.abs), ...mn.map(Math.abs));
+    const dir = q === "My" || q === "Mz" ? -1 : 1;           // moments drawn on the tension side, like the 3D view
+    const sx = (v) => pl + (v / L) * (W - pl - pr), mid = pt + (H - pt - pb) / 2, sy = (v) => mid - dir * (v / amax) * (H - pt - pb) / 2;
+    const area = (arr) => `M${sx(x[0]).toFixed(1)},${mid} ` + arr.map((v, k) => `L${sx(x[k]).toFixed(1)},${sy(v).toFixed(1)}`).join(" ") + ` L${sx(x[x.length - 1]).toFixed(1)},${mid} Z`;
+    const ext = (arr, wantMax) => { let k = 0; arr.forEach((v, j) => { if (wantMax ? v > arr[k] : v < arr[k]) k = j; }); return k; };
+    const kx = ext(mx, true), kn = ext(mn, false);
+    const lab = (k, v, col) => {
+      if (Math.abs(v) < 1e-6 * amax) return "";
+      const y = sy(v), up = y < mid || (Math.abs(y - mid) < 1 && dir * v >= 0);
+      const ty = Math.min(Math.max(up ? y - 4 : y + 12, 11), H - 3), tx = Math.min(Math.max(sx(x[k]), 28), W - 28);
+      return `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" fill="${col}">${T.fmt(v)}</text>`;
+    };
+    const same = mx.every((v, k) => Math.abs(v - mn[k]) < 1e-9 * amax);
+    const pos = "var(--plot-pos)", neg = "var(--plot-neg)";
+    return `<svg class="mini" viewBox="0 0 ${W} ${H}" role="img" aria-label="${q} along the member, largest ${T.fmt(Math.max(...mx))}, smallest ${T.fmt(Math.min(...mn))}">
+      <path d="${area(mx)}" fill="${pos}" fill-opacity="0.15" stroke="${pos}" stroke-width="1.3"/>
+      ${same ? "" : `<path d="${area(mn)}" fill="${neg}" fill-opacity="0.15" stroke="${neg}" stroke-width="1.3"/>`}
+      <line x1="${pl}" x2="${W - pr}" y1="${mid}" y2="${mid}" stroke="var(--ink)" stroke-width="1"/>
+      ${lab(kx, mx[kx], pos)}${same ? "" : lab(kn, mn[kn], neg)}</svg>`;
+  }
+  function renderResults() {
+    $$("[data-rtab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.rtab === S.rtab)));
+    const sum = $("#b-summary"), out = $("#b-results"), r = S.result;
+    if (!r) {
+      sum.innerHTML = `<div class="empty"><b>The model cannot be analysed yet.</b><br>${esc(S.error || "")}</div>`;
+      out.innerHTML = "";
+      return;
+    }
+    const s = r.summary, nU = r.combos.combos.filter((c) => c.kind === "ULS").length;
+    const nFail = Object.keys(r.checks).filter((m) => memberUtil(m).st === "fail").length;
+    sum.innerHTML = `<div class="summary"><span class="big" style="color:${s.status === "fail" ? "var(--bad)" : s.status === "pass" ? "var(--ok)" : "var(--nc)"}">${s.max_utilisation != null ? s.max_utilisation.toFixed(3) : "–"}</span>
+      <span>${pill(s.status)} <span class="gov">${s.status === "pass" ? "All members pass" : s.status === "fail" ? `${nFail} member${nFail === 1 ? "" : "s"} fail` : "Some checks are not covered"}</span></span>
+      <span class="gov">${s.governing ? `Governing: <button class="link-btn" data-goto="${esc(s.governing.member)}">${esc(s.governing.member)}</button>, ${esc(s.governing.check.toLowerCase())}.` : ""} ${Object.keys(r.model.members).length} members, ${nU} ULS combinations, ${(s.runtime_ms / 1000).toFixed(2)} s.</span></div>
+      ${r.warnings.map((w) => `<div class="banner" style="position:static;margin:8px 12px 0;background:var(--nc-bg);color:var(--nc)">${esc(w)}</div>`).join("")}`;
+    sum.querySelectorAll("[data-goto]").forEach((b) => b.onclick = () => select(b.dataset.goto, true));
+    if (S.rtab === "member") out.innerHTML = memberPanel();
+    else if (S.rtab === "critical") out.innerHTML = criticalPanel();
+    else if (S.rtab === "reactions") out.innerHTML = reactionsPanel();
+    else out.innerHTML = `<div style="padding:10px 12px"><p class="hint">EN 1990 with recommended ψ factors (Table A1.1). Every variable case is switched on and off and takes a turn as the leading action; the four wind directions are mutually exclusive.</p>
+      <table class="data"><thead><tr><th>Id</th><th style="text-align:left">Combination</th></tr></thead><tbody>${r.combos.combos.slice(0, 600).map((c) => `<tr><td>${esc(c.id)}</td><td style="text-align:left;font-family:var(--font-num)">${esc(c.label)}</td></tr>`).join("")}</tbody></table>
+      ${r.combos.combos.length > 600 ? `<p class="hint">First 600 of ${r.combos.combos.length} shown.</p>` : ""}</div>`;
+    bindResults();
+  }
+  function memberPanel() {
+    const r = S.result, mid = S.sel;
+    if (!mid || !r.model.members[mid]) {
+      return `<div class="empty"><b>Click a member in the 3D view</b> to see its forces, every design check with the calculation steps, and to edit it.<br><br>Or open the <button class="link-btn" data-rt="critical">critical members</button>.</div>`;
+    }
+    const m = r.model.members[mid], md = r.analysis.members[mid], sec = r.model.sections[m.section], env = r.envelopes[mid];
+    const { u, st } = memberUtil(mid), lst = r.checks[mid] || [];
+    const secOpts = Object.keys(r.model.sections).map((k) => `<option value="${esc(k)}"${k === m.section ? " selected" : ""}>${esc(k)}, ${r.model.sections[k].b_mm}×${r.model.sections[k].h_mm}</option>`).join("");
+    const cases = Object.values(r.model.load_cases);
+    if (!S.formLoad.caseId || !r.model.load_cases[S.formLoad.caseId]) S.formLoad.caseId = (cases.find((c) => c.type === "variable") || cases[0]).id;
+    const released = m.rel_i.my && m.rel_j.my;
+    const diag = (q, note) => `<div class="diag"><h3><span style="font:inherit;color:inherit">${QLABEL[q]}</span><span>${note}, ${QUNIT[q]}</span></h3>${miniDiagram(env.x, env.max[q], env.min[q], q)}</div>`;
+    const ext = (q) => { const a = Math.max(...env.max[q]), b = Math.min(...env.min[q]); return Math.abs(a) >= Math.abs(b) ? a : b; };
+    return `<div class="mhead"><h2><mark>${esc(mid)}</mark></h2>
+        <dl class="kv"><dt>Type</dt><dd>${esc(m.design.type)}${m.design.type === "beam" ? `, ${esc(m.design.deflection_system.replace(/_/g, " "))}` : `, l<sub>0</sub>/L = ${m.design.l0_factor_y}`}</dd>
+          <dt>Length</dt><dd>${md.L.toFixed(3)} m, ${esc(m.i)} → ${esc(m.j)}</dd><dt>Section</dt><dd>${esc(m.section)}: ${sec.b_mm} × ${sec.h_mm} mm, ${esc(sec.concrete.name)}</dd>
+          <dt>Utilisation</dt><dd>${u == null ? "–" : (u >= 9.99 ? "≫ 1" : u.toFixed(3))} ${pill(st)}</dd><dt>V<sub>y</sub>, T</dt><dd>${f3(ext("Vy"))} kN, ${f3(ext("T"))} kNm (largest)</dd></dl>
+        <div class="fields" style="grid-template-columns:minmax(0,1fr) auto"><label class="field">Section<select id="b-msec">${secOpts}<option value="__new">New section from this one…</option></select></label></div>
+        <div class="actions"><button class="btn" id="b-mrem">Remove member</button><button class="btn" id="b-mrel"${released ? " disabled" : ""}>${released ? "Ends pinned" : "Pin both ends"}</button><button class="btn" id="b-mfit">Zoom to</button></div>
+        <div class="inline-form"><label class="field"><span>Line load <span class="hint">kN/m</span></span><input type="number" step="0.5" id="b-lw" value="${S.formLoad.w}"></label>
+          <label class="field">Direction<select id="b-ldir"><option value="global_z">Down (−Z)</option><option value="global_x">+X</option><option value="global_y">+Y</option></select></label>
+          <label class="field">Case<select id="b-lcase">${cases.map((c) => `<option value="${esc(c.id)}">${esc(c.id)}</option>`).join("")}</select></label><button class="btn" id="b-ladd">Add</button></div>
+      </div>
+      ${diag("My", `x-z plane, ULS envelope, on the tension side, L = ${md.L.toFixed(2)} m`)}${diag("Mz", "x-y plane, on the tension side")}${diag("N", "+ tension")}${diag("Vz", "x-z plane")}
+      <div class="member-block">${lst.map((c, k) => { const key = `${mid}|${k}`, open = S.openCheck === key; return `<button class="crow" aria-expanded="${open}" data-open="${esc(key)}"><span>${esc(c.title)}<span class="cl">${esc(c.clause.replace("EN 1992-1-1 ", "EC2 "))}</span></span>${ubar(c.utilisation, c.status)}${pill(c.status)}</button>${open ? detail(c) : ""}`; }).join("")}</div>`;
+  }
+  function criticalPanel() {
+    const r = S.result;
+    let rows = Object.keys(r.model.members).map((mid) => Object.assign({ mid, m: r.model.members[mid] }, memberUtil(mid))).filter((x) => x.n);
+    if (S.critFilter === "fail") rows = rows.filter((x) => x.st === "fail");
+    if (S.critFilter === "column" || S.critFilter === "beam") rows = rows.filter((x) => x.m.design.type === S.critFilter);
+    rows.sort((a, b) => (b.u ?? -1) - (a.u ?? -1));
+    const gov = (mid) => { let g = null; for (const c of r.checks[mid]) if (c.utilisation != null && (c.status === "pass" || c.status === "fail") && (!g || c.utilisation > g.utilisation)) g = c; return g; };
+    return `<div class="filters" role="group" aria-label="Filter">${[["all", "All"], ["fail", "Failing"], ["column", "Columns"], ["beam", "Beams"]].map(([k, l]) => `<button class="chip" data-crit="${k}" aria-pressed="${S.critFilter === k}">${l}</button>`).join("")}</div>
+      ${rows.length ? rows.slice(0, 80).map((x) => { const g = gov(x.mid); return `<button class="crit${x.mid === S.sel ? " sel" : ""}" data-pick="${esc(x.mid)}"><span><b>${esc(x.mid)}</b><span class="meta">${esc(x.m.design.type)} · ${esc(x.m.section)}${g ? " · " + esc(g.title.toLowerCase()) : ""}</span></span>${ubar(x.u, x.st)}${pill(x.st)}</button>`; }).join("") : `<p class="empty">No members match.</p>`}
+      ${rows.length > 80 ? `<p class="hint" style="padding:8px 12px">Top 80 of ${rows.length} shown.</p>` : ""}`;
+  }
+  function reactionsPanel() {
+    const r = S.result;
+    const rows = Object.entries(r.reactions).map(([nid, rr]) => {
+      const absmax = (q) => Math.max(Math.abs(rr.uls_max[q]), Math.abs(rr.uls_min[q]));
+      return `<tr><td>${esc(nid)}</td><td>${f3(rr.uls_max[2])}</td><td>${f3(rr.uls_min[2])}</td><td>${f3(Math.hypot(absmax(0), absmax(1)))}</td><td>${f3(absmax(3))}</td><td>${f3(absmax(4))}</td></tr>`;
+    }).join("");
+    const caseRows = Object.entries(r.cases).map(([cid, cr]) => {
+      const R = Object.values(cr.reactions).reduce((s, v) => s + v[2], 0);
+      const res = Math.max(...Object.values(cr.equilibrium).map(Math.abs));
+      return `<tr><td>${esc(cid)}</td><td>${f3(-cr.applied.Fz)}</td><td>${f3(R)}</td><td>${res.toExponential(1)}</td></tr>`;
+    }).join("");
+    return `<div style="padding:10px 12px" class="group"><p class="hint">ULS envelope of the support reactions (forces on the structure, Z up). F<sub>h</sub> is the larger horizontal resultant; M<sub>x</sub>, M<sub>y</sub> the largest base moments.</p>
+      <div class="scroll-x"><table class="data"><thead><tr><th>Support</th><th>F<sub>z</sub> max</th><th>F<sub>z</sub> min</th><th>F<sub>h</sub></th><th>|M<sub>x</sub>|</th><th>|M<sub>y</sub>|</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <h3 style="margin-top:8px">Equilibrium per load case</h3>
+      <table class="data"><thead><tr><th>Case</th><th>Applied down, kN</th><th>ΣF<sub>z</sub> reactions</th><th>Residual</th></tr></thead><tbody>${caseRows}</tbody></table>
+      <p class="hint">Every load case is checked for global force and moment equilibrium; residuals are in kN and kNm.</p></div>`;
+  }
+  function bindResults() {
+    const out = $("#b-results");
+    out.querySelectorAll("[data-open]").forEach((b) => b.onclick = () => { S.openCheck = S.openCheck === b.dataset.open ? null : b.dataset.open; renderResults(); });
+    out.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => select(b.dataset.pick, false, true));
+    out.querySelectorAll("[data-crit]").forEach((b) => b.onclick = () => { S.critFilter = b.dataset.crit; renderResults(); });
+    out.querySelectorAll("[data-rt]").forEach((b) => b.onclick = () => { S.rtab = b.dataset.rt; renderResults(); });
+    const msec = $("#b-msec", out);
+    if (!msec) return;
+    const mid = S.sel;
+    msec.onchange = () => {
+      let name = msec.value;
+      if (name === "__new") {
+        const cur = S.data.sections[S.result.model.members[mid].section];
+        let k = 2; const baseName = S.result.model.members[mid].section.replace(/ \d+$/, "");
+        while (`${baseName} ${k}` in S.data.sections) k++;
+        name = `${baseName} ${k}`;
+        S.extraSections[name] = clone(cur);
+        S.btab = "sections"; renderEditor();
+        toast(`Section '${name}' created; edit it in the Sections tab.`);
+      }
+      addEdit({ op: "section", member: mid, section: name });
+    };
+    $("#b-mrem", out).onclick = () => { addEdit({ op: "remove", member: mid }); toast(`Removed ${mid}. Undo it in the Edits tab.`); };
+    $("#b-mrel", out).onclick = () => addEdit({ op: "release", member: mid });
+    $("#b-mfit", out).onclick = () => V.fitTo(mid);
+    $("#b-lw", out).oninput = (e) => { S.formLoad.w = Number(e.target.value); };
+    $("#b-ldir", out).value = S.formLoad.dir;
+    $("#b-ldir", out).onchange = (e) => { S.formLoad.dir = e.target.value; };
+    $("#b-lcase", out).value = S.formLoad.caseId;
+    $("#b-lcase", out).onchange = (e) => { S.formLoad.caseId = e.target.value; };
+    $("#b-ladd", out).onclick = () => {
+      const w = S.formLoad.w;
+      if (!isFinite(w) || w === 0) return;
+      addEdit({ op: "load", member: mid, w: S.formLoad.dir === "global_z" ? -Math.abs(w) : w, dir: S.formLoad.dir, caseId: S.formLoad.caseId });
+      toast(`Line load added to ${mid} in ${S.formLoad.caseId}.`);
+    };
+  }
+  function select(mid, toMember = false, fromList = false) {
+    S.sel = mid; S.openCheck = null;
+    if (toMember || !fromList) S.rtab = "member";
+    renderResults(); V.updateSelection();
+    if (mid && fromList) V.flash();
+  }
+
+  // ================================================================ 3D viewer
+  const V = (function () {
+    const THREE = window.THREE;
+    const v = { ok: false };
+    const container = () => $("#b-canvas");
+    let renderer, scene, camP, camO, world, gStatic, gMembers, gOverlay, gSel, inst = null, instIds = [], ray, pending = false;
+    let colors = {};
+    const ctl = { az: -55 * Math.PI / 180, el: 26 * Math.PI / 180, dist: 60, target: null, ortho: false, cam: "iso", size: 20 };
+    const DEG = Math.PI / 180;
+
+    function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888"; }
+    function readColors() {
+      const dark = (css("--sheet").toLowerCase() !== "#ffffff");
+      colors = {
+        bg: css("--sheet"), ink: css("--ink"), ink3: css("--ink-3"), rule: css("--rule"), pos: css("--plot-pos"), neg: css("--plot-neg"), def: css("--plot-def"),
+        mark: css("--mark"), ok: css("--ok"), bad: css("--bad"), dark,
+        concrete: dark ? "#6f7d8c" : "#c5ccd4", column: dark ? "#7b8999" : "#b7c0ca", edge: dark ? "#1b242e" : "#5f6c7a", slab: dark ? "#8aa0b8" : "#9db1c6",
+      };
+    }
+    function init() {
+      if (!THREE) { v.reason = "The 3D library could not be loaded"; return; }
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        if (!renderer.getContext()) throw new Error("no WebGL");
+      } catch (e) { v.reason = "This browser has WebGL turned off"; renderer = null; return; }
+      v.ok = true;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      container().prepend(renderer.domElement);
+      renderer.domElement.setAttribute("aria-label", "3D model of the structure. Drag to orbit, right-drag or shift-drag to pan, scroll or pinch to zoom, click a member to select it.");
+      renderer.domElement.setAttribute("role", "img");
+      scene = new THREE.Scene();
+      camP = new THREE.PerspectiveCamera(35, 1, 0.1, 10000); camP.up.set(0, 0, 1);
+      camO = new THREE.OrthographicCamera(-1, 1, 1, -1, -10000, 10000); camO.up.set(0, 0, 1);
+      ctl.target = new THREE.Vector3();
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x8d939b, 0.78); hemi.position.set(0, 0, 1); scene.add(hemi);
+      const sun = new THREE.DirectionalLight(0xffffff, 0.62); sun.position.set(-0.55, -1.0, 1.35); scene.add(sun);
+      world = new THREE.Group(); scene.add(world);
+      gStatic = new THREE.Group(); gMembers = new THREE.Group(); gOverlay = new THREE.Group(); gSel = new THREE.Group();
+      world.add(gStatic, gMembers, gOverlay, gSel);
+      ray = new THREE.Raycaster();
+      readColors();
+      bindControls();
+      new ResizeObserver(resize).observe(container());
+      resize();
+    }
+    function resize() {
+      if (!v.ok) { if (v.fallback) drawFallback(); return; }
+      const el = container(), w = Math.max(el.clientWidth, 10), h = Math.max(el.clientHeight, 10);
+      renderer.setSize(w, h, false);
+      camP.aspect = w / h; camP.updateProjectionMatrix();
+      updateCamera();
+    }
+    function cam() { return ctl.ortho ? camO : camP; }
+    function updateCamera() {
+      if (!v.ok) return;
+      const d = new THREE.Vector3(Math.cos(ctl.el) * Math.cos(ctl.az), Math.cos(ctl.el) * Math.sin(ctl.az), Math.sin(ctl.el));
+      const el = container(), aspect = Math.max(el.clientWidth, 10) / Math.max(el.clientHeight, 10);
+      camP.position.copy(ctl.target).addScaledVector(d, ctl.dist);
+      camP.near = Math.max(ctl.dist / 200, 0.05); camP.far = ctl.dist + ctl.size * 20; camP.updateProjectionMatrix();
+      camP.lookAt(ctl.target);
+      const hh = ctl.dist * Math.tan(17.5 * DEG);
+      camO.left = -hh * aspect; camO.right = hh * aspect; camO.top = hh; camO.bottom = -hh;
+      camO.near = -ctl.size * 20; camO.far = ctl.dist + ctl.size * 20;
+      camO.position.copy(ctl.target).addScaledVector(d, ctl.dist);
+      camO.lookAt(ctl.target); camO.updateProjectionMatrix();
+      request();
+    }
+    function request() {
+      if (!v.ok || pending) return;
+      pending = true;
+      requestAnimationFrame(() => { pending = false; renderer.setClearColor(colors.bg, 1); renderer.render(scene, cam()); });
+    }
+
+    // ---------------------------------------------------------- controls
+    function bindControls() {
+      const el = renderer.domElement, pts = new Map();
+      let mode = null, last = null, down = null, pinch = null, hoverRaf = null;
+      el.addEventListener("contextmenu", (e) => e.preventDefault());
+      el.addEventListener("pointerdown", (e) => {
+        el.setPointerCapture(e.pointerId);
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        down = { x: e.clientX, y: e.clientY, t: performance.now() };
+        mode = e.button === 2 || e.button === 1 || e.shiftKey || e.ctrlKey || e.metaKey ? "pan" : "orbit";
+        last = { x: e.clientX, y: e.clientY };
+        if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; mode = "pinch"; }
+        hideTip();
+      });
+      el.addEventListener("pointermove", (e) => {
+        if (!pts.has(e.pointerId)) {
+          if (e.pointerType === "mouse") { const cx = e.clientX, cy = e.clientY; if (!hoverRaf) hoverRaf = requestAnimationFrame(() => { hoverRaf = null; hover(cx, cy); }); }
+          return;
+        }
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (mode === "pinch" && pts.size === 2) {
+          const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+          if (pinch.d > 0 && d > 0) ctl.dist = clampDist(ctl.dist * pinch.d / d);
+          pan(cx - pinch.cx, cy - pinch.cy);
+          pinch = { d, cx, cy };
+          updateCamera();
+          return;
+        }
+        const dx = e.clientX - last.x, dy = e.clientY - last.y;
+        last = { x: e.clientX, y: e.clientY };
+        if (mode === "orbit") {
+          ctl.az -= dx * 0.0085; ctl.el = Math.min(Math.max(ctl.el + dy * 0.0085, -10 * DEG), 89.9 * DEG);
+          if (ctl.cam !== "iso") { ctl.cam = "iso"; ctl.ortho = false; markCam(); }
+        } else pan(dx, dy);
+        updateCamera();
+      });
+      const up = (e) => {
+        if (!pts.has(e.pointerId)) return;
+        pts.delete(e.pointerId);
+        if (down && pts.size === 0 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && mode !== "pinch") {
+          const mid = pick(e.clientX, e.clientY);
+          select(mid, true);
+        }
+        if (pts.size < 2) pinch = null;
+        if (pts.size === 0) { mode = null; down = null; }
+      };
+      el.addEventListener("pointerup", up);
+      el.addEventListener("pointercancel", (e) => { pts.delete(e.pointerId); mode = null; down = null; });
+      el.addEventListener("pointerleave", () => { if (!pts.size) { hideTip(); setHover(null); } });
+      el.addEventListener("wheel", (e) => { e.preventDefault(); ctl.dist = clampDist(ctl.dist * Math.exp(e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015))); updateCamera(); }, { passive: false });
+      el.addEventListener("dblclick", () => { if (S.sel) fitTo(S.sel); else setCamera(ctl.cam === "iso" ? "fit" : ctl.cam); });
+    }
+    const clampDist = (d) => Math.min(Math.max(d, ctl.size * 0.05), ctl.size * 12);
+    function pan(dx, dy) {
+      const c = cam(), h = container().clientHeight || 1;
+      const worldPerPx = (2 * ctl.dist * Math.tan(17.5 * DEG)) / h;
+      const right = new THREE.Vector3().setFromMatrixColumn(c.matrixWorld, 0), upv = new THREE.Vector3().setFromMatrixColumn(c.matrixWorld, 1);
+      ctl.target.addScaledVector(right, -dx * worldPerPx).addScaledVector(upv, dy * worldPerPx);
+    }
+    function markCam() { $$("[data-cam]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.cam === ctl.cam))); }
+    function bounds(only) {
+      const g = v.geom || [];
+      const box = new THREE.Box3();
+      for (const m of g) if (!only || m.id === only) { box.expandByPoint(new THREE.Vector3(...m.a)); box.expandByPoint(new THREE.Vector3(...m.b)); }
+      if (box.isEmpty()) box.set(new THREE.Vector3(-5, -5, 0), new THREE.Vector3(5, 5, 5));
+      return box;
+    }
+    function setCamera(kind, reset) {
+      if (!v.ok) return;
+      const box = bounds();
+      if (v.labelBox) box.union(v.labelBox);
+      const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
+      if (kind === "fit") kind = ctl.cam;
+      ctl.cam = kind;
+      if (kind === "iso") { ctl.ortho = false; if (reset !== false) { ctl.az = -55 * DEG; ctl.el = 26 * DEG; } }
+      if (kind === "plan") { ctl.ortho = true; ctl.az = -90 * DEG; ctl.el = 89.9 * DEG; }
+      if (kind === "xz") { ctl.ortho = true; ctl.az = -90 * DEG; ctl.el = 0; }
+      if (kind === "yz") { ctl.ortho = true; ctl.az = 0; ctl.el = 0; }
+      ctl.target.copy(c);
+      const r = sz.length() / 2 || 5;
+      if (ctl.ortho) {
+        const el = container(), aspect = Math.max(el.clientWidth, 10) / Math.max(el.clientHeight, 10);
+        const wv = kind === "plan" ? sz.x : kind === "xz" ? sz.x : sz.y, hv = kind === "plan" ? sz.y : sz.z;
+        const hh = Math.max(hv / 2, wv / 2 / aspect) * 1.18 + 0.5;
+        ctl.dist = hh / Math.tan(17.5 * DEG);
+      } else {
+        // exact fit: the camera distance at which every corner of the box is inside the view frustum
+        const el = container(), aspect = Math.max(el.clientWidth, 10) / Math.max(el.clientHeight, 10);
+        const tv = Math.tan(17.5 * DEG), th = tv * aspect;
+        const dir = new THREE.Vector3(Math.cos(ctl.el) * Math.cos(ctl.az), Math.cos(ctl.el) * Math.sin(ctl.az), Math.sin(ctl.el));
+        const right = new THREE.Vector3().crossVectors(dir.clone().negate(), new THREE.Vector3(0, 0, 1)).normalize();
+        const upv = new THREE.Vector3().crossVectors(right, dir.clone().negate()).normalize();
+        let need = r;
+        for (const cx of [box.min.x, box.max.x]) for (const cy of [box.min.y, box.max.y]) for (const cz of [box.min.z, box.max.z]) {
+          const rel = new THREE.Vector3(cx, cy, cz).sub(c);
+          need = Math.max(need, rel.dot(dir) + Math.abs(rel.dot(right)) / th, rel.dot(dir) + Math.abs(rel.dot(upv)) / tv);
+        }
+        ctl.dist = need * 1.06;
+      }
+      markCam();
+      updateCamera();
+    }
+    function fitTo(mid) {
+      if (!v.ok) return;
+      const box = bounds(mid), c = box.getCenter(new THREE.Vector3()), r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1.5);
+      ctl.target.copy(c); ctl.dist = clampDist(r / Math.sin(17.5 * DEG) * 1.6);
+      updateCamera();
+    }
+
+    // ---------------------------------------------------------- picking and hover
+    function pick(x, y) {
+      if (!v.ok || !inst) return null;
+      const rect = renderer.domElement.getBoundingClientRect();
+      const ndc = new THREE.Vector2(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
+      ray.setFromCamera(ndc, cam());
+      const hits = ray.intersectObject(inst);
+      return hits.length ? instIds[hits[0].instanceId] : null;
+    }
+    function hover(x, y) {
+      const mid = pick(x, y);
+      setHover(mid);
+      const tip = $("#b-tip");
+      if (!mid) { hideTip(); return; }
+      const m = S.data.members.find((q) => q.id === mid);
+      const { u, st } = memberUtil(mid);
+      tip.innerHTML = `<b>${esc(mid)}</b> · ${esc(m ? m.section : "")}${u != null ? ` · η ${u >= 9.99 ? "≫1" : u.toFixed(2)}${st === "fail" ? " ✕" : ""}` : ""}`;
+      const rect = container().getBoundingClientRect();
+      tip.hidden = false;
+      const left = Math.min(x - rect.left + 14, rect.width - tip.offsetWidth - 6);
+      tip.style.left = `${Math.max(left, 4)}px`; tip.style.top = `${Math.max(y - rect.top - 30, 4)}px`;
+      renderer.domElement.style.cursor = "pointer";
+    }
+    function hideTip() { $("#b-tip").hidden = true; if (v.ok) renderer.domElement.style.cursor = ""; }
+
+    // ---------------------------------------------------------- geometry
+    function geomFrom(d) {
+      if (!d) return [];
+      const nodes = new Map(d.nodes.map((n) => [n.id, n]));
+      const out = [];
+      for (const m of d.members) {
+        const a = nodes.get(m.i), b = nodes.get(m.j);
+        if (!a || !b) continue;
+        const pa = [a.x, a.y, a.z ?? 0], pb = [b.x, b.y, b.z ?? 0];
+        const dv = [pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]], L = Math.hypot(...dv);
+        if (!(L > 1e-6)) continue;
+        const ex = dv.map((q) => q / L), [, ey, ez] = T.localAxes(ex, m.roll_deg || 0);
+        const s = (d.sections || {})[m.section] || { b_mm: 300, h_mm: 300 };
+        const type = (m.design && m.design.type) || (Math.abs(dv[2]) > Math.hypot(dv[0], dv[1]) * Math.tan(Math.PI / 3) ? "column" : "beam");
+        out.push({ id: m.id, a: pa, b: pb, L, ex, ey, ez, bw: (s.b_mm || 300) / 1000, h: (s.h_mm || 300) / 1000, type, zmax: Math.max(pa[2], pb[2]) });
+      }
+      return out;
+    }
+    function disposeGroup(g) {
+      for (const o of [...g.children]) {
+        g.remove(o);
+        o.traverse((q) => { if (q.geometry) q.geometry.dispose(); if (q.material) { if (q.material.map) q.material.map.dispose(); q.material.dispose(); } });
+      }
+    }
+    const hangs = () => !!(S.data && S.data.meta && S.data.meta.slabs && S.data.meta.slabs.length);
+    const look = () => (["My", "Mz", "N", "def"].includes(S.show) ? "lines" : S.look);
+    function memberMatrix(m, grow = 0, thin = false) {
+      const mat = new THREE.Matrix4();
+      let bw = m.bw, h = m.h;
+      if (thin) { const t = thin === "sel" ? Math.max(ctl.size * 0.011, 0.14) : Math.max(ctl.size * 0.004, 0.06); bw = t; h = t; }
+      const ex = new THREE.Vector3(...m.ex).multiplyScalar(m.L + grow * 2), ey = new THREE.Vector3(...m.ey).multiplyScalar(bw + grow * 2), ez = new THREE.Vector3(...m.ez).multiplyScalar(h + grow * 2);
+      mat.makeBasis(ex, ey, ez);
+      const c = new THREE.Vector3((m.a[0] + m.b[0]) / 2, (m.a[1] + m.b[1]) / 2, (m.a[2] + m.b[2]) / 2);
+      if (!thin && look() === "solid" && hangs() && m.type === "beam" && m.ez[2] > 0.9) c.addScaledVector(new THREE.Vector3(...m.ez), -m.h / 2);
+      mat.setPosition(c);
+      return mat;
+    }
+    function utilColor(u, st) {
+      if (u == null) return new THREE.Color(colors.concrete);
+      const stops = colors.dark
+        ? [[0, "#5b7894"], [0.5, "#3f9a6a"], [0.8, "#d8b13c"], [1.0, "#ea7a35"], [1.0001, "#f2564a"]]
+        : [[0, "#a9bdd0"], [0.5, "#4f9d6c"], [0.8, "#e1b33a"], [1.0, "#e2782f"], [1.0001, "#c62f22"]];
+      if (st === "fail" || u > 1) return new THREE.Color(stops[4][1]);
+      for (let k = 1; k < 4; k++) if (u <= stops[k][0]) { const t = (u - stops[k - 1][0]) / (stops[k][0] - stops[k - 1][0]); return new THREE.Color(stops[k - 1][1]).lerp(new THREE.Color(stops[k][1]), Math.max(0, Math.min(1, t))); }
+      return new THREE.Color(stops[3][1]);
+    }
+    v.rampCss = () => colors.dark
+      ? "linear-gradient(90deg,#5b7894 0%,#3f9a6a 50%,#d8b13c 80%,#ea7a35 99%,#f2564a 100%)"
+      : "linear-gradient(90deg,#a9bdd0 0%,#4f9d6c 50%,#e1b33a 80%,#e2782f 99%,#c62f22 100%)";
+    function textSprite(text, opts = {}) {
+      const fs = 44, pad = 14, cv = document.createElement("canvas"), cx = cv.getContext("2d");
+      const font = `600 ${fs}px "IBM Plex Sans", "Segoe UI", Arial, sans-serif`;
+      cx.font = font;
+      const w = Math.ceil(cx.measureText(text).width) + pad * 2, h = fs + pad * 1.4;
+      const W = opts.circle ? Math.max(w, h) : w;
+      cv.width = W; cv.height = h;
+      cx.font = font; cx.textAlign = "center"; cx.textBaseline = "middle";
+      if (opts.circle) { cx.beginPath(); cx.arc(W / 2, h / 2, h / 2 - 3, 0, Math.PI * 2); cx.fillStyle = colors.bg; cx.fill(); cx.lineWidth = 4; cx.strokeStyle = opts.color || colors.ink3; cx.stroke(); }
+      else if (opts.box) { cx.fillStyle = opts.box; cx.fillRect(0, 0, W, h); }
+      cx.fillStyle = opts.color || colors.ink3; cx.fillText(text, W / 2, h / 2 + 2);
+      const tex = new THREE.CanvasTexture(cv); tex.minFilter = THREE.LinearFilter;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+      const sh = opts.size || 0.6;
+      sp.scale.set(sh * W / h, sh, 1); sp.renderOrder = 10;
+      return sp;
+    }
+    function lineSeg(points, color, opacity = 1, dashed = false) {
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+      const mat = dashed ? new THREE.LineDashedMaterial({ color, dashSize: ctl.size * 0.012, gapSize: ctl.size * 0.008, transparent: opacity < 1, opacity })
+        : new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity });
+      const l = new THREE.LineSegments(g, mat);
+      if (dashed) l.computeLineDistances();
+      return l;
+    }
+    v.rebuild = function () {
+      if (!v.ok) { v.geom = geomFrom(S.data); if (v.fallback) drawFallback(); renderLegend(); renderTitle(); return; }
+      readColors();
+      disposeGroup(gStatic); disposeGroup(gMembers); inst = null; instIds = [];
+      const all = geomFrom(S.data), cut = zCut();
+      const g = all.filter((m) => m.zmax <= cut + 1e-6);
+      const first = !v.geom || !v.geom.length;
+      v.geom = all;
+      if (!all.length) { request(); return; }
+      const box = bounds(), sz = box.getSize(new THREE.Vector3());
+      ctl.size = Math.max(sz.x, sz.y, sz.z, 1);
+      const z0 = box.min.z;
+      // ground grid and grid axes
+      const d = S.data, grid = d.meta && d.meta.grid;
+      const lab = Math.max(0.8, Math.min(ctl.size * 0.05, 2.6));
+      v.labelBox = null;
+      if (grid) {
+        const gx = Object.entries(grid.x), gy = Object.entries(grid.y);
+        const xs = gx.map((e) => e[1]), ys = gy.map((e) => e[1]), ext = Math.max(2.0, ctl.size * 0.08);
+        const pts = [];
+        for (const [, x] of gx) pts.push(x, Math.min(...ys) - ext, z0, x, Math.max(...ys) + ext * 0.4, z0);
+        for (const [, y] of gy) pts.push(Math.min(...xs) - ext, y, z0, Math.max(...xs) + ext * 0.4, y, z0);
+        gStatic.add(lineSeg(pts, colors.ink3, 0.55, true));
+        for (const [n, x] of gx) { const s = textSprite(n, { circle: true, size: lab }); s.position.set(x, Math.min(...ys) - ext - lab * 0.6, z0); gStatic.add(s); }
+        for (const [n, y] of gy) { const s = textSprite(n, { circle: true, size: lab }); s.position.set(Math.min(...xs) - ext - lab * 0.6, y, z0); gStatic.add(s); }
+        const lv = grid.levels || [];
+        lv.forEach((z, k) => { if (k === 0 || z > cut + 1e-6) return; const s = textSprite(`L${k} +${z.toFixed(2)}`, { size: lab * 0.92 }); s.position.set(Math.min(...xs) - ext - lab * 1.2, Math.min(...ys) - ext - lab * 1.2, z); gStatic.add(s); });
+        v.labelBox = new THREE.Box3(new THREE.Vector3(Math.min(...xs) - ext - lab * 3.4, Math.min(...ys) - ext - lab * 3.4, z0), new THREE.Vector3(Math.max(...xs) + ext * 0.4, Math.max(...ys) + ext * 0.4, z0));
+      } else {
+        const gh = new THREE.GridHelper(Math.ceil(ctl.size * 1.4), Math.ceil(ctl.size * 1.4 / 2), colors.rule, colors.rule);
+        gh.rotation.x = Math.PI / 2; gh.position.set((box.min.x + box.max.x) / 2, (box.min.y + box.max.y) / 2, z0);
+        gh.material.transparent = true; gh.material.opacity = 0.6;
+        gStatic.add(gh);
+      }
+      // supports
+      const sup = Math.max(0.28, Math.min(ctl.size * 0.022, 0.8));
+      const nodes = new Map(d.nodes.map((n) => [n.id, n]));
+      const supMat = new THREE.MeshLambertMaterial({ color: colors.dark ? "#4a5664" : "#7c8896" });
+      for (const s of d.supports || []) {
+        const n = nodes.get(s.node);
+        if (!n || (n.z ?? 0) > cut + 1e-6) continue;
+        const fixed = s.rx && s.ry;
+        const geo = fixed ? new THREE.BoxGeometry(sup * 1.9, sup * 1.9, sup * 0.5) : new THREE.ConeGeometry(sup * 0.95, sup * 1.1, 4);
+        const mesh = new THREE.Mesh(geo, supMat.clone());
+        if (fixed) mesh.position.set(n.x, n.y, (n.z ?? 0) - sup * 0.25);
+        else { mesh.rotation.x = Math.PI / 2; mesh.rotation.y = Math.PI / 4; mesh.position.set(n.x, n.y, (n.z ?? 0) - sup * 0.55); }
+        gStatic.add(mesh);
+      }
+      // slabs
+      if (S.slabs && d.meta && d.meta.slabs && look() === "solid") {
+        const slabs = d.meta.slabs.filter((s) => s.z <= cut + 1e-6);
+        if (slabs.length) {
+          const sm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: colors.slab, transparent: true, opacity: colors.dark ? 0.2 : 0.26, depthWrite: false }), slabs.length);
+          const mt = new THREE.Matrix4(), ep = [];
+          slabs.forEach((s, k) => {
+            const t = s.t_mm / 1000;
+            mt.makeScale(s.x1 - s.x0, s.y1 - s.y0, t); mt.setPosition((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, s.z - t / 2);
+            sm.setMatrixAt(k, mt);
+            for (const zz of [s.z, s.z - t]) ep.push(s.x0, s.y0, zz, s.x1, s.y0, zz, s.x1, s.y0, zz, s.x1, s.y1, zz, s.x1, s.y1, zz, s.x0, s.y1, zz, s.x0, s.y1, zz, s.x0, s.y0, zz);
+          });
+          sm.renderOrder = 2;
+          gStatic.add(sm);
+          gStatic.add(lineSeg(ep, colors.edge, 0.35));
+        }
+      }
+      // members: one instanced mesh (also the pick target), edges, centre lines
+      if (g.length) {
+        inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0xffffff }), g.length);
+        const ep = [], cp = [];
+        g.forEach((m, k) => {
+          const mat = memberMatrix(m, 0, false);
+          inst.setMatrixAt(k, mat);
+          inst.setColorAt(k, new THREE.Color(colors.concrete));
+          instIds.push(m.id);
+          cp.push(...m.a, ...m.b);
+          if (look() === "solid") {
+            const corners = [[-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]
+              .map((c) => new THREE.Vector3(...c).applyMatrix4(mat));
+            for (const [p, q] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) ep.push(corners[p].x, corners[p].y, corners[p].z, corners[q].x, corners[q].y, corners[q].z);
+          }
+        });
+        inst.instanceMatrix.needsUpdate = true;
+        if (look() === "lines") { inst.material.visible = false; gMembers.add(lineSeg(cp, S.show === "model" || S.show === "util" ? colors.ink : colors.ink3, S.show === "model" || S.show === "util" ? 0.85 : 0.75)); }
+        else gMembers.add(lineSeg(ep, colors.edge, colors.dark ? 0.9 : 0.55));
+        gMembers.add(inst);
+        v.colorMembers();
+      }
+      if (first) setCamera("iso");
+      v.updateSelection();
+      renderTitle();
+      request();
+    };
+    v.colorMembers = function () {
+      if (!v.ok || !inst) return;
+      if (look() === "lines" && S.show === "util" && S.result) {
+        const old = gMembers.getObjectByName("utilLines");
+        if (old) { gMembers.remove(old); old.geometry.dispose(); old.material.dispose(); }
+        const pos = [], col = [];
+        for (const m of (v.geom || []).filter((q) => instIds.includes(q.id))) {
+          const { u, st } = memberUtil(m.id), c = utilColor(u, st);
+          pos.push(...m.a, ...m.b); col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+        const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true })); l.name = "utilLines"; l.renderOrder = 2;
+        gMembers.add(l);
+      }
+      const showU = S.show === "util" && S.result;
+      instIds.forEach((mid, k) => {
+        let c;
+        if (showU) { const { u, st } = memberUtil(mid); c = utilColor(u, st); }
+        else c = new THREE.Color(colors.concrete);
+        if (!showU && S.show !== "model") c.lerp(new THREE.Color(colors.bg), 0.45);
+        inst.setColorAt(k, c);
+      });
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+      const faded = S.show !== "model" && S.show !== "util";
+      inst.material.transparent = faded; inst.material.opacity = faded ? 0.5 : 1; inst.material.depthWrite = !faded;
+      inst.material.needsUpdate = true;
+      request();
+    };
+    let hoverId = null;
+    function setHover(mid) {
+      if (mid === hoverId) return;
+      hoverId = mid;
+      v.updateSelection();
+    }
+    v.updateSelection = function () {
+      if (!v.ok) { if (v.fallback) drawFallback(); return; }
+      disposeGroup(gSel);
+      const g = v.geom || [];
+      for (const [mid, kind] of [[hoverId, "hover"], [S.sel, "sel"]]) {
+        const m = mid && g.find((q) => q.id === mid);
+        if (!m) continue;
+        const thin = look() === "lines";
+        const grow = kind === "sel" ? Math.max(0.03, ctl.size * 0.0015) : Math.max(0.015, ctl.size * 0.001);
+        const mat = memberMatrix(m, grow, thin && kind === "sel" ? "sel" : thin);
+        if (kind === "sel") {
+          const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: colors.mark, transparent: true, opacity: 0.82 }));
+          mesh.applyMatrix4(mat); mesh.renderOrder = 5;
+          gSel.add(mesh);
+        }
+        if (thin && kind === "sel") continue;
+        const eg = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
+        const lines = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: kind === "sel" ? colors.ink : colors.ink3, transparent: true, opacity: 0.95, depthTest: kind !== "sel" }));
+        lines.applyMatrix4(mat); lines.renderOrder = 6;
+        gSel.add(lines);
+      }
+      request();
+    };
+    v.flash = function () { request(); };
+    v.screenOf = function (mid) {          // client coordinates of a member's mid point (used by the browser tests)
+      const m = (v.geom || []).find((q) => q.id === mid);
+      if (!v.ok || !m) return null;
+      const p = new THREE.Vector3((m.a[0] + m.b[0]) / 2, (m.a[1] + m.b[1]) / 2, (m.a[2] + m.b[2]) / 2).project(cam());
+      const rect = renderer.domElement.getBoundingClientRect();
+      return { x: rect.left + (p.x + 1) / 2 * rect.width, y: rect.top + (1 - p.y) / 2 * rect.height };
+    };
+
+    // ---------------------------------------------------------- overlays: diagrams and deformed shape
+    v.refreshOverlay = function () {
+      v.diagMax = v.defMax = v.defScale = v.defAt = null;
+      if (!v.ok) { renderLegend(); if (v.fallback) drawFallback(); return; }
+      disposeGroup(gOverlay);
+      v.colorMembers();
+      const r = S.result;
+      if (r && S.show !== "model" && S.show !== "util") {
+        const cut = zCut(), g = (v.geom || []).filter((m) => m.zmax <= cut + 1e-6 && r.model.members[m.id]);
+        if (S.show === "def") drawDeformed(r, g); else drawDiagram(r, g, S.show);
+      }
+      renderLegend();
+      request();
+    };
+    function drawDiagram(r, g, q) {
+      const fac = sourceFactors(S.source);
+      const data = g.map((m) => {
+        const env = r.envelopes[m.id];
+        const arrs = fac ? [series(m.id, q, fac)] : [env.max[q], env.min[q]];
+        return { m, x: env.x, arrs };
+      });
+      let amax = 0, peak = null;
+      for (const dd of data) for (const a of dd.arrs) a.forEach((val, k) => { if (Math.abs(val) > amax) { amax = Math.abs(val); peak = { m: dd.m, x: dd.x[k], v: val }; } });
+      v.diagMax = amax;
+      if (amax < 1e-9) return;
+      const sc = Math.max(ctl.size * 0.085, 0.8) / amax;
+      const pos = [], col = [], lp = [], lc = [];
+      const cpos = new THREE.Color(colors.pos), cneg = new THREE.Color(colors.neg);
+      for (const { m, x, arrs } of data) {
+        const off = q === "Mz" || q === "Vy" ? m.ey : m.ez;
+        const sign = q === "My" || q === "Mz" ? -1 : 1;
+        for (const arr of arrs) {
+          for (let k = 0; k + 1 < x.length; k++) {
+            if (x[k + 1] - x[k] < 1e-12) continue;
+            const P = (j) => [m.a[0] + m.ex[0] * x[j], m.a[1] + m.ex[1] * x[j], m.a[2] + m.ex[2] * x[j]];
+            const O = (j) => { const p = P(j), s = sign * arr[j] * sc; return [p[0] + off[0] * s, p[1] + off[1] * s, p[2] + off[2] * s]; };
+            const p0 = P(k), p1 = P(k + 1), o0 = O(k), o1 = O(k + 1);
+            const c0 = arr[k] >= 0 ? cpos : cneg, c1 = arr[k + 1] >= 0 ? cpos : cneg;
+            pos.push(...p0, ...o0, ...o1, ...p0, ...o1, ...p1);
+            for (const c of [c0, c0, c1, c0, c1, c1]) col.push(c.r, c.g, c.b);
+            lp.push(...o0, ...o1); lc.push(c0.r, c0.g, c0.b, c1.r, c1.g, c1.b);
+          }
+        }
+      }
+      const fg = new THREE.BufferGeometry();
+      fg.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); fg.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+      const fill = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.32, depthWrite: false }));
+      fill.renderOrder = 3; gOverlay.add(fill);
+      const lg = new THREE.BufferGeometry();
+      lg.setAttribute("position", new THREE.Float32BufferAttribute(lp, 3)); lg.setAttribute("color", new THREE.Float32BufferAttribute(lc, 3));
+      const outline = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ vertexColors: true })); outline.renderOrder = 4; gOverlay.add(outline);
+      if (peak) {
+        const m = peak.m, off = q === "Mz" || q === "Vy" ? m.ey : m.ez, sign = q === "My" || q === "Mz" ? -1 : 1, s = sign * peak.v * sc * 1.12;
+        const sp = textSprite(`${T.fmt(peak.v)} ${QUNIT[q]}`, { size: Math.max(0.6, Math.min(ctl.size * 0.034, 1.6)), color: peak.v >= 0 ? colors.pos : colors.neg, box: colors.bg });
+        sp.position.set(m.a[0] + m.ex[0] * peak.x + off[0] * s, m.a[1] + m.ex[1] * peak.x + off[1] * s, m.a[2] + m.ex[2] * peak.x + off[2] * s);
+        gOverlay.add(sp);
+        v.peak = { member: m.id, value: peak.v };
+      }
+    }
+    function drawDeformed(r, g) {
+      const fac = deformFactors(), ids = r.combos.caseIds;
+      let dmax = 0, at = null;
+      r.analysis.nodeIds.forEach((nid, k) => {
+        let ux = 0, uy = 0, uz = 0;
+        fac.forEach((f, q) => { const d = r.cases[ids[q]].displacements[k]; ux += f * d[0]; uy += f * d[1]; uz += f * d[2]; });
+        const u = Math.hypot(ux, uy, uz); if (u > dmax) { dmax = u; at = nid; }
+      });
+      const data = g.map((m) => {
+        const md = r.analysis.members[m.id], x = r.analysis.stations[m.id].x;
+        const u = series(m.id, "u", fac), vv = series(m.id, "v", fac), w = series(m.id, "w", fac);
+        return { m, md, x, u, vv, w };
+      });
+      for (const dd of data) for (let k = 0; k < dd.x.length; k++) dmax = Math.max(dmax, Math.hypot(dd.u[k], dd.vv[k], dd.w[k]));
+      v.defMax = dmax; v.defAt = at;
+      if (dmax < 1e-12) return;
+      const sc = Math.max(ctl.size * 0.06, 0.5) / dmax;
+      v.defScale = sc;
+      const pts = [];
+      for (const { m, md, x, u, vv, w } of data) {
+        const lam = md.lam;
+        const P = (k) => {
+          const gx = lam[0][0] * u[k] + lam[1][0] * vv[k] + lam[2][0] * w[k], gy = lam[0][1] * u[k] + lam[1][1] * vv[k] + lam[2][1] * w[k], gz = lam[0][2] * u[k] + lam[1][2] * vv[k] + lam[2][2] * w[k];
+          return [m.a[0] + m.ex[0] * x[k] + gx * sc, m.a[1] + m.ex[1] * x[k] + gy * sc, m.a[2] + m.ex[2] * x[k] + gz * sc];
+        };
+        for (let k = 0; k + 1 < x.length; k++) if (x[k + 1] - x[k] > 1e-9) pts.push(...P(k), ...P(k + 1));
+      }
+      const nseg = pts.length / 6, t = Math.max(ctl.size * 0.0032, 0.045);
+      const tubes = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: colors.def }), nseg);
+      const mt = new THREE.Matrix4(), a = new THREE.Vector3(), b = new THREE.Vector3(), dv = new THREE.Vector3(), up = new THREE.Vector3(), side = new THREE.Vector3();
+      for (let k = 0; k < nseg; k++) {
+        a.fromArray(pts, 6 * k); b.fromArray(pts, 6 * k + 3); dv.subVectors(b, a);
+        const len = dv.length() || 1e-6;
+        up.set(0, 0, 1); if (Math.abs(dv.z) > 0.9 * len) up.set(1, 0, 0);
+        side.crossVectors(up, dv).normalize().multiplyScalar(t); up.crossVectors(dv, side).normalize().multiplyScalar(t);
+        mt.makeBasis(dv.clone().multiplyScalar(1 + t / len), side, up); mt.setPosition(a.clone().add(b).multiplyScalar(0.5));
+        tubes.setMatrixAt(k, mt);
+      }
+      tubes.instanceMatrix.needsUpdate = true; tubes.renderOrder = 4;
+      gOverlay.add(tubes);
+    }
+
+    // ---------------------------------------------------------- legend and title block
+    function renderLegend() {
+      const el = $("#b-legend"), r = S.result;
+      const banner = $("#b-banner");
+      if (S.error) { banner.hidden = false; banner.textContent = S.error; } else banner.hidden = true;
+      if (!v.ok && v.reason) { el.innerHTML = `<b>${esc(v.reason)}.</b> Showing a plain drawing; results and checks are complete.`; return; }
+      if (S.show === "model" || !r) {
+        el.innerHTML = `Drag to orbit · right-drag or shift-drag to pan · scroll or pinch to zoom · click a member to inspect it.${hangs() && look() === "solid" ? "<br>Beams are drawn hanging below the floor level; the analysis uses centre lines." : ""}`;
+      } else if (S.show === "util") {
+        el.innerHTML = `<b>Utilisation η</b>, largest over all checks of each member<br><span class="ramp" style="background:${v.rampCss()}"></span><span class="num">> 1 fails</span><div class="ramp-ticks"><span style="left:0">0</span><span style="left:50%">0.5</span><span style="left:80%">0.8</span><span style="left:100%">1.0</span></div>`;
+      } else if (S.show === "def") {
+        el.innerHTML = `<b>Deformed shape</b>, ${esc(S.defInfo || "")}<br>max <b class="num">${v.defMax != null ? (v.defMax * 1000).toFixed(1) : "–"} mm</b>${v.defAt ? ` at node ${esc(v.defAt)}` : ""}, drawn ×${v.defScale ? Math.round(v.defScale) : "–"}`;
+      } else {
+        const q = S.show, plane = q === "Mz" ? "x-y plane, on the tension side" : q === "My" ? "x-z plane, on the tension side" : "+ tension";
+        el.innerHTML = `<b>${QLABEL[q]}</b> ${plane}, ${esc(sourceLabel(S.source))}<br><i class="sw" style="background:var(--plot-pos)"></i>positive<i class="sw" style="background:var(--plot-neg)"></i>negative · largest <b class="num">${v.diagMax != null ? T.fmt(v.diagMax) : "–"} ${QUNIT[q]}</b>`;
+      }
+    }
+    function renderTitle() {
+      const d = S.data, el = $("#b-title");
+      if (!d) { el.innerHTML = ""; return; }
+      const xs = d.nodes.map((n) => n.x), ys = d.nodes.map((n) => n.y), zs = d.nodes.map((n) => n.z ?? 0);
+      const span = (a) => (a.length ? Math.max(...a) - Math.min(...a) : 0);
+      el.innerHTML = `<div class="tb-name">${esc(d.name || "Untitled")}</div><div>Size</div><div class="num">${r1(span(xs))} × ${r1(span(ys))} × ${r1(span(zs))} m</div>
+        <div>Model</div><div class="num">${d.nodes.length} nodes · ${d.members.length} members</div><div>Code</div><div>EN 1990, EN 1992-1-1</div>`;
+    }
+
+    // ---------------------------------------------------------- fallback (no WebGL): axonometric SVG
+    function drawFallback() {
+      const c = container();
+      let svg = c.querySelector("svg.fallback");
+      if (!svg) { svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "fallback"); c.prepend(svg); }
+      const g = (v.geom || []).filter((m) => m.zmax <= zCut() + 1e-6);
+      const W = c.clientWidth || 600, H = c.clientHeight || 400;
+      svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      if (!g.length) { svg.innerHTML = ""; return; }
+      const az = -35 * DEG, el = 28 * DEG;
+      const P = (p) => [p[0] * Math.cos(az) - p[1] * Math.sin(az), (p[0] * Math.sin(az) + p[1] * Math.cos(az)) * Math.sin(el) + p[2] * Math.cos(el)];
+      const pts = g.flatMap((m) => [P(m.a), P(m.b)]);
+      const x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0])), y0 = Math.min(...pts.map((p) => p[1])), y1 = Math.max(...pts.map((p) => p[1]));
+      const s = Math.min((W - 80) / Math.max(x1 - x0, 1e-6), (H - 120) / Math.max(y1 - y0, 1e-6));
+      const X = (p) => 40 + (p[0] - x0) * s, Y = (p) => H - 60 - (p[1] - y0) * s;
+      svg.innerHTML = g.map((m) => {
+        const a = P(m.a), b = P(m.b), { u, st } = memberUtil(m.id);
+        const col = S.show === "util" && u != null ? (st === "fail" || u > 1 ? "var(--bad)" : u > 0.8 ? "var(--nc)" : "var(--ok)") : "var(--ink-2)";
+        const sel = m.id === S.sel;
+        return `<line x1="${X(a)}" y1="${Y(a)}" x2="${X(b)}" y2="${Y(b)}" stroke="${sel ? "var(--mark)" : col}" stroke-width="${sel ? 6 : 2}" data-fb="${esc(m.id)}" style="cursor:pointer"/>`;
+      }).join("");
+      svg.querySelectorAll("[data-fb]").forEach((l) => l.addEventListener("click", () => select(l.dataset.fb, true)));
+    }
+
+    v.init = function () { init(); if (!v.ok) { v.fallback = true; new ResizeObserver(() => drawFallback()).observe(container()); } };
+    v.setCamera = function (k, reset) { if (v.ok) setCamera(k, reset); };
+    v.fitTo = fitTo;
+    v.theme = function () { readColors(); v.rebuild(); v.refreshOverlay(); };
+    return v;
+  })();
+
+  // ================================================================ misc UI
+  let toastTimer = null;
+  function toast(msg) {
+    let el = document.querySelector(".toast");
+    if (!el) { el = document.createElement("div"); el.className = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2800);
+  }
+  function setShow(s) {
+    S.show = s; saveView();
+    $$("[data-show]").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.show === S.show)));
+    syncLookControls(); renderSource(); V.rebuild(); V.refreshOverlay();
+  }
+  function syncLookControls() {
+    const diagView = ["My", "Mz", "N", "def"].includes(S.show);
+    $$("[data-look]").forEach((b) => { b.disabled = diagView; b.setAttribute("aria-pressed", String(!diagView && b.dataset.look === S.look)); });
+    $("#b-slabs").disabled = diagView || S.look !== "solid";
+  }
+  function setLook(l) {
+    S.look = l; saveView();
+    syncLookControls();
+    V.rebuild(); V.refreshOverlay();
+  }
+  function init() {
+    const ex3 = window.TRAGWERK_EXAMPLES3D || {};
+    $("#b-preset").innerHTML = `<optgroup label="Generate a building">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${esc(p.label)}</option>`).join("")}</optgroup>
+      ${Object.keys(ex3).length ? `<optgroup label="Open a model file">${Object.keys(ex3).map((k) => `<option value="ex:${esc(k)}">${esc(ex3[k].name || k)} (JSON)</option>`).join("")}</optgroup>` : ""}`;
+    $("#b-preset").onchange = (e) => {
+      const k = e.target.value;
+      if (k.startsWith("ex:")) loadData(clone(ex3[k.slice(3)])); else load({ spec: PRESETS[k].spec });
+    };
+    $$("[data-btab]").forEach((t) => t.onclick = () => { S.btab = t.dataset.btab; renderEditor(); });
+    $$("[data-rtab]").forEach((t) => t.onclick = () => { S.rtab = t.dataset.rtab; renderResults(); });
+    $$("[data-show]").forEach((c) => c.onclick = () => setShow(c.dataset.show));
+    $$("[data-look]").forEach((b) => b.onclick = () => setLook(b.dataset.look));
+    $$("[data-cam]").forEach((b) => b.onclick = () => V.setCamera(b.dataset.cam));
+    $("#b-slabs").checked = S.slabs;
+    $("#b-slabs").onchange = (e) => { S.slabs = e.target.checked; saveView(); V.rebuild(); };
+    $("#b-source").onchange = (e) => { S.source = e.target.value; V.refreshOverlay(); };
+    $("#b-level").onchange = (e) => { S.level = e.target.value; V.rebuild(); V.refreshOverlay(); };
+    $("#b-name").addEventListener("input", (e) => { if (S.spec) S.spec.name = e.target.value; else S.base.name = e.target.value; if (S.data) S.data.name = e.target.value; V.rebuild(); });
+    $("#b-json").onclick = () => { $("#b-json-text").value = JSON.stringify(S.data, null, 2); $("#b-json-msg").textContent = ""; $("#b-drawer").hidden = false; $("#b-json-text").focus(); };
+    $("#b-drawer-close").onclick = () => { $("#b-drawer").hidden = true; };
+    $("#b-drawer").addEventListener("click", (e) => { if (e.target.id === "b-drawer") $("#b-drawer").hidden = true; });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("#b-drawer").hidden = true; } });
+    $("#b-json-copy").onclick = () => {
+      const t = $("#b-json-text");
+      navigator.clipboard.writeText(t.value).then(() => { $("#b-json-msg").textContent = "Copied."; }, () => { t.select(); $("#b-json-msg").textContent = "Select all and copy with your keyboard."; });
+    };
+    $("#b-json-load").onclick = () => {
+      try {
+        const data = JSON.parse($("#b-json-text").value);
+        if (data.schema !== T.SCHEMA3D) throw new Error(`expected schema '${T.SCHEMA3D}'; 2D models open in the 2D frame workspace`);
+        T.parseModel3d(data);
+        loadData(data); $("#b-drawer").hidden = true; toast("Model loaded.");
+      } catch (e) { $("#b-json-msg").textContent = `Not loaded: ${e.message}`; }
+    };
+    const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    if (mq && mq.addEventListener) mq.addEventListener("change", () => V.theme());
+    new MutationObserver(() => V.theme()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    $$("[data-show]").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.show === S.show)));
+    syncLookControls();
+    $("#b-ver").textContent = `v${T.VERSION}`;
+    V.init();
+    $("#b-preset").value = "office";
+    S.spec = Object.assign(T.BUILDING_DEFAULTS(), clone(PRESETS.office.spec));
+    renderEditor();
+    $("#b-busy").hidden = false;
+    setTimeout(() => { runNow(); V.setCamera("iso", true); }, 30);
+    window.TragwerkStudio3D = { S, V, runNow, select };
+  }
+  init();
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+  const modes = { "3d": document.getElementById("mode-3d"), "2d": document.getElementById("mode-2d") };
+  function setMode(m) {
+    if (!modes[m]) m = "3d";
+    for (const [k, el] of Object.entries(modes)) el.hidden = k !== m;
+    document.querySelectorAll(".modes [data-mode]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.mode === m)));
+    try { localStorage.setItem("tragwerk.mode", m); } catch (e) { /* storage unavailable */ }
+    window.dispatchEvent(new Event("resize"));
+  }
+  document.querySelectorAll(".modes [data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  let m = "3d";
+  try { m = localStorage.getItem("tragwerk.mode") || "3d"; } catch (e) { /* storage unavailable */ }
+  setMode(m);
+})();
+</script>

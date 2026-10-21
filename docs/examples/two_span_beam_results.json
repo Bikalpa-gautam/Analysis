@@ -1,5 +1,5 @@
 {
- "tragwerk_version": "0.1.0",
+ "tragwerk_version": "0.2.0",
  "model": "Two-span continuous beam, office floor",
  "design_code": "EC2",
  "basis": {
@@ -21,7 +21,7 @@
    "SLS_freq": 5,
    "SLS_qp": 4
   },
-  "runtime_s": 0.3078
+  "runtime_s": 0.0391
  },
  "warnings": [],
  "load_cases": {

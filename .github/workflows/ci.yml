@@ -9,8 +9,13 @@ jobs:
         with: {python-version: "3.12"}
       - uses: actions/setup-node@v4
         with: {node-version: "22"}
-      - run: pip install -e ".[dev,api]" openseespy
+      - run: pip install -e ".[dev,api,pdf]" openseespy
+      - run: python -m playwright install --with-deps chromium
+      - run: npm install --no-save --prefix web three@0.128.0
       - run: pytest
       - run: tragwerk verify --html verification.html --crosscheck
+      - run: python web/build.py
       - uses: actions/upload-artifact@v4
         with: {name: verification-report, path: verification.html}
+      - uses: actions/upload-artifact@v4
+        with: {name: tragwerk-studio, path: dist/tragwerk-studio.html}

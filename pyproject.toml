@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tragwerk"
-version = "0.1.0"
+version = "0.2.0"
 description = "Verifiable structural analysis and Eurocode 2 checks for reinforced-concrete frames"
 readme = "README.md"
 requires-python = ">=3.10"

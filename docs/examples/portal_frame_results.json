@@ -1,5 +1,5 @@
 {
- "tragwerk_version": "0.1.0",
+ "tragwerk_version": "0.2.0",
  "model": "Single-bay portal frame with wind",
  "design_code": "EC2",
  "basis": {
@@ -21,7 +21,7 @@
    "SLS_freq": 4,
    "SLS_qp": 1
   },
-  "runtime_s": 0.7234
+  "runtime_s": 0.0654
  },
  "warnings": [],
  "load_cases": {

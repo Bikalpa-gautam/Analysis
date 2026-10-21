@@ -202,7 +202,8 @@ sub, sup { font-size: 72%; line-height: 0; }
 </style>
 
 <header class="bar">
-  <div class="brand"><b>Tragwerk</b><span id="ver">v0.1</span></div>
+  <div class="brand"><b>Tragwerk</b><span id="ver">v0.2</span></div>
+  <div class="modes" role="tablist" aria-label="Workspace"><button role="tab" data-mode="3d" aria-selected="false">3D building</button><button role="tab" data-mode="2d" aria-selected="true">2D frame</button></div>
   <input id="model-name" class="model-name" aria-label="Model name" value="">
   <select id="preset" aria-label="Load an example model"></select>
   <button id="btn-json" class="btn">Model JSON</button>
@@ -272,8 +273,9 @@ sub, sup { font-size: 72%; line-height: 0; }
 (function () {
   "use strict";
   const T = window.Tragwerk;
-  const $ = (s, el = document) => el.querySelector(s);
-  const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+  const ROOT = document.getElementById("mode-2d") || document;   // the 2D workspace shares the page with the 3D studio
+  const $ = (s, el = ROOT) => el.querySelector(s);
+  const $$ = (s, el = ROOT) => Array.from(el.querySelectorAll(s));
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const mk = (s) => esc(s).replace(/_\{([^}]*)\}/g, "<sub>$1</sub>").replace(/\^\{([^}]*)\}/g, "<sup>$1</sup>");
   const STATUS = { pass: "Pass", fail: "Fail", not_covered: "Not covered", info: "Info", warn: "Warning" };
@@ -1022,7 +1024,7 @@ sub, sup { font-size: 72%; line-height: 0; }
   // ------------------------------------------------------------ misc UI
   let toastTimer = null;
   function toast(msg) {
-    let el = $(".toast");
+    let el = document.querySelector(".toast");
     if (!el) { el = document.createElement("div"); el.className = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
     el.textContent = msg; el.hidden = false;
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
