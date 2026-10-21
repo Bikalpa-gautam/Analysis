@@ -1,0 +1,43 @@
+{
+  "schema": "tragwerk/0.1",
+  "name": "Two-span continuous beam, office floor",
+  "design": {"design_code": "EC2", "combination_rule": "6.10"},
+  "materials": {
+    "C30/37": {"type": "concrete", "fck": 30, "dmax_mm": 16},
+    "B500B": {"type": "rebar", "fyk": 500}
+  },
+  "sections": {
+    "B300x550": {
+      "type": "rc_rect", "b_mm": 300, "h_mm": 550, "concrete": "C30/37", "rebar": "B500B",
+      "cover_mm": 30,
+      "bottom": {"n": 3, "dia_mm": 20},
+      "top": {"n": 3, "dia_mm": 20},
+      "links": {"dia_mm": 8, "legs": 2, "spacing_mm": 200}
+    }
+  },
+  "nodes": [
+    {"id": "A", "x": 0, "y": 0},
+    {"id": "B", "x": 6, "y": 0},
+    {"id": "C", "x": 12, "y": 0}
+  ],
+  "supports": [
+    {"node": "A", "ux": true, "uy": true},
+    {"node": "B", "uy": true},
+    {"node": "C", "uy": true}
+  ],
+  "members": [
+    {"id": "Span 1", "i": "A", "j": "B", "section": "B300x550", "design": {"type": "beam", "deflection_system": "end_span"}},
+    {"id": "Span 2", "i": "B", "j": "C", "section": "B300x550", "design": {"type": "beam", "deflection_system": "end_span"}}
+  ],
+  "load_cases": [
+    {"id": "G", "name": "Self weight and finishes", "type": "permanent", "self_weight": true,
+     "loads": [
+       {"type": "udl", "member": "Span 1", "w": -12.0},
+       {"type": "udl", "member": "Span 2", "w": -12.0}
+     ]},
+    {"id": "Q1", "name": "Office load, span 1", "type": "variable", "category": "B",
+     "loads": [{"type": "udl", "member": "Span 1", "w": -10.0}]},
+    {"id": "Q2", "name": "Office load, span 2", "type": "variable", "category": "B",
+     "loads": [{"type": "udl", "member": "Span 2", "w": -10.0}]}
+  ]
+}

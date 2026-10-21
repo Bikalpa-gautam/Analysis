@@ -1,0 +1,1065 @@
+<title>Tragwerk Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an engineer's workbench. Model editor left, the drawing in the middle,
+   checks and calculation steps right; stacks drawing > results > editor on phones.
+   Bold element: the checker's yellow highlighter marking the selected member. */
+:root {
+  --paper: #eef1f4;        /* cool drafting-film neutral, biased to the ink blue */
+  --sheet: #ffffff;
+  --ink: #15212e;
+  --ink-2: #4f5d6c;
+  --ink-3: #7a8695;
+  --rule: #d4dbe3;
+  --rule-2: #e6ebf0;
+  --plot-pos: #1f5fa8;     /* positive values on diagrams */
+  --plot-neg: #c4541c;     /* negative values on diagrams */
+  --plot-def: #6b46c1;
+  --mark: #f2c230;         /* checker's highlighter */
+  --mark-ink: #3d2f00;
+  --ok: #17803d; --ok-bg: #e5f3ea;
+  --bad: #b42318; --bad-bg: #fbe9e7;
+  --nc: #a35a00; --nc-bg: #fcf0dc;
+  --info: #4f5d6c; --info-bg: #eceff3;
+  --focus: #1f5fa8;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f151c; --sheet: #161e27; --ink: #e5ebf1; --ink-2: #a8b4c2; --ink-3: #7c8897;
+    --rule: #2a3542; --rule-2: #212b36; --plot-pos: #6aa6ec; --plot-neg: #f08a52; --plot-def: #a98bf0;
+    --mark: #d9ab1c; --mark-ink: #1a1400;
+    --ok: #4cc27a; --ok-bg: #12301f; --bad: #f2776b; --bad-bg: #3a1714; --nc: #f0b252; --nc-bg: #3a2a10;
+    --info: #a8b4c2; --info-bg: #222c37; --focus: #6aa6ec; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f151c; --sheet: #161e27; --ink: #e5ebf1; --ink-2: #a8b4c2; --ink-3: #7c8897;
+  --rule: #2a3542; --rule-2: #212b36; --plot-pos: #6aa6ec; --plot-neg: #f08a52; --plot-def: #a98bf0;
+  --mark: #d9ab1c; --mark-ink: #1a1400;
+  --ok: #4cc27a; --ok-bg: #12301f; --bad: #f2776b; --bad-bg: #3a1714; --nc: #f0b252; --nc-bg: #3a2a10;
+  --info: #a8b4c2; --info-bg: #222c37; --focus: #6aa6ec; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--paper); color: var(--ink); font: 14px/1.45 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 16px; display: flex; flex-direction: column; gap: 12px;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* header */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.brand { display: flex; align-items: baseline; gap: 8px; margin-right: 4px; }
+.brand b { font: 700 24px/1 var(--font-display); letter-spacing: .01em; }
+.brand span { font: 500 12px var(--font-num); color: var(--ink-3); }
+.model-name { flex: 1 1 220px; min-width: 0; font: 600 17px var(--font-display); background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 6px; }
+.model-name:hover, .model-name:focus { border-color: var(--rule); background: var(--sheet); }
+.bar select, .btn { height: 32px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 4px; padding: 0 10px; cursor: pointer; }
+.btn:hover, .bar select:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+.verdict { display: flex; align-items: center; gap: 10px; padding: 4px 4px 4px 12px; border-radius: 6px; background: var(--sheet); border: 1px solid var(--rule); }
+.verdict .eta { font: 600 20px var(--font-num); }
+.verdict .lbl { font-size: 12px; color: var(--ink-2); line-height: 1.2; }
+
+/* workbench */
+.bench { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) minmax(320px, 400px); gap: 12px; }
+.pane { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.pane-hd { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.pane-bd { overflow: auto; min-height: 0; flex: 1; }
+h2 { font: 600 15px var(--font-display); margin: 0; letter-spacing: .01em; }
+h3 { font: 600 14px var(--font-display); margin: 0 0 6px; }
+
+/* tabs */
+.tabs { display: flex; gap: 2px; width: 100%; }
+.tab { flex: 1; border: 0; background: transparent; padding: 6px 4px; border-radius: 4px; cursor: pointer; color: var(--ink-2); font-weight: 500; }
+.tab[aria-selected="true"] { background: var(--paper); color: var(--ink); font-weight: 600; }
+.tabpanel { padding: 12px; display: flex; flex-direction: column; gap: 14px; }
+.group { display: flex; flex-direction: column; gap: 6px; }
+.group-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hint { font-size: 12px; color: var(--ink-3); margin: 0; }
+
+/* compact grid tables for editing */
+table.ed { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.ed th { text-align: left; font-weight: 500; color: var(--ink-3); font-size: 11.5px; padding: 0 3px 3px; }
+table.ed td { padding: 2px 3px; vertical-align: middle; }
+table.ed input, table.ed select, .field input, .field select {
+  width: 100%; min-width: 0; height: 28px; border: 1px solid var(--rule); border-radius: 3px; background: var(--sheet); padding: 0 6px;
+}
+table.ed input[type="number"], .field input[type="number"] { font-family: var(--font-num); font-size: 12.5px; }
+table.ed input[type="checkbox"] { width: 16px; height: 16px; }
+table.ed tr.active td { background: color-mix(in srgb, var(--mark) 22%, transparent); }
+.icon-btn { border: 0; background: transparent; color: var(--ink-3); cursor: pointer; width: 26px; height: 26px; border-radius: 3px; font-size: 16px; line-height: 1; }
+.icon-btn:hover { background: var(--paper); color: var(--bad); }
+.link-btn { border: 0; background: transparent; color: var(--plot-pos); cursor: pointer; padding: 2px 0; font-weight: 500; }
+.link-btn:hover { text-decoration: underline; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.field { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--ink-2); min-width: 0; }
+.card { border: 1px solid var(--rule); border-radius: 5px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.card.active { border-color: var(--ink-3); }
+.case-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+.case-pick { border: 1px solid var(--rule); border-radius: 3px; background: var(--sheet); padding: 2px 8px; cursor: pointer; font: 600 13px var(--font-num); }
+.case-pick[aria-pressed="true"] { background: var(--mark); color: var(--mark-ink); border-color: var(--mark); }
+
+/* drawing */
+.draw { position: relative; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--rule); background: var(--sheet); border-radius: 14px; padding: 3px 10px; cursor: pointer; font-size: 13px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+.source { margin-left: auto; max-width: 100%; }
+.source select { height: 28px; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); max-width: 260px; }
+.canvas { flex: 1; min-height: 300px; position: relative; overflow: hidden; }
+.canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.canvas svg text { font-family: var(--font-body); }
+.titleblock { position: absolute; right: 10px; bottom: 10px; display: grid; grid-template-columns: auto auto; border: 1px solid var(--ink-3); background: var(--sheet); font-size: 11px; max-width: calc(100% - 20px); }
+.titleblock div { padding: 3px 8px; border-top: 1px solid var(--rule); }
+.titleblock div:nth-child(-n+2) { border-top: 0; }
+.titleblock div:nth-child(odd) { color: var(--ink-3); border-right: 1px solid var(--rule); }
+.titleblock .tb-name { grid-column: 1 / -1; font: 600 13px var(--font-display); color: var(--ink) !important; border-right: 0 !important; }
+.banner { position: absolute; left: 10px; right: 10px; top: 10px; padding: 8px 12px; border-radius: 5px; background: var(--bad-bg); color: var(--bad); font-weight: 500; border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); }
+.legend { position: absolute; left: 10px; top: 8px; display: flex; gap: 4px 12px; font-size: 12px; color: var(--ink-2); flex-wrap: wrap; max-width: calc(100% - 20px); pointer-events: none; }
+.mrow { display: grid; grid-template-columns: 1.15fr 1fr 1fr 26px; gap: 6px; padding: 8px 0; border-top: 1px solid var(--rule-2); align-items: end; }
+.mrow.active { background: color-mix(in srgb, var(--mark) 22%, transparent); box-shadow: -6px 0 0 color-mix(in srgb, var(--mark) 22%, transparent), 6px 0 0 color-mix(in srgb, var(--mark) 22%, transparent); }
+.mrow .wide { grid-column: span 2; }
+.mrow .icon-btn { align-self: center; }
+.hinges { display: flex; gap: 10px; align-items: center; height: 28px; color: var(--ink); font-size: 13px; }
+.hinges input { width: 16px; height: 16px; margin: 0 4px 0 0; vertical-align: -3px; }
+.hinges label { white-space: nowrap; }
+.lrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 26px; gap: 6px; padding: 8px 0; border-top: 1px solid var(--rule-2); align-items: end; }
+.lrow .kind { font: 600 13px var(--font-display); align-self: center; }
+.legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
+
+/* results */
+.summary { padding: 12px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; border-bottom: 1px solid var(--rule); }
+.summary .big { font: 600 34px/1 var(--font-num); grid-row: span 2; }
+.summary .gov { font-size: 12.5px; color: var(--ink-2); }
+.pill { display: inline-block; border-radius: 10px; padding: 1px 8px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.pill.pass { background: var(--ok-bg); color: var(--ok); } .pill.fail { background: var(--bad-bg); color: var(--bad); }
+.pill.not_covered, .pill.warn { background: var(--nc-bg); color: var(--nc); } .pill.info { background: var(--info-bg); color: var(--info); }
+.rtabs { display: flex; gap: 2px; padding: 6px 10px 0; }
+.member-block { border-bottom: 1px solid var(--rule-2); }
+.member-hd { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 0; background: transparent; cursor: pointer; text-align: left; }
+.member-hd b { font: 600 14px var(--font-display); }
+.member-hd.sel b { background: var(--mark); color: var(--mark-ink); padding: 0 5px; border-radius: 2px; }
+.member-hd .meta { font-size: 12px; color: var(--ink-3); }
+.crow { width: 100%; display: grid; grid-template-columns: 1fr 74px 64px; gap: 8px; align-items: center; padding: 5px 12px 5px 20px; border: 0; background: transparent; cursor: pointer; text-align: left; font-size: 13px; }
+.crow:hover { background: var(--paper); }
+.crow[aria-expanded="true"] { background: var(--paper); }
+.crow .cl { color: var(--ink-3); font-size: 11.5px; display: block; }
+.ubar { display: flex; flex-direction: column; gap: 2px; font: 500 12px var(--font-num); }
+.ubar span { display: block; height: 4px; background: var(--rule-2); border-radius: 2px; overflow: hidden; }
+.ubar span i { display: block; height: 100%; border-radius: 2px; }
+.detail { padding: 6px 12px 12px 20px; background: var(--paper); font-size: 12.5px; }
+.detail .where { color: var(--ink-2); margin-bottom: 6px; }
+.steps { width: 100%; border-collapse: collapse; }
+.steps td { padding: 4px 4px; border-top: 1px solid var(--rule); vertical-align: top; }
+.steps td.sym { font-weight: 600; white-space: nowrap; width: 1%; }
+.steps td.val { text-align: right; white-space: nowrap; font-family: var(--font-num); font-size: 12px; }
+.steps .ref { color: var(--ink-3); font-size: 11px; display: block; }
+.steps .subst { color: var(--ink-3); font-size: 11.5px; display: block; overflow-wrap: anywhere; }
+.notes { margin: 6px 0 0; padding-left: 18px; color: var(--ink-2); }
+table.data { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.data th { text-align: right; font-weight: 500; color: var(--ink-3); padding: 6px 8px; border-bottom: 1px solid var(--rule); font-size: 11.5px; }
+table.data th:first-child, table.data td:first-child { text-align: left; }
+table.data td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--rule-2); font-family: var(--font-num); font-size: 12px; }
+table.data td:first-child { font-family: var(--font-body); }
+.empty { padding: 24px 16px; color: var(--ink-2); }
+.scroll-x { overflow-x: auto; }
+sub, sup { font-size: 72%; line-height: 0; }
+
+/* JSON drawer */
+.drawer { position: fixed; inset: 0; background: color-mix(in srgb, var(--ink) 35%, transparent); display: flex; justify-content: flex-end; z-index: 20; }
+.drawer-in { width: min(560px, 100%); height: 100%; background: var(--sheet); padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.drawer textarea { flex: 1; width: 100%; font: 12px/1.5 var(--font-num); border: 1px solid var(--rule); border-radius: 4px; padding: 10px; background: var(--paper); resize: none; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.toast { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--sheet); padding: 8px 14px; border-radius: 5px; z-index: 30; font-size: 13px; }
+
+@media (max-width: 1180px) {
+  .bench { grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); }
+  .results { grid-column: 1 / -1; max-height: none; }
+}
+@media (max-width: 760px) {
+  html, body { height: auto; }
+  .bench { display: flex; flex-direction: column; flex: none; }
+  .pane { flex: none; }
+  .draw { order: 1; } .results { order: 2; } .editor { order: 3; }
+  .canvas { min-height: 340px; flex: none; height: 52vh; }
+  .pane-bd { overflow: visible; }
+  .titleblock { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .crow, .chip, .tab { transition: background-color .12s ease; }
+}
+</style>
+
+<header class="bar">
+  <div class="brand"><b>Tragwerk</b><span id="ver">v0.1</span></div>
+  <input id="model-name" class="model-name" aria-label="Model name" value="">
+  <select id="preset" aria-label="Load an example model"></select>
+  <button id="btn-json" class="btn">Model JSON</button>
+  <div class="verdict" id="verdict" aria-live="polite"></div>
+</header>
+
+<main class="bench">
+  <section class="pane editor" aria-label="Model editor">
+    <div class="pane-hd">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-geometry" aria-selected="true" data-tab="geometry">Geometry</button>
+        <button class="tab" role="tab" id="tab-sections" aria-selected="false" data-tab="sections">Sections</button>
+        <button class="tab" role="tab" id="tab-loads" aria-selected="false" data-tab="loads">Loads</button>
+        <button class="tab" role="tab" id="tab-settings" aria-selected="false" data-tab="settings">Design</button>
+      </div>
+    </div>
+    <div class="pane-bd" id="editor"></div>
+  </section>
+
+  <section class="pane draw" aria-label="Drawing">
+    <div class="pane-hd">
+      <div class="chips" role="group" aria-label="What to draw">
+        <button class="chip" data-view="model">Model</button>
+        <button class="chip" data-view="M">M</button>
+        <button class="chip" data-view="V">V</button>
+        <button class="chip" data-view="N">N</button>
+        <button class="chip" data-view="def">Deflection</button>
+        <button class="chip" data-view="util">Utilisation</button>
+      </div>
+      <label class="source"><select id="source" aria-label="Results to show"></select></label>
+    </div>
+    <div class="canvas" id="canvas">
+      <svg id="svg" role="img" aria-label="Structure drawing"></svg>
+      <div class="legend" id="legend"></div>
+      <div class="titleblock" id="titleblock"></div>
+      <div class="banner" id="banner" hidden></div>
+    </div>
+  </section>
+
+  <section class="pane results" aria-label="Design checks">
+    <div id="summary"></div>
+    <div class="rtabs" role="tablist">
+      <button class="tab" role="tab" id="rtab-checks" aria-selected="true" data-rtab="checks">Checks</button>
+      <button class="tab" role="tab" id="rtab-reactions" aria-selected="false" data-rtab="reactions">Reactions</button>
+      <button class="tab" role="tab" id="rtab-combos" aria-selected="false" data-rtab="combos">Combinations</button>
+    </div>
+    <div class="pane-bd" id="results"></div>
+  </section>
+</main>
+
+<div class="drawer" id="drawer" hidden>
+  <div class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div class="row" style="justify-content:space-between"><h2 id="drawer-title">Model JSON</h2><button class="btn" id="drawer-close">Close</button></div>
+    <p class="hint">This is the open model format used by the Python package and the HTTP API. Copy it to run the full PDF calculation report with <span class="num">tragwerk run model.json --pdf report.pdf</span>, or paste a model here and load it.</p>
+    <textarea id="json-text" spellcheck="false" aria-label="Model JSON"></textarea>
+    <div class="row"><button class="btn primary" id="json-copy">Copy</button><button class="btn" id="json-load">Load pasted model</button><span class="hint" id="json-msg"></span></div>
+  </div>
+</div>
+
+<script>
+/*__ENGINE__*/
+</script>
+<script>
+/*__EXAMPLES__*/
+</script>
+<script>
+(function () {
+  "use strict";
+  const T = window.Tragwerk;
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const mk = (s) => esc(s).replace(/_\{([^}]*)\}/g, "<sub>$1</sub>").replace(/\^\{([^}]*)\}/g, "<sup>$1</sup>");
+  const STATUS = { pass: "Pass", fail: "Fail", not_covered: "Not covered", info: "Info", warn: "Warning" };
+  const pill = (s) => `<span class="pill ${s}">${STATUS[s] || s}</span>`;
+  const CONCRETE = { "C20/25": 20, "C25/30": 25, "C30/37": 30, "C35/45": 35, "C40/50": 40, "C45/55": 45, "C50/60": 50, "C55/67": 55, "C60/75": 60 };
+  const CATS = Object.keys(T.PSI);
+  const SUPPORTS = { none: [false, false, false], pinned: [true, true, false], roller: [false, true, false], fixed: [true, true, true] };
+  const f3 = (v) => (v == null || !isFinite(v) ? "–" : T.fmt(v));
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+
+  const S = {
+    data: null, result: null, error: null, tab: "geometry", rtab: "checks", view: "M", source: "env",
+    activeCase: null, selMember: null, openCheck: null, beam: { spans: "6, 6", ends: "pinned", g: 12, q: 10, cat: "B", h: 550, b: 300 },
+  };
+  try { const v = localStorage.getItem("tragwerk.view"); if (v) S.view = v; } catch (e) { /* storage unavailable */ }
+
+  // ------------------------------------------------------------ run
+  let timer = null;
+  function schedule() { clearTimeout(timer); timer = setTimeout(runNow, 140); }
+  function runNow() {
+    try { S.result = T.runProject(S.data); S.error = null; }
+    catch (e) { S.error = e.message; }
+    if (S.result && S.selMember && !(S.selMember in S.result.model.members)) S.selMember = null;
+    renderHeader(); renderSource(); renderDrawing(); renderResults();
+  }
+  function load(data) {
+    S.data = clone(data);
+    S.activeCase = S.data.load_cases[0] ? S.data.load_cases[0].id : null;
+    S.selMember = null; S.openCheck = null; S.source = "env";
+    $("#model-name").value = S.data.name || "";
+    renderEditor(); runNow();
+  }
+
+  // ------------------------------------------------------------ header
+  function renderHeader() {
+    $("#ver").textContent = "v" + T.VERSION;
+    const v = $("#verdict");
+    if (S.error || !S.result) { v.innerHTML = `<span class="lbl">Model incomplete</span>${pill("fail")}`; return; }
+    const s = S.result.summary;
+    v.innerHTML = `<span class="eta num">${s.max_utilisation != null ? s.max_utilisation.toFixed(3) : "–"}</span><span class="lbl">max η<br>EN 1992-1-1</span>${pill(s.status)}`;
+  }
+
+  // ------------------------------------------------------------ editor
+  function renameRefs(kind, from, to) {
+    const d = S.data;
+    if (kind === "node") {
+      d.members.forEach((m) => { if (m.i === from) m.i = to; if (m.j === from) m.j = to; });
+      (d.supports || []).forEach((s) => { if (s.node === from) s.node = to; });
+      d.load_cases.forEach((c) => (c.loads || []).forEach((l) => { if (l.node === from) l.node = to; }));
+    } else if (kind === "member") {
+      d.load_cases.forEach((c) => (c.loads || []).forEach((l) => { if (l.member === from) l.member = to; }));
+      if (S.selMember === from) S.selMember = to;
+    }
+  }
+  function supportType(nid) {
+    const s = (S.data.supports || []).find((x) => x.node === nid);
+    if (!s) return "none";
+    for (const [k, v] of Object.entries(SUPPORTS)) if (!!s.ux === v[0] && !!s.uy === v[1] && !!s.rz === v[2]) return k;
+    return "custom";
+  }
+  function setSupport(nid, type) {
+    S.data.supports = (S.data.supports || []).filter((s) => s.node !== nid);
+    if (type !== "none") { const [ux, uy, rz] = SUPPORTS[type]; S.data.supports.push({ node: nid, ux, uy, rz }); }
+  }
+  const opt = (vals, cur, labels) => vals.map((v, k) => `<option value="${esc(v)}"${String(v) === String(cur) ? " selected" : ""}>${esc(labels ? labels[k] : v)}</option>`).join("");
+  const nextId = (prefix, list) => { let k = list.length + 1; while (list.includes(prefix + k)) k++; return prefix + k; };
+
+  function renderEditor() {
+    $$(".tabs .tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === S.tab)));
+    const ed = $("#editor");
+    const d = S.data;
+    if (S.tab === "geometry") {
+      const nodeIds = d.nodes.map((n) => n.id), secIds = Object.keys(d.sections);
+      ed.innerHTML = `<div class="tabpanel">
+        <details class="card" id="beam-builder"><summary><b>Quick continuous beam</b> <span class="hint">replaces the model</span></summary>
+          <div class="fields" style="margin-top:8px">
+            <label class="field">Spans [m]<input id="bb-spans" value="${esc(S.beam.spans)}"></label>
+            <label class="field">Ends<select id="bb-ends">${opt(["pinned", "fixed"], S.beam.ends, ["Simply supported", "Fixed"])}</select></label>
+            <label class="field">b × h [mm]<span class="row" style="gap:4px;flex-wrap:nowrap"><input id="bb-b" type="number" value="${S.beam.b}"><input id="bb-h" type="number" value="${S.beam.h}"></span></label>
+            <label class="field">g<sub>k</sub> extra [kN/m]<input id="bb-g" type="number" value="${S.beam.g}"></label>
+            <label class="field">q<sub>k</sub> per span [kN/m]<input id="bb-q" type="number" value="${S.beam.q}"></label>
+            <label class="field">Category<select id="bb-cat">${opt(CATS, S.beam.cat, CATS.map((c) => T.CATEGORY_LABEL[c]))}</select></label>
+          </div>
+          <div class="row" style="margin-top:8px"><button class="btn primary" id="bb-build">Build beam</button><span class="hint">Self weight is added. q<sub>k</sub> gets one load case per span, so pattern loading is covered.</span></div>
+        </details>
+        <div class="group"><div class="group-hd"><h3>Nodes</h3><button class="link-btn" id="add-node">Add node</button></div>
+          <table class="ed"><thead><tr><th>Id</th><th>x [m]</th><th>y [m]</th><th>Support</th><th></th></tr></thead><tbody>
+          ${d.nodes.map((n, k) => `<tr><td><input id="n${k}-id" data-k="${k}" data-f="id" value="${esc(n.id)}"></td>
+            <td><input id="n${k}-x" type="number" step="any" data-k="${k}" data-f="x" value="${n.x}"></td>
+            <td><input id="n${k}-y" type="number" step="any" data-k="${k}" data-f="y" value="${n.y}"></td>
+            <td><select id="n${k}-sup" data-k="${k}" data-f="support">${opt(["none", "pinned", "roller", "fixed"].concat(supportType(n.id) === "custom" ? ["custom"] : []), supportType(n.id), ["Free", "Pinned", "Roller", "Fixed"].concat(supportType(n.id) === "custom" ? ["Spring/custom"] : []))}</select></td>
+            <td><button class="icon-btn" aria-label="Delete node ${esc(n.id)}" data-del-node="${k}">×</button></td></tr>`).join("")}
+          </tbody></table></div>
+        <div class="group"><div class="group-hd"><h3>Members</h3><button class="link-btn" id="add-member">Add member</button></div>
+          <div>${d.members.map((m, k) => { const dz = m.design || {}; return `<div class="mrow${m.id === S.selMember ? " active" : ""}" data-mrow="${esc(m.id)}">
+            <label class="field">Id<input id="m${k}-id" data-k="${k}" data-f="id" value="${esc(m.id)}"></label>
+            <label class="field">From<select id="m${k}-i" data-k="${k}" data-f="i">${opt(nodeIds, m.i)}</select></label>
+            <label class="field">To<select id="m${k}-j" data-k="${k}" data-f="j">${opt(nodeIds, m.j)}</select></label>
+            <button class="icon-btn" aria-label="Delete member ${esc(m.id)}" data-del-member="${k}">×</button>
+            <label class="field">Section<select id="m${k}-sec" data-k="${k}" data-f="section">${opt(secIds, m.section)}</select></label>
+            <label class="field">Design as<select id="m${k}-type" data-k="${k}" data-f="type">${opt(["auto", "beam", "column", "none"], dz.type || "auto", ["Auto", "Beam", "Column", "Not designed"])}</select></label>
+            <div class="field wide">Hinges<span class="hinges"><label><input type="checkbox" id="m${k}-ri" data-k="${k}" data-f="ri"${(m.releases || {}).i ? " checked" : ""}>start</label><label><input type="checkbox" id="m${k}-rj" data-k="${k}" data-f="rj"${(m.releases || {}).j ? " checked" : ""}>end</label></span></div>
+          </div>`; }).join("")}</div>
+          ${d.members.filter((m) => { const t = (m.design || {}).type; return t === "beam" || (!t && isBeamLike(m)); }).length ? `<div class="group"><h3>Beam spans for deflection</h3><table class="ed"><thead><tr><th>Member</th><th>System (Table 7.4N)</th><th>φ(∞,t₀)</th></tr></thead><tbody>
+            ${d.members.map((m, k) => ({ m, k })).filter(({ m }) => { const t = (m.design || {}).type; return t === "beam" || (!t && isBeamLike(m)); }).map(({ m, k }) => `<tr><td>${esc(m.id)}</td>
+              <td><select id="m${k}-sys" data-k="${k}" data-f="system">${opt(["simply_supported", "end_span", "interior_span", "cantilever"], (m.design || {}).deflection_system || "simply_supported", ["Simply supported", "End span", "Interior span", "Cantilever"])}</select></td>
+              <td><input id="m${k}-phi" type="number" step="0.1" data-k="${k}" data-f="phi" value="${(m.design || {}).creep_coefficient ?? 2.0}"></td></tr>`).join("")}</tbody></table></div>` : ""}
+          ${d.members.filter((m) => (m.design || {}).type === "column" || (!(m.design || {}).type && !isBeamLike(m))).length ? `<div class="group"><h3>Column effective lengths</h3><table class="ed"><thead><tr><th>Member</th><th>l₀ / L</th></tr></thead><tbody>
+            ${d.members.map((m, k) => ({ m, k })).filter(({ m }) => (m.design || {}).type === "column" || (!(m.design || {}).type && !isBeamLike(m))).map(({ m, k }) => `<tr><td>${esc(m.id)}</td><td><input id="m${k}-l0" type="number" step="0.05" data-k="${k}" data-f="l0" value="${(m.design || {}).l0_factor ?? 1.0}"></td></tr>`).join("")}</tbody></table></div>` : ""}
+        </div></div>`;
+      bindGeometry();
+    } else if (S.tab === "sections") {
+      ed.innerHTML = `<div class="tabpanel">${Object.entries(d.sections).map(([sid, s], k) => {
+        const conc = d.materials[s.concrete] || {}; const cls = Object.keys(CONCRETE).find((c) => CONCRETE[c] === conc.fck) || s.concrete;
+        const L = s.links || {}; const B = s.bottom || { n: 0, dia_mm: 16 }; const Tp = s.top || { n: 0, dia_mm: 12 };
+        return `<div class="card"><div class="group-hd"><input id="s${k}-name" class="model-name" style="font-size:15px;flex:1" data-sec="${esc(sid)}" data-f="name" value="${esc(sid)}" aria-label="Section name">
+          <button class="icon-btn" aria-label="Delete section ${esc(sid)}" data-del-sec="${esc(sid)}">×</button></div>
+          <div class="fields">
+            <label class="field">b [mm]<input id="s${k}-b" type="number" data-sec="${esc(sid)}" data-f="b_mm" value="${s.b_mm}"></label>
+            <label class="field">h [mm]<input id="s${k}-h" type="number" data-sec="${esc(sid)}" data-f="h_mm" value="${s.h_mm}"></label>
+            <label class="field">Concrete<select id="s${k}-c" data-sec="${esc(sid)}" data-f="concrete">${opt(Object.keys(CONCRETE), cls)}</select></label>
+            <label class="field">Cover [mm]<input id="s${k}-cov" type="number" data-sec="${esc(sid)}" data-f="cover_mm" value="${s.cover_mm}"></label>
+            <label class="field">Bottom bars<span class="row" style="gap:4px;flex-wrap:nowrap"><input id="s${k}-bn" type="number" min="0" step="1" aria-label="Number of bottom bars" data-sec="${esc(sid)}" data-f="bottom.n" value="${B.n}"><input id="s${k}-bd" type="number" aria-label="Bottom bar diameter" data-sec="${esc(sid)}" data-f="bottom.dia_mm" value="${B.dia_mm}"></span></label>
+            <label class="field">Top bars<span class="row" style="gap:4px;flex-wrap:nowrap"><input id="s${k}-tn" type="number" min="0" step="1" aria-label="Number of top bars" data-sec="${esc(sid)}" data-f="top.n" value="${Tp.n}"><input id="s${k}-td" type="number" aria-label="Top bar diameter" data-sec="${esc(sid)}" data-f="top.dia_mm" value="${Tp.dia_mm}"></span></label>
+            <label class="field">Links Ø [mm]<input id="s${k}-ld" type="number" data-sec="${esc(sid)}" data-f="links.dia_mm" value="${L.dia_mm ?? ""}" placeholder="none"></label>
+            <label class="field">Legs<input id="s${k}-ll" type="number" step="1" data-sec="${esc(sid)}" data-f="links.legs" value="${L.legs ?? 2}"></label>
+            <label class="field">Spacing [mm]<input id="s${k}-ls" type="number" data-sec="${esc(sid)}" data-f="links.spacing_mm" value="${L.spacing_mm ?? ""}" placeholder="none"></label>
+          </div>
+          <p class="hint">${sectionNote(s)}</p></div>`; }).join("")}
+        <button class="btn" id="add-sec">Add section</button>
+        <p class="hint">Steel B500B (f<sub>yk</sub> = 500 MPa, class B). Bar counts are n × Ø; for example 3 × 20 is three Ø20 bars. "Bottom" is on the right-hand side when walking from a member's start node to its end node.</p></div>`;
+      bindSections();
+    } else if (S.tab === "loads") {
+      if (!d.load_cases.find((c) => c.id === S.activeCase)) S.activeCase = d.load_cases[0] ? d.load_cases[0].id : null;
+      const memIds = d.members.map((m) => m.id), nodeIds = d.nodes.map((n) => n.id);
+      ed.innerHTML = `<div class="tabpanel">
+        <div class="group"><div class="group-hd"><h3>Load cases</h3><span class="row"><button class="link-btn" id="add-case-g">Add permanent</button><button class="link-btn" id="add-case-q">Add variable</button></span></div>
+        ${d.load_cases.map((c, k) => `<div class="card${c.id === S.activeCase ? " active" : ""}">
+          <div class="case-row"><button class="case-pick" aria-pressed="${c.id === S.activeCase}" data-pick="${esc(c.id)}">${esc(c.id)}</button>
+            <input id="c${k}-name" data-c="${k}" data-f="name" value="${esc(c.name || "")}" aria-label="Load case name" style="height:28px;border:1px solid var(--rule);border-radius:3px;padding:0 6px;background:var(--sheet);min-width:0">
+            <button class="icon-btn" aria-label="Delete load case ${esc(c.id)}" data-del-case="${k}">×</button></div>
+          <div class="fields">
+            <label class="field">Type<select id="c${k}-type" data-c="${k}" data-f="type">${opt(["permanent", "variable"], c.type, ["Permanent", "Variable"])}</select></label>
+            ${c.type === "variable" ? `<label class="field">Category<select id="c${k}-cat" data-c="${k}" data-f="category">${opt(CATS, c.category || "B", CATS.map((x) => T.CATEGORY_LABEL[x]))}</select></label>
+              <label class="field">Exclusive group<input id="c${k}-grp" data-c="${k}" data-f="group" value="${esc(c.group || "")}" placeholder="none"></label>` :
+              `<label class="field">Self weight<select id="c${k}-sw" data-c="${k}" data-f="self_weight">${opt(["yes", "no"], c.self_weight ? "yes" : "no", ["Included", "Not included"])}</select></label>`}
+          </div></div>`).join("")}
+        </div>
+        ${S.activeCase ? (() => { const ci = d.load_cases.findIndex((c) => c.id === S.activeCase); const c = d.load_cases[ci]; return `<div class="group"><div class="group-hd"><h3>Loads in ${esc(c.id)}</h3>
+          <span class="row"><button class="link-btn" data-add-load="udl">Line load</button><button class="link-btn" data-add-load="point">Point load</button><button class="link-btn" data-add-load="nodal">Node load</button></span></div>
+          ${(c.loads || []).length ? `<div>${(c.loads || []).map((l, q) => loadRow(l, q, memIds, nodeIds)).join("")}</div>` : `<p class="hint">No loads yet. Add a line load, a point load or a node load. Downward loads are negative.</p>`}
+          <p class="hint">Units: kN/m for line loads, kN and kNm for point and node loads. Global y points up, so gravity loads are negative.</p></div>`; })() : ""}
+      </div>`;
+      bindLoads();
+    } else {
+      const p = d.design || {}; const pr = p.params || {};
+      ed.innerHTML = `<div class="tabpanel">
+        <div class="fields" style="grid-template-columns:1fr 1fr">
+          <label class="field">Design code<select id="set-code" data-f="design_code">${opt(["EC2", "SIA262"], p.design_code || "EC2", ["EN 1992-1-1 (EC2)", "SIA 262 (not yet available)"])}</select></label>
+          <label class="field">ULS combination<select id="set-rule" data-f="combination_rule">${opt(["6.10", "6.10ab"], p.combination_rule || "6.10", ["EN 1990 Eq. 6.10", "EN 1990 Eq. 6.10a/b"])}</select></label>
+          <label class="field">Stations per member<input id="set-st" type="number" step="1" data-f="stations_per_member" value="${p.stations_per_member ?? 40}"></label>
+        </div>
+        <div class="group"><h3>Nationally determined parameters</h3>
+          <p class="hint">Recommended values of EN 1992-1-1 and EN 1990 are used unless you enter a National Annex value here.</p>
+          <div class="fields" style="grid-template-columns:1fr 1fr 1fr">
+            ${[["gamma_c", "γ<sub>c</sub>", 1.5], ["gamma_s", "γ<sub>s</sub>", 1.15], ["alpha_cc", "α<sub>cc</sub>", 1.0], ["gamma_G_sup", "γ<sub>G,sup</sub>", 1.35], ["gamma_G_inf", "γ<sub>G,inf</sub>", 1.0], ["gamma_Q", "γ<sub>Q</sub>", 1.5]]
+              .map(([k, lab, def]) => `<label class="field">${lab}<input id="ndp-${k}" type="number" step="any" data-ndp="${k}" value="${pr[k] ?? ""}" placeholder="${def}"></label>`).join("")}
+          </div></div>
+        <div class="group"><h3>What this version checks</h3>
+          <p class="hint">Linear 2D frame analysis with exact member diagrams; EN 1990 combinations with pattern loading; EN 1992-1-1 bending with axial force (6.1), shear (6.2), detailing (8.2, 9.2, 9.5), column slenderness (5.8.3.1), span/depth (7.4.2) and long-term deflection (7.4.3). Not yet: second-order analysis, crack widths, torsion, anchorage, SIA 262.</p></div>
+      </div>`;
+      bindSettings();
+    }
+  }
+  function isBeamLike(m) {
+    const ni = S.data.nodes.find((n) => n.id === m.i), nj = S.data.nodes.find((n) => n.id === m.j);
+    if (!ni || !nj) return true;
+    return Math.abs(nj.y - ni.y) <= Math.abs(nj.x - ni.x) * Math.tan(Math.PI / 6);
+  }
+  function sectionNote(s) {
+    const a = (l) => (l && l.n ? l.n * Math.PI * l.dia_mm * l.dia_mm / 4 : 0);
+    const Ab = a(s.bottom), At = a(s.top), Ac = s.b_mm * s.h_mm;
+    return `A<sub>s,bottom</sub> = ${Ab.toFixed(0)} mm², A<sub>s,top</sub> = ${At.toFixed(0)} mm², ρ = ${((Ab + At) / Ac * 100).toFixed(2)} % of A<sub>c</sub>, self weight ${(25 * Ac * 1e-6).toFixed(2)} kN/m`;
+  }
+  function loadRow(l, q, memIds, nodeIds) {
+    const dirSel = (cur) => `<label class="field">Direction<select id="l${q}-dir" data-l="${q}" data-f="direction">${opt(["global_y", "global_x", "local_y", "local_x"], cur || "global_y", ["Global y", "Global x", "Local y", "Local x"])}</select></label>`;
+    const del = `<button class="icon-btn" aria-label="Delete load" data-del-load="${q}">×</button>`;
+    const nf = (id, f, v, lab, ph = "") => `<label class="field">${lab}<input id="l${q}-${id}" type="number" step="any" data-l="${q}" data-f="${f}" value="${v ?? ""}" placeholder="${ph}"></label>`;
+    if (l.type === "nodal") return `<div class="lrow"><span class="kind">Node load</span><label class="field">Node<select id="l${q}-tg" data-l="${q}" data-f="node">${opt(nodeIds, l.node)}</select></label><span></span>${del}
+      ${nf("fx", "fx", l.fx ?? 0, "F<sub>x</sub> [kN]")}${nf("fy", "fy", l.fy ?? 0, "F<sub>y</sub> [kN]")}${nf("mz", "mz", l.mz ?? 0, "M<sub>z</sub> [kNm]")}</div>`;
+    if (l.type === "point") return `<div class="lrow"><span class="kind">Point load</span><label class="field">Member<select id="l${q}-tg" data-l="${q}" data-f="member">${opt(memIds, l.member)}</select></label>${dirSel(l.direction)}${del}
+      ${nf("p", "p", l.p, "P [kN]")}${nf("a", "a", l.a, "at [m]")}</div>`;
+    const uni = "w" in l;
+    return `<div class="lrow"><span class="kind">Line load</span><label class="field">Member<select id="l${q}-tg" data-l="${q}" data-f="member">${opt(memIds, l.member)}</select></label>${dirSel(l.direction)}${del}
+      ${uni ? nf("w", "w", l.w, "w [kN/m]") : nf("w1", "w1", l.w1, "w start") + nf("w2", "w2", l.w2, "w end")}${nf("a", "a", l.a, "from [m]", "0")}${nf("b", "b", l.b, "to [m]", "end")}</div>`;
+  }
+  const numVal = (el) => { const v = parseFloat(el.value); return isFinite(v) ? v : null; };
+
+  function bindGeometry() {
+    const d = S.data, ed = $("#editor");
+    ed.querySelectorAll("[data-k]").forEach((el) => {
+      const isNode = el.id.startsWith("n");
+      el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
+        const k = +el.dataset.k, f = el.dataset.f;
+        if (isNode) {
+          const n = d.nodes[k];
+          if (f === "id") { const v = el.value.trim(); if (!v || d.nodes.some((o, j) => j !== k && o.id === v)) return; renameRefs("node", n.id, v); n.id = v; }
+          else if (f === "support") { if (el.value !== "custom") setSupport(n.id, el.value); }
+          else { const v = numVal(el); if (v === null) return; n[f] = v; }
+        } else {
+          const m = d.members[k]; m.design = m.design || {};
+          if (f === "id") { const v = el.value.trim(); if (!v || d.members.some((o, j) => j !== k && o.id === v)) return; renameRefs("member", m.id, v); m.id = v; }
+          else if (f === "i" || f === "j" || f === "section") m[f] = el.value;
+          else if (f === "type") { if (el.value === "auto") delete m.design.type; else m.design.type = el.value; renderEditor(); }
+          else if (f === "ri" || f === "rj") { m.releases = m.releases || {}; m.releases[f[1]] = el.checked; }
+          else if (f === "system") m.design.deflection_system = el.value;
+          else if (f === "phi") { const v = numVal(el); if (v === null) return; m.design.creep_coefficient = v; }
+          else if (f === "l0") { const v = numVal(el); if (v === null) return; m.design.l0_factor = v; }
+        }
+        schedule();
+      });
+    });
+    $("#add-node").onclick = () => {
+      const last = d.nodes[d.nodes.length - 1] || { x: 0, y: 0 };
+      d.nodes.push({ id: nextId("N", d.nodes.map((n) => n.id)), x: last.x + 3, y: last.y });
+      renderEditor(); schedule();
+    };
+    $("#add-member").onclick = () => {
+      const n = d.nodes;
+      if (n.length < 2) return;
+      d.members.push({ id: nextId("M", d.members.map((m) => m.id)), i: n[n.length - 2].id, j: n[n.length - 1].id, section: Object.keys(d.sections)[0] });
+      renderEditor(); schedule();
+    };
+    ed.querySelectorAll("[data-del-node]").forEach((b) => b.onclick = () => {
+      const n = d.nodes[+b.dataset.delNode];
+      d.nodes.splice(+b.dataset.delNode, 1);
+      const gone = d.members.filter((m) => m.i === n.id || m.j === n.id).map((m) => m.id);
+      d.members = d.members.filter((m) => !gone.includes(m.id));
+      d.supports = (d.supports || []).filter((s) => s.node !== n.id);
+      d.load_cases.forEach((c) => { c.loads = (c.loads || []).filter((l) => l.node !== n.id && !gone.includes(l.member)); });
+      renderEditor(); schedule();
+    });
+    ed.querySelectorAll("[data-del-member]").forEach((b) => b.onclick = () => {
+      const m = d.members[+b.dataset.delMember];
+      d.members.splice(+b.dataset.delMember, 1);
+      d.load_cases.forEach((c) => { c.loads = (c.loads || []).filter((l) => l.member !== m.id); });
+      renderEditor(); schedule();
+    });
+    const bb = $("#beam-builder");
+    bb.querySelectorAll("input,select").forEach((el) => el.addEventListener("input", () => {
+      const k = el.id.slice(3); S.beam[k] = el.type === "number" ? parseFloat(el.value) : el.value;
+    }));
+    $("#bb-build").onclick = buildBeam;
+  }
+
+  function buildBeam() {
+    const B = S.beam;
+    const spans = String(B.spans).split(/[,;\s]+/).map(Number).filter((v) => v > 0);
+    if (!spans.length) { toast("Enter at least one span length, for example 6, 6"); return; }
+    const nodes = [{ id: "A", x: 0, y: 0 }];
+    let x = 0;
+    spans.forEach((L, k) => { x += L; nodes.push({ id: String.fromCharCode(66 + k), x, y: 0 }); });
+    const n = nodes.length;
+    const supports = nodes.map((nd, k) => {
+      const end = k === 0 || k === n - 1;
+      if (B.ends === "fixed" && end) return { node: nd.id, ux: true, uy: true, rz: true };
+      return k === 0 ? { node: nd.id, ux: true, uy: true } : { node: nd.id, uy: true };
+    });
+    const sys = (k) => spans.length === 1 ? (B.ends === "fixed" ? "interior_span" : "simply_supported") : (k === 0 || k === spans.length - 1) ? (B.ends === "fixed" ? "interior_span" : "end_span") : "interior_span";
+    const members = spans.map((_, k) => ({ id: `Span ${k + 1}`, i: nodes[k].id, j: nodes[k + 1].id, section: "Beam", design: { type: "beam", deflection_system: sys(k) } }));
+    const cases = [{ id: "G", name: "Self weight and finishes", type: "permanent", self_weight: true, loads: members.map((m) => ({ type: "udl", member: m.id, w: -Math.abs(B.g) })) }];
+    members.forEach((m, k) => cases.push({ id: spans.length > 1 ? `Q${k + 1}` : "Q", name: `Imposed load, span ${k + 1}`, type: "variable", category: B.cat, loads: [{ type: "udl", member: m.id, w: -Math.abs(B.q) }] }));
+    load({ schema: "tragwerk/0.1", name: `${spans.length}-span beam, ${spans.join(" + ")} m`, design: { design_code: "EC2", combination_rule: "6.10" },
+      materials: { "C30/37": { type: "concrete", fck: 30 }, B500B: { type: "rebar", fyk: 500 } },
+      sections: { Beam: { type: "rc_rect", b_mm: B.b, h_mm: B.h, concrete: "C30/37", rebar: "B500B", cover_mm: 30, bottom: { n: 3, dia_mm: 20 }, top: { n: 3, dia_mm: 20 }, links: { dia_mm: 8, legs: 2, spacing_mm: 200 } } },
+      nodes, supports, members, load_cases: cases });
+    $("#preset").value = "";
+    toast("Beam built. Adjust reinforcement in Sections.");
+  }
+
+  function ensureConcrete(cls) {
+    if (!S.data.materials[cls]) S.data.materials[cls] = { type: "concrete", fck: CONCRETE[cls] };
+    return cls;
+  }
+  function bindSections() {
+    const d = S.data, ed = $("#editor");
+    ed.querySelectorAll("[data-sec]").forEach((el) => {
+      el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+        const sid = el.dataset.sec, f = el.dataset.f, s = d.sections[sid];
+        if (!s) return;
+        if (f === "name") {
+          const v = el.value.trim();
+          if (!v || v === sid || d.sections[v]) return;
+          d.sections[v] = s; delete d.sections[sid];
+          d.members.forEach((m) => { if (m.section === sid) m.section = v; });
+          el.dataset.sec = v; ed.querySelectorAll(`[data-sec="${CSS.escape(sid)}"]`).forEach((o) => { o.dataset.sec = v; });
+        } else if (f === "concrete") s.concrete = ensureConcrete(el.value);
+        else if (f.includes(".")) {
+          const [grp, key] = f.split(".");
+          const v = numVal(el);
+          if (grp === "links") {
+            if (key !== "legs" && (v === null || v <= 0)) { if (el.value === "") { delete s.links; schedule(); updateNotes(); } return; }
+            s.links = s.links || { dia_mm: 8, legs: 2, spacing_mm: 200 };
+            if (v !== null) s.links[key] = key === "legs" ? Math.round(v) : v;
+          } else {
+            if (v === null) return;
+            s[grp] = s[grp] || { n: 0, dia_mm: 16 };
+            s[grp][key] = key === "n" ? Math.max(0, Math.round(v)) : v;
+          }
+        } else { const v = numVal(el); if (v === null) return; s[f] = v; }
+        updateNotes(); schedule();
+      });
+    });
+    function updateNotes() { $$(".card", ed).forEach((card, k) => { const sid = Object.keys(d.sections)[k]; const p = card.querySelector(".hint"); if (p && d.sections[sid]) p.innerHTML = sectionNote(d.sections[sid]); }); }
+    ed.querySelectorAll("[data-del-sec]").forEach((b) => b.onclick = () => {
+      const sid = b.dataset.delSec;
+      if (d.members.some((m) => m.section === sid)) { toast(`Section ${sid} is used by a member. Assign another section first.`); return; }
+      if (Object.keys(d.sections).length < 2) return;
+      delete d.sections[sid]; renderEditor(); schedule();
+    });
+    $("#add-sec").onclick = () => {
+      const base = clone(Object.values(d.sections)[0]);
+      let k = 2, name = "Section 2"; while (d.sections[name]) name = `Section ${++k}`;
+      d.sections[name] = base; renderEditor(); schedule();
+    };
+  }
+
+  function bindLoads() {
+    const d = S.data, ed = $("#editor");
+    ed.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => { S.activeCase = b.dataset.pick; if (S.view !== "model") setView("model"); renderEditor(); renderDrawing(); });
+    ed.querySelectorAll("[data-c]").forEach((el) => {
+      el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+        const c = d.load_cases[+el.dataset.c], f = el.dataset.f;
+        if (f === "name") c.name = el.value;
+        else if (f === "type") { c.type = el.value; if (c.type === "variable") { c.category = c.category || "B"; delete c.self_weight; } else { delete c.category; delete c.group; } renderEditor(); }
+        else if (f === "category") c.category = el.value;
+        else if (f === "group") { if (el.value.trim()) c.group = el.value.trim(); else delete c.group; }
+        else if (f === "self_weight") c.self_weight = el.value === "yes";
+        schedule();
+      });
+    });
+    ed.querySelectorAll("[data-del-case]").forEach((b) => b.onclick = () => { d.load_cases.splice(+b.dataset.delCase, 1); renderEditor(); schedule(); });
+    const addCase = (type) => {
+      const id = nextId(type === "permanent" ? "G" : "Q", d.load_cases.map((c) => c.id));
+      d.load_cases.push(type === "permanent" ? { id, name: "Permanent load", type, loads: [] } : { id, name: "Imposed load", type, category: "B", loads: [] });
+      S.activeCase = id; renderEditor(); schedule();
+    };
+    $("#add-case-g").onclick = () => addCase("permanent");
+    $("#add-case-q").onclick = () => addCase("variable");
+    const c = d.load_cases.find((x) => x.id === S.activeCase);
+    if (!c) return;
+    c.loads = c.loads || [];
+    ed.querySelectorAll("[data-add-load]").forEach((b) => b.onclick = () => {
+      const t = b.dataset.addLoad, m0 = d.members[0] ? d.members[0].id : null;
+      if (t === "udl") c.loads.push({ type: "udl", member: S.selMember || m0, w: -10 });
+      else if (t === "point") c.loads.push({ type: "point", member: S.selMember || m0, p: -20, a: 1.0 });
+      else c.loads.push({ type: "nodal", node: d.nodes[d.nodes.length - 1].id, fx: 10, fy: 0, mz: 0 });
+      renderEditor(); schedule();
+    });
+    ed.querySelectorAll("[data-l]").forEach((el) => {
+      el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+        const l = c.loads[+el.dataset.l], f = el.dataset.f;
+        if (f === "member" || f === "node" || f === "direction") l[f] = el.value;
+        else if (f === "a" || f === "b") { if (el.value === "") delete l[f]; else { const v = numVal(el); if (v === null) return; l[f] = v; } }
+        else { const v = numVal(el); if (v === null) return; l[f] = v; }
+        schedule();
+      });
+    });
+    ed.querySelectorAll("[data-del-load]").forEach((b) => b.onclick = () => { c.loads.splice(+b.dataset.delLoad, 1); renderEditor(); schedule(); });
+  }
+
+  function bindSettings() {
+    const d = S.data; d.design = d.design || {};
+    $$("#editor [data-f]").forEach((el) => el.addEventListener("change", () => {
+      const f = el.dataset.f;
+      if (f === "stations_per_member") { const v = numVal(el); if (v && v >= 4 && v <= 200) d.design[f] = Math.round(v); }
+      else d.design[f] = el.value;
+      schedule();
+    }));
+    $$("#editor [data-ndp]").forEach((el) => el.addEventListener("input", () => {
+      d.design.params = d.design.params || {};
+      const v = numVal(el);
+      if (v === null || v <= 0) delete d.design.params[el.dataset.ndp]; else d.design.params[el.dataset.ndp] = v;
+      schedule();
+    }));
+  }
+
+  // ------------------------------------------------------------ drawing
+  function renderSource() {
+    const sel = $("#source");
+    if (!S.result) { sel.innerHTML = ""; return; }
+    const r = S.result, cs = r.combos.combos;
+    const opts = [["env", "ULS envelope (all combinations)"]]
+      .concat(r.combos.caseIds.map((c) => [`case:${c}`, `Load case ${c}, characteristic`]))
+      .concat(cs.filter((c) => c.kind === "ULS").map((c) => [`combo:${c.id}`, `${c.id}: ${c.label}`]))
+      .concat(cs.filter((c) => c.kind === "SLS_char").map((c) => [`combo:${c.id}`, `${c.id} (characteristic): ${c.label}`]))
+      .concat(cs.filter((c) => c.kind === "SLS_qp").map((c) => [`combo:${c.id}`, `${c.id} (quasi-permanent): ${c.label}`]));
+    if (!opts.some(([v]) => v === S.source)) S.source = "env";
+    sel.innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}"${v === S.source ? " selected" : ""}>${esc(l)}</option>`).join("");
+  }
+  function sourceSeries(mid, q) {
+    const r = S.result;
+    if (S.source === "env") return { max: r.envelopes[mid].max[q], min: r.envelopes[mid].min[q] };
+    if (S.source.startsWith("case:")) return { one: r.cases[S.source.slice(5)].members[mid][q] };
+    const c = r.combos.combos.find((x) => x.id === S.source.slice(6));
+    const arrs = r.combos.caseIds.map((cid) => r.cases[cid].members[mid][q]);
+    return { one: arrs[0].map((_, j) => c.factors.reduce((s, f, k) => s + f * arrs[k][j], 0)) };
+  }
+  function sourceFactors() {
+    const r = S.result;
+    if (S.source.startsWith("case:")) return r.combos.caseIds.map((c) => (c === S.source.slice(5) ? 1 : 0));
+    if (S.source.startsWith("combo:")) return r.combos.combos.find((x) => x.id === S.source.slice(6)).factors;
+    // envelope: show the characteristic combination with the largest displacement
+    let best = null, bv = -1;
+    for (const c of r.combos.combos.filter((x) => x.kind === "SLS_char")) {
+      let v = 0;
+      r.model && Object.keys(r.model.nodes).forEach((_, k) => {
+        const dx = c.factors.reduce((s, f, j) => s + f * r.cases[r.combos.caseIds[j]].displacements[k][0], 0);
+        const dy = c.factors.reduce((s, f, j) => s + f * r.cases[r.combos.caseIds[j]].displacements[k][1], 0);
+        v = Math.max(v, Math.hypot(dx, dy));
+      });
+      Object.keys(r.model.members).forEach((mid) => {
+        const vv = r.combos.caseIds.map((cid) => r.cases[cid].members[mid].v);
+        vv[0].forEach((_, j) => { v = Math.max(v, Math.abs(c.factors.reduce((s, f, k) => s + f * vv[k][j], 0))); });
+      });
+      if (v > bv) { bv = v; best = c; }
+    }
+    S._defCombo = best;
+    return best.factors;
+  }
+
+  function memberMaxUtil(mid) {
+    const lst = S.result.checks[mid] || [];
+    let u = 0, st = "pass";
+    for (const c of lst) {
+      if (c.status === "fail") st = "fail"; else if (c.status === "not_covered" && st !== "fail") st = "not_covered";
+      if (c.utilisation != null && (c.status === "pass" || c.status === "fail")) u = Math.max(u, isFinite(c.utilisation) ? c.utilisation : 9.99);
+    }
+    return { u, st };
+  }
+
+  const NS = "http://www.w3.org/2000/svg";
+  function renderDrawing() {
+    $$(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.view === S.view)));
+    const svg = $("#svg"), box = $("#canvas").getBoundingClientRect();
+    const W = Math.max(box.width, 300), H = Math.max(box.height, 260);
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const banner = $("#banner");
+    if (S.error) { banner.hidden = false; banner.textContent = S.error; } else banner.hidden = true;
+    const d = S.data;
+    const nodes = Object.fromEntries(d.nodes.filter((n) => isFinite(n.x) && isFinite(n.y)).map((n) => [n.id, n]));
+    const xs = Object.values(nodes).map((n) => n.x), ys = Object.values(nodes).map((n) => n.y);
+    if (!xs.length) { svg.innerHTML = ""; return; }
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const size = Math.max(x1 - x0, y1 - y0, 1);
+    const pad = { l: 64, r: 64, t: 64, b: 72 };
+    const extra = 0.10 * size;
+    const s = Math.min((W - pad.l - pad.r) / Math.max(x1 - x0 + 2 * extra, 1e-9), (H - pad.t - pad.b) / Math.max(y1 - y0 + 2 * extra, 1e-9));
+    const ox = pad.l + (W - pad.l - pad.r) / 2 - (x0 + x1) / 2 * s;
+    const oy = pad.t + (H - pad.t - pad.b) / 2 + (y0 + y1) / 2 * s;
+    const P = (x, y) => [ox + x * s, oy - y * s];
+    const parts = [];
+    const cssv = (n) => `var(--${n})`;
+    // dimension chains (model view): horizontal below the structure, vertical to the left
+    if (S.view === "model") {
+      const ux = Array.from(new Set(xs.map((v) => Math.round(v * 1000) / 1000))).sort((a, b) => a - b);
+      const uy = Array.from(new Set(ys.map((v) => Math.round(v * 1000) / 1000))).sort((a, b) => a - b);
+      const dimCol = cssv("ink-3");
+      if (ux.length > 1) {
+        const yy = P(0, y0)[1] + 52;
+        parts.push(`<line x1="${P(ux[0], 0)[0]}" x2="${P(ux[ux.length - 1], 0)[0]}" y1="${yy}" y2="${yy}" stroke="${dimCol}" stroke-width="0.8"/>`);
+        ux.forEach((v, k) => {
+          const px = P(v, 0)[0];
+          parts.push(`<line x1="${px - 4}" y1="${yy + 4}" x2="${px + 4}" y2="${yy - 4}" stroke="${dimCol}" stroke-width="1.2"/><line x1="${px}" y1="${yy - 8}" x2="${px}" y2="${yy + 8}" stroke="${dimCol}" stroke-width="0.6"/>`);
+          if (k) parts.push(`<text x="${(px + P(ux[k - 1], 0)[0]) / 2}" y="${yy - 5}" text-anchor="middle" font-size="11" fill="${dimCol}" font-family="var(--font-num)">${+(v - ux[k - 1]).toFixed(3)}</text>`);
+        });
+      }
+      if (uy.length > 1) {
+        const xx = P(x0, 0)[0] - 46;
+        parts.push(`<line x1="${xx}" x2="${xx}" y1="${P(0, uy[0])[1]}" y2="${P(0, uy[uy.length - 1])[1]}" stroke="${dimCol}" stroke-width="0.8"/>`);
+        uy.forEach((v, k) => {
+          const py = P(0, v)[1];
+          parts.push(`<line x1="${xx - 4}" y1="${py + 4}" x2="${xx + 4}" y2="${py - 4}" stroke="${dimCol}" stroke-width="1.2"/><line x1="${xx - 8}" y1="${py}" x2="${xx + 8}" y2="${py}" stroke="${dimCol}" stroke-width="0.6"/>`);
+          if (k) { const my = (py + P(0, uy[k - 1])[1]) / 2; parts.push(`<text x="${xx - 6}" y="${my}" text-anchor="middle" font-size="11" fill="${dimCol}" font-family="var(--font-num)" transform="rotate(-90 ${xx - 6} ${my})">${+(v - uy[k - 1]).toFixed(3)}</text>`); }
+        });
+      }
+    }
+    const R = S.result && !S.error ? S.result : null;
+    const legend = [];
+    // members (base line); selected member highlighted
+    const memLines = [];
+    for (const m of d.members) {
+      const a = nodes[m.i], b = nodes[m.j];
+      if (!a || !b) continue;
+      const [ax, ay] = P(a.x, a.y), [bx, by] = P(b.x, b.y);
+      let color = cssv("ink"), width = 2.4;
+      if (S.view !== "model" && S.view !== "util") { color = cssv("ink-3"); width = 1.6; }
+      if (S.view === "util" && R && R.checks[m.id]) {
+        const { u, st } = memberMaxUtil(m.id);
+        color = st === "fail" ? cssv("bad") : st === "not_covered" ? cssv("nc") : cssv("ok");
+        width = 5;
+        const mx = (ax + bx) / 2, my = (ay + by) / 2;
+        const off = Math.abs(by - ay) < 1 ? -14 : 0, offx = Math.abs(by - ay) < 1 ? 0 : 14;
+        parts.push(`<text x="${mx + offx}" y="${my + off}" text-anchor="${offx ? "start" : "middle"}" font-size="12.5" font-weight="600" fill="${color}" font-family="var(--font-num)">η ${u.toFixed(2)}</text>`);
+      }
+      if (m.id === S.selMember) memLines.push(`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${cssv("mark")}" stroke-width="14" stroke-linecap="round" opacity="0.85"/>`);
+      memLines.push(`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${color}" stroke-width="${width}" stroke-linecap="round"/>`);
+      memLines.push(`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="18" data-member="${esc(m.id)}" style="cursor:pointer"><title>${esc(m.id)}</title></line>`);
+      const L = Math.hypot(bx - ax, by - ay);
+      for (const [end, rel] of [["i", (m.releases || {}).i], ["j", (m.releases || {}).j]]) {
+        if (!rel || L < 1) continue;
+        const t = end === "i" ? 9 / L : 1 - 9 / L;
+        memLines.push(`<circle cx="${ax + (bx - ax) * t}" cy="${ay + (by - ay) * t}" r="4.2" fill="${cssv("sheet")}" stroke="${color}" stroke-width="1.6"/>`);
+      }
+    }
+    // diagrams
+    const diag = [];
+    if (R && ["M", "V", "N"].includes(S.view)) {
+      const q = S.view;
+      let vmax = 0;
+      const series = {};
+      for (const mid of Object.keys(R.model.members)) {
+        series[mid] = sourceSeries(mid, q);
+        for (const arr of Object.values(series[mid])) for (const v of arr) vmax = Math.max(vmax, Math.abs(v));
+      }
+      const amp = Math.max(0.13 * size * s, Math.min(0.16 * (H - pad.t - pad.b), 110));
+      const sign = q === "M" ? -1 : 1;
+      const labels = [];
+      if (vmax > 1e-9) for (const [mid, ser] of Object.entries(series)) {
+        const [L, c, sn] = R.model.geometry(mid);
+        const a = R.model.nodes[R.model.members[mid].i];
+        const x = R.analysis.stations[mid].x;
+        for (const [key, arr] of Object.entries(ser)) {
+          const col = key === "min" ? cssv("plot-neg") : cssv("plot-pos");
+          if (Math.max(...arr.map(Math.abs)) < 1e-9 * vmax) continue;
+          const pts = arr.map((v, k) => { const off = sign * v / vmax * amp / s; return P(a.x + c * x[k] - sn * off, a.y + sn * x[k] + c * off); });
+          const [sx, sy] = P(a.x, a.y), [ex, ey] = P(a.x + c * L, a.y + sn * L);
+          if (key === "one") {
+            // colour by sign: draw positive and negative parts separately
+            const poly = [[sx, sy]].concat(pts, [[ex, ey]]).map((p) => p.join(",")).join(" ");
+            diag.push(`<polygon points="${poly}" fill="${cssv("plot-pos")}" fill-opacity="0.10" stroke="${cssv("plot-pos")}" stroke-width="1.4"/>`);
+          } else {
+            const poly = [[sx, sy]].concat(pts, [[ex, ey]]).map((p) => p.join(",")).join(" ");
+            diag.push(`<polygon points="${poly}" fill="${col}" fill-opacity="0.10" stroke="${col}" stroke-width="1.4"/>`);
+          }
+          let kmax = 0, kmin = 0;
+          arr.forEach((v, k) => { if (v > arr[kmax]) kmax = k; if (v < arr[kmin]) kmin = k; });
+          for (const k of [kmax, kmin]) if (Math.abs(arr[k]) > 0.03 * vmax) labels.push([pts[k], arr[k], key === "min" || (key === "one" && arr[k] < 0) ? "plot-neg" : "plot-pos"]);
+        }
+      }
+      const placed = [];
+      labels.sort((p, q2) => Math.abs(q2[1]) - Math.abs(p[1]));
+      for (const [[px, py], v, col] of labels) {
+        if (placed.some(([qx, qy]) => Math.abs(px - qx) < 52 && Math.abs(py - qy) < 16)) continue;
+        placed.push([px, py]);
+        diag.push(`<text x="${px}" y="${py + (v * (q === "M" ? 1 : -1) > 0 ? 16 : -6)}" text-anchor="middle" font-size="12" font-weight="600" fill="${cssv(col)}" font-family="var(--font-num)" paint-order="stroke" stroke="${cssv("sheet")}" stroke-width="3">${v.toFixed(1)}</text>`);
+      }
+      const unit = q === "M" ? "kNm" : "kN";
+      if (S.source === "env") legend.push(`<span><i style="background:var(--plot-pos)"></i>maximum</span><span><i style="background:var(--plot-neg)"></i>minimum</span>`);
+      legend.push(`<span>${q === "M" ? "Bending moment, drawn on the tension side" : q === "V" ? "Shear force" : "Axial force, tension positive"} [${unit}]</span>`);
+    }
+    if (R && S.view === "def") {
+      const F = sourceFactors();
+      let dmax = 0;
+      const shapes = [];
+      for (const mid of Object.keys(R.model.members)) {
+        const [, c, sn] = R.model.geometry(mid);
+        const a = R.model.nodes[R.model.members[mid].i];
+        const x = R.analysis.stations[mid].x;
+        const comb = (q) => x.map((_, j) => F.reduce((sum, f, k) => sum + f * R.cases[R.combos.caseIds[k]].members[mid][q][j], 0));
+        const u = comb("u"), v = comb("v");
+        const gx = u.map((uu, j) => c * uu - sn * v[j]), gy = u.map((uu, j) => sn * uu + c * v[j]);
+        gx.forEach((_, j) => { dmax = Math.max(dmax, Math.hypot(gx[j], gy[j])); });
+        shapes.push({ a, c, sn, x, gx, gy, vmin: Math.min(...v), vmax: Math.max(...v) });
+      }
+      const mag = dmax > 0 ? 0.08 * size / dmax : 1;
+      for (const sh of shapes) {
+        const pts = sh.x.map((xx, j) => P(sh.a.x + sh.c * xx + mag * sh.gx[j], sh.a.y + sh.sn * xx + mag * sh.gy[j]).join(",")).join(" ");
+        diag.push(`<polyline points="${pts}" fill="none" stroke="${cssv("plot-def")}" stroke-width="2.2"/>`);
+      }
+      const lab = S.source === "env" && S._defCombo ? `${S._defCombo.id}, the characteristic combination with the largest displacement` : $("#source").selectedOptions[0]?.textContent || "";
+      legend.push(`<span><i style="background:var(--plot-def)"></i>Short-term elastic deflection, max ${(dmax * 1000).toFixed(2)} mm, drawn ×${mag.toFixed(0)} · ${esc(lab)}</span>`);
+    }
+    if (S.view === "util" && R) legend.push(`<span><i style="background:var(--ok)"></i>all checks pass</span><span><i style="background:var(--bad)"></i>a check fails</span><span><i style="background:var(--nc)"></i>not covered</span>`);
+    // loads of the active case (model view)
+    const loadsSvg = [];
+    if (S.view === "model") {
+      const c = d.load_cases.find((x) => x.id === S.activeCase);
+      if (c) {
+        const lens = [];
+        const arrow = (x, y, dx, dy, len, col) => {
+          const n = Math.hypot(dx, dy) || 1, ux = dx / n, uy = dy / n;
+          const tx = x - ux * len, ty = y - uy * len;
+          return `<line x1="${tx}" y1="${ty}" x2="${x - ux * 2}" y2="${y - uy * 2}" stroke="${col}" stroke-width="1.4"/><path d="M${x},${y} l${-ux * 8 - uy * 3.5},${-uy * 8 + ux * 3.5} l${uy * 7},${-ux * 7} z" fill="${col}"/>`;
+        };
+        const col = cssv("plot-neg");
+        const memberById = Object.fromEntries(d.members.map((m) => [m.id, m]));
+        for (const l of c.loads || []) {
+          if (l.type === "nodal") {
+            const n = nodes[l.node]; if (!n) continue;
+            const [px, py] = P(n.x, n.y);
+            if (l.fx) { loadsSvg.push(arrow(px, py, Math.sign(l.fx), 0, 44, col)); loadsSvg.push(`<text x="${px - Math.sign(l.fx) * 50}" y="${py - 6}" text-anchor="middle" font-size="11.5" fill="${col}" font-family="var(--font-num)">${Math.abs(l.fx)} kN</text>`); }
+            if (l.fy) { loadsSvg.push(arrow(px, py, 0, -Math.sign(l.fy), 44, col)); loadsSvg.push(`<text x="${px + 6}" y="${py + Math.sign(l.fy) * 50}" font-size="11.5" fill="${col}" font-family="var(--font-num)">${Math.abs(l.fy)} kN</text>`); }
+            if (l.mz) loadsSvg.push(`<path d="M${px - 14},${py - 4} A15,15 0 1 1 ${px + 4},${py + 14}" fill="none" stroke="${col}" stroke-width="1.4"/><text x="${px + 18}" y="${py + 18}" font-size="11.5" fill="${col}" font-family="var(--font-num)">${l.mz} kNm</text>`);
+            continue;
+          }
+          const m = memberById[l.member]; if (!m || !nodes[m.i] || !nodes[m.j]) continue;
+          const a = nodes[m.i], b = nodes[m.j], L = Math.hypot(b.x - a.x, b.y - a.y);
+          if (L <= 0) continue;
+          const c2 = (b.x - a.x) / L, s2 = (b.y - a.y) / L;
+          const dirVec = (dir, w) => dir === "global_x" ? [Math.sign(w), 0] : dir === "local_x" ? [c2 * Math.sign(w), s2 * Math.sign(w)] : dir === "local_y" ? [-s2 * Math.sign(w), c2 * Math.sign(w)] : [0, Math.sign(w)];
+          if (l.type === "point") {
+            const [dx, dy] = dirVec(l.direction || "global_y", l.p);
+            const [px, py] = P(a.x + c2 * l.a, a.y + s2 * l.a);
+            loadsSvg.push(arrow(px, py, dx, -dy, 46, col));
+            loadsSvg.push(`<text x="${px - dx * 52 + 4}" y="${py + dy * 52 - 4}" font-size="11.5" fill="${col}" font-family="var(--font-num)">${Math.abs(l.p)} kN</text>`);
+          } else {
+            const w1 = "w" in l ? l.w : l.w1, w2 = "w" in l ? l.w : l.w2;
+            const aa = l.a ?? 0, bb = l.b ?? L;
+            const wref = Math.max(Math.abs(w1), Math.abs(w2)) || 1;
+            const [dx, dy] = dirVec(l.direction || "global_y", w1 || w2);
+            const nArr = Math.max(3, Math.round((bb - aa) * s / 26));
+            const tops = [];
+            for (let k = 0; k <= nArr; k++) {
+              const t = aa + (bb - aa) * k / nArr, w = w1 + (w2 - w1) * k / nArr;
+              const len = 10 + 26 * Math.abs(w) / wref;
+              const [px, py] = P(a.x + c2 * t, a.y + s2 * t);
+              loadsSvg.push(arrow(px, py, dx, -dy, len, col));
+              tops.push([px - dx * len, py + dy * len]);
+            }
+            loadsSvg.push(`<polyline points="${tops.map((p) => p.join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="1.2"/>`);
+            const mid = tops[Math.floor(tops.length / 2)];
+            loadsSvg.push(`<text x="${mid[0] + 4}" y="${mid[1] - 6}" font-size="11.5" fill="${col}" font-family="var(--font-num)">${w1 === w2 ? Math.abs(w1) : `${Math.abs(w1)}…${Math.abs(w2)}`} kN/m</text>`);
+          }
+        }
+        if (c.self_weight) legend.push(`<span>Self weight acts in ${esc(c.id)} but is not drawn</span>`);
+        legend.unshift(`<span><i style="background:var(--plot-neg)"></i>Loads in ${esc(c.id)}${c.name ? `, ${esc(c.name)}` : ""}</span>`);
+      }
+    }
+    // supports and nodes
+    const sup = [];
+    for (const sp of d.supports || []) {
+      const n = nodes[sp.node]; if (!n) continue;
+      const [x, y] = P(n.x, n.y), ink = cssv("ink");
+      if (sp.ux && sp.uy && sp.rz) {
+        sup.push(`<rect x="${x - 15}" y="${y + 2}" width="30" height="5" fill="${ink}"/>`);
+        for (let k = 0; k < 5; k++) sup.push(`<line x1="${x - 13 + k * 6.5}" y1="${y + 7}" x2="${x - 18 + k * 6.5}" y2="${y + 13}" stroke="${ink}" stroke-width="1"/>`);
+      } else if (sp.ux || sp.uy) {
+        sup.push(`<path d="M${x},${y + 2} l-10,15 h20 z" fill="${cssv("sheet")}" stroke="${ink}" stroke-width="1.5"/>`);
+        if (!sp.ux) sup.push(`<line x1="${x - 12}" y1="${y + 21}" x2="${x + 12}" y2="${y + 21}" stroke="${ink}" stroke-width="1.5"/>`);
+        else for (let k = 0; k < 4; k++) sup.push(`<line x1="${x - 10 + k * 6.5}" y1="${y + 17}" x2="${x - 14 + k * 6.5}" y2="${y + 22}" stroke="${ink}" stroke-width="1"/>`);
+      }
+      if (sp.kx || sp.ky || sp.kr) sup.push(`<path d="M${x},${y + 2} l0,4 l-5,3 l10,4 l-10,4 l10,4 l-5,3 l0,4" fill="none" stroke="${ink}" stroke-width="1.3"/>`);
+    }
+    const nodeSvg = [];
+    for (const n of Object.values(nodes)) {
+      const [x, y] = P(n.x, n.y);
+      nodeSvg.push(`<circle cx="${x}" cy="${y}" r="2.8" fill="${cssv("ink")}"/><text x="${x - 7}" y="${y - 9}" text-anchor="end" font-size="11.5" fill="${cssv("ink-3")}">${esc(n.id)}</text>`);
+    }
+    const labelsSvg = [];
+    if (S.view === "model") for (const m of d.members) {
+      const a = nodes[m.i], b = nodes[m.j]; if (!a || !b) continue;
+      const [ax, ay] = P(a.x, a.y), [bx, by] = P(b.x, b.y);
+      const horiz = Math.abs(by - ay) < Math.abs(bx - ax);
+      const right = !horiz && (ax + bx) / 2 > W * 0.6;
+      const mx = (ax + bx) / 2 + (horiz ? 0 : right ? -12 : 12), my = (ay + by) / 2 + (horiz ? 22 : 0);
+      labelsSvg.push(`<text x="${mx}" y="${my}" text-anchor="${horiz ? "middle" : right ? "end" : "start"}" font-size="12" font-weight="600" fill="${cssv("ink-2")}" font-family="var(--font-display)">${esc(m.id)} · ${esc(m.section)}</text>`);
+    }
+    svg.innerHTML = parts.join("") + diag.join("") + memLines.join("") + sup.join("") + nodeSvg.join("") + loadsSvg.join("") + labelsSvg.join("");
+    svg.querySelectorAll("[data-member]").forEach((el) => el.addEventListener("click", () => selectMember(el.dataset.member)));
+    $("#legend").innerHTML = S.error ? "" : legend.join("");
+    const viewName = { model: "Model and loads", M: "Bending moment", V: "Shear force", N: "Axial force", def: "Deflected shape", util: "Utilisation" }[S.view];
+    const srcName = S.source === "env" ? "ULS envelope" : S.source.startsWith("case:") ? `Load case ${S.source.slice(5)}` : S.source.slice(6);
+    $("#titleblock").innerHTML = `<div class="tb-name">${esc(d.name || "Untitled model")}</div><div>View</div><div>${viewName}</div><div>Results</div><div>${S.view === "model" ? "–" : esc(srcName)}</div><div>Code</div><div>${(d.design || {}).design_code === "SIA262" ? "SIA 262" : "EN 1992-1-1"}</div>`;
+  }
+
+  function setView(v) { S.view = v; try { localStorage.setItem("tragwerk.view", v); } catch (e) { /* storage unavailable */ } renderDrawing(); }
+  function selectMember(mid) {
+    S.selMember = S.selMember === mid ? null : mid;
+    if (S.rtab !== "checks") { S.rtab = "checks"; }
+    renderDrawing(); renderResults();
+    if (S.tab === "geometry") $$("#editor [data-mrow]").forEach((row) => row.classList.toggle("active", row.dataset.mrow === S.selMember));
+    const el = S.selMember && $(`#results [data-mblock="${CSS.escape(S.selMember)}"]`);
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  // ------------------------------------------------------------ results
+  function ubar(u, st) {
+    if (u == null) return `<span class="ubar"><b class="num" style="font-weight:500">–</b></span>`;
+    const w = isFinite(u) ? Math.min(u, 1) * 100 : 100;
+    const col = st === "fail" ? "var(--bad)" : st === "pass" ? "var(--ok)" : "var(--nc)";
+    return `<span class="ubar">${isFinite(u) ? u.toFixed(3) : "∞"}<span><i style="width:${w}%;background:${col}"></i></span></span>`;
+  }
+  function renderResults() {
+    $$(".rtabs .tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.rtab === S.rtab)));
+    const sum = $("#summary"), out = $("#results");
+    if (S.error || !S.result) {
+      sum.innerHTML = `<div class="empty"><b>The model cannot be analysed yet.</b><br>${esc(S.error || "")}</div>`;
+      out.innerHTML = "";
+      return;
+    }
+    const r = S.result, s = r.summary;
+    const counts = ["ULS", "SLS_char", "SLS_freq", "SLS_qp"].map((k) => r.combos.combos.filter((c) => c.kind === k).length);
+    sum.innerHTML = `<div class="summary"><span class="big" style="color:${s.status === "fail" ? "var(--bad)" : s.status === "pass" ? "var(--ok)" : "var(--nc)"}">${s.max_utilisation != null ? s.max_utilisation.toFixed(3) : "–"}</span>
+      <span>${pill(s.status)} <span class="gov">${s.status === "pass" ? "All checks pass" : s.status === "fail" ? "At least one check fails" : "Some checks are not covered"}</span></span>
+      <span class="gov">${s.governing ? `Governing: ${esc(s.governing.member)}, ${esc(s.governing.check.toLowerCase())} (${esc(s.governing.clause.replace("EN 1992-1-1 ", ""))}).` : ""} ${counts[0]} ULS and ${counts[1] + counts[2] + counts[3]} SLS combinations, ${s.runtime_ms.toFixed(0)} ms.</span></div>
+      ${r.warnings.map((w) => `<div class="banner" style="position:static;margin:8px 12px 0;background:var(--nc-bg);color:var(--nc)">${esc(w)}</div>`).join("")}`;
+    if (S.rtab === "checks") {
+      out.innerHTML = Object.entries(r.checks).map(([mid, lst]) => {
+        const { u, st } = memberMaxUtil(mid);
+        const m = r.model.members[mid];
+        return `<div class="member-block" data-mblock="${esc(mid)}"><button class="member-hd${mid === S.selMember ? " sel" : ""}" data-msel="${esc(mid)}"><span><b>${esc(mid)}</b> <span class="meta">${esc(m.design.type)} · ${esc(m.section)}</span></span><span>${lst.length ? ubar(u, st) : `<span class="meta">not designed</span>`}</span></button>
+          ${lst.map((c, k) => { const key = `${mid}|${k}`; const open = S.openCheck === key; return `<button class="crow" aria-expanded="${open}" data-open="${esc(key)}"><span>${esc(c.title)}<span class="cl">${esc(c.clause.replace("EN 1992-1-1 ", "EC2 "))}</span></span>${ubar(c.utilisation, c.status)}${pill(c.status)}</button>
+            ${open ? detail(c) : ""}`; }).join("")}</div>`;
+      }).join("");
+      out.querySelectorAll("[data-open]").forEach((b) => b.onclick = () => { S.openCheck = S.openCheck === b.dataset.open ? null : b.dataset.open; S.selMember = b.dataset.open.split("|")[0]; renderResults(); renderDrawing(); });
+      out.querySelectorAll("[data-msel]").forEach((b) => b.onclick = () => selectMember(b.dataset.msel));
+    } else if (S.rtab === "reactions") {
+      const ids = r.combos.caseIds;
+      const rows = [];
+      for (const [nid, rr] of Object.entries(r.reactions)) {
+        ["R<sub>x</sub> [kN]", "R<sub>y</sub> [kN]", "M<sub>z</sub> [kNm]"].forEach((lab, q) => {
+          const vals = ids.map((c) => rr.per_case[c][q]);
+          if (vals.every((v) => Math.abs(v) < 1e-9) && Math.abs(rr.uls_max[q]) < 1e-9 && Math.abs(rr.uls_min[q]) < 1e-9) return;
+          rows.push(`<tr><td>${esc(nid)} ${lab}</td>${vals.map((v) => `<td>${f3(v)}</td>`).join("")}<td>${f3(rr.uls_max[q])}</td><td>${f3(rr.uls_min[q])}</td></tr>`);
+        });
+      }
+      const eq = Object.entries(r.cases).map(([cid, cr]) => Math.max(...Object.values(cr.equilibrium).map(Math.abs)));
+      out.innerHTML = `<div style="padding:10px 12px" class="group"><p class="hint">Characteristic values per load case and the ULS envelope. Reactions act on the structure; y is up.</p>
+        <div class="scroll-x"><table class="data"><thead><tr><th>Support</th>${ids.map((c) => `<th>${esc(c)}</th>`).join("")}<th>ULS max</th><th>ULS min</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
+        <p class="hint">Equilibrium self-check: largest residual ${Math.max(...eq).toExponential(1)} kN over all load cases.</p></div>`;
+    } else {
+      out.innerHTML = `<div style="padding:10px 12px"><p class="hint">EN 1990, recommended ψ factors. Every variable load case is switched on and off and takes a turn as the leading action.</p>
+        <table class="data"><thead><tr><th>Id</th><th style="text-align:left">Combination</th></tr></thead><tbody>${r.combos.combos.map((c) => `<tr><td>${esc(c.id)}</td><td style="text-align:left;font-family:var(--font-num)">${esc(c.label)}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+  }
+  function detail(c) {
+    const where = [];
+    if (c.x != null) where.push(`at x = ${c.x.toFixed(2)} m from the start node`);
+    if (c.combination) where.push(`in ${esc(c.combination)}: ${esc(c.combination_label)}`);
+    return `<div class="detail">${where.length ? `<div class="where">Governing ${where.join(", ")}.</div>` : ""}
+      ${c.steps.length ? `<table class="steps"><tbody>${c.steps.map((s) => `<tr><td class="sym">${mk(s.symbol)}</td><td>${mk(s.expression)}${s.substituted ? `<span class="subst">= ${mk(s.substituted)}</span>` : ""}${s.clause ? `<span class="ref">${esc(s.clause)}</span>` : ""}</td><td class="val">${f3(s.value)} ${mk(s.unit)}</td></tr>`).join("")}</tbody></table>` : ""}
+      ${c.notes.length ? `<ul class="notes">${c.notes.map((n) => `<li>${mk(n)}</li>`).join("")}</ul>` : ""}</div>`;
+  }
+
+  // ------------------------------------------------------------ misc UI
+  let toastTimer = null;
+  function toast(msg) {
+    let el = $(".toast");
+    if (!el) { el = document.createElement("div"); el.className = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+  }
+  function openDrawer() {
+    $("#json-text").value = JSON.stringify(S.data, null, 2);
+    $("#json-msg").textContent = "";
+    $("#drawer").hidden = false; $("#json-text").focus();
+  }
+
+  function init() {
+    const presets = window.TRAGWERK_EXAMPLES || {};
+    const names = { two_span_beam: "Two-span beam", portal_frame: "Portal frame with wind", cantilever: "Balcony cantilever" };
+    $("#preset").innerHTML = `<option value="" disabled>Examples</option>` + Object.keys(presets).map((k) => `<option value="${k}">${esc(names[k] || k)}</option>`).join("");
+    $("#preset").onchange = (e) => { if (presets[e.target.value]) load(presets[e.target.value]); };
+    $$(".tabs .tab").forEach((t) => t.onclick = () => { S.tab = t.dataset.tab; renderEditor(); });
+    $$(".rtabs .tab").forEach((t) => t.onclick = () => { S.rtab = t.dataset.rtab; renderResults(); });
+    $$(".chip").forEach((c) => c.onclick = () => setView(c.dataset.view));
+    $("#source").onchange = (e) => { S.source = e.target.value; renderDrawing(); };
+    $("#model-name").addEventListener("input", (e) => { S.data.name = e.target.value; renderDrawing(); });
+    $("#btn-json").onclick = openDrawer;
+    $("#drawer-close").onclick = () => { $("#drawer").hidden = true; };
+    $("#drawer").addEventListener("click", (e) => { if (e.target.id === "drawer") $("#drawer").hidden = true; });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#drawer").hidden = true; });
+    $("#json-copy").onclick = () => {
+      const t = $("#json-text");
+      navigator.clipboard.writeText(t.value).then(() => { $("#json-msg").textContent = "Copied."; }, () => { t.select(); $("#json-msg").textContent = "Select all and copy with your keyboard."; });
+    };
+    $("#json-load").onclick = () => {
+      try { const data = JSON.parse($("#json-text").value); T.parseModel(data); load(data); $("#drawer").hidden = true; toast("Model loaded."); }
+      catch (e) { $("#json-msg").textContent = `Not loaded: ${e.message}`; }
+    };
+    new ResizeObserver(() => renderDrawing()).observe($("#canvas"));
+    const first = presets.two_span_beam || Object.values(presets)[0];
+    $("#preset").value = "two_span_beam";
+    load(first);
+  }
+  init();
+})();
+</script>

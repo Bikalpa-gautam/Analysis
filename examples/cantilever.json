@@ -1,0 +1,29 @@
+{
+  "schema": "tragwerk/0.1",
+  "name": "Balcony cantilever with edge load",
+  "materials": {
+    "C25/30": {"type": "concrete", "fck": 25},
+    "B500B": {"type": "rebar", "fyk": 500}
+  },
+  "sections": {
+    "B300x450": {
+      "type": "rc_rect", "b_mm": 300, "h_mm": 450, "concrete": "C25/30", "rebar": "B500B",
+      "cover_mm": 35,
+      "bottom": {"n": 2, "dia_mm": 14}, "top": {"n": 4, "dia_mm": 20},
+      "links": {"dia_mm": 8, "legs": 2, "spacing_mm": 150}
+    }
+  },
+  "nodes": [{"id": "Root", "x": 0, "y": 0}, {"id": "Tip", "x": 2.5, "y": 0}],
+  "supports": [{"node": "Root", "ux": true, "uy": true, "rz": true}],
+  "members": [
+    {"id": "Cantilever", "i": "Root", "j": "Tip", "section": "B300x450",
+     "design": {"type": "beam", "deflection_system": "cantilever"}}
+  ],
+  "load_cases": [
+    {"id": "G", "name": "Self weight, slab strip, parapet", "type": "permanent", "self_weight": true,
+     "loads": [{"type": "udl", "member": "Cantilever", "w": -9.0},
+               {"type": "point", "member": "Cantilever", "p": -12.0, "a": 2.5}]},
+    {"id": "Q", "name": "Balcony imposed load", "type": "variable", "category": "A",
+     "loads": [{"type": "udl", "member": "Cantilever", "w": -6.0}]}
+  ]
+}

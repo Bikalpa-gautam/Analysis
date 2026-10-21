@@ -1,0 +1,46 @@
+{
+  "schema": "tragwerk/0.1",
+  "name": "Single-bay portal frame with wind",
+  "design": {"design_code": "EC2", "combination_rule": "6.10"},
+  "materials": {
+    "C30/37": {"type": "concrete", "fck": 30},
+    "B500B": {"type": "rebar", "fyk": 500}
+  },
+  "sections": {
+    "C400x400": {
+      "type": "rc_rect", "b_mm": 400, "h_mm": 400, "concrete": "C30/37", "rebar": "B500B",
+      "cover_mm": 35,
+      "bottom": {"n": 3, "dia_mm": 20}, "top": {"n": 3, "dia_mm": 20},
+      "links": {"dia_mm": 8, "legs": 2, "spacing_mm": 240}
+    },
+    "B300x600": {
+      "type": "rc_rect", "b_mm": 300, "h_mm": 600, "concrete": "C30/37", "rebar": "B500B",
+      "cover_mm": 30,
+      "bottom": {"n": 4, "dia_mm": 20}, "top": {"n": 3, "dia_mm": 20},
+      "links": {"dia_mm": 10, "legs": 2, "spacing_mm": 200}
+    }
+  },
+  "nodes": [
+    {"id": "A", "x": 0, "y": 0}, {"id": "B", "x": 0, "y": 4.5},
+    {"id": "C", "x": 8, "y": 4.5}, {"id": "D", "x": 8, "y": 0}
+  ],
+  "supports": [
+    {"node": "A", "ux": true, "uy": true, "rz": true},
+    {"node": "D", "ux": true, "uy": true, "rz": true}
+  ],
+  "members": [
+    {"id": "Col L", "i": "A", "j": "B", "section": "C400x400", "design": {"type": "column", "l0_factor": 1.0}},
+    {"id": "Beam", "i": "B", "j": "C", "section": "B300x600", "design": {"type": "beam", "deflection_system": "interior_span"}},
+    {"id": "Col R", "i": "D", "j": "C", "section": "C400x400", "design": {"type": "column", "l0_factor": 1.0}}
+  ],
+  "load_cases": [
+    {"id": "G", "name": "Self weight and roof build-up", "type": "permanent", "self_weight": true,
+     "loads": [{"type": "udl", "member": "Beam", "w": -18.0}]},
+    {"id": "S", "name": "Snow", "type": "variable", "category": "snow",
+     "loads": [{"type": "udl", "member": "Beam", "w": -8.0}]},
+    {"id": "W+", "name": "Wind from the left", "type": "variable", "category": "wind", "group": "wind",
+     "loads": [{"type": "nodal", "node": "B", "fx": 22.0}, {"type": "udl", "member": "Col L", "w": 4.0, "direction": "global_x"}]},
+    {"id": "W-", "name": "Wind from the right", "type": "variable", "category": "wind", "group": "wind",
+     "loads": [{"type": "nodal", "node": "C", "fx": -22.0}, {"type": "udl", "member": "Col R", "w": -4.0, "direction": "global_x"}]}
+  ]
+}
