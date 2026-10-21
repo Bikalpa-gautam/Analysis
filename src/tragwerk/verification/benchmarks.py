@@ -559,3 +559,6 @@ def run_all() -> list[tuple[Benchmark, list[Comparison], str | None]]:
         except Exception as exc:  # report, never hide
             out.append((bm, [], f"{type(exc).__name__}: {exc}"))
     return out
+
+
+from . import benchmarks3d  # noqa: E402,F401  (registers the 3D benchmarks)

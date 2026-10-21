@@ -24,7 +24,8 @@ pytestmark = pytest.mark.skipif(NODE is None, reason="node.js not available")
 
 
 def _variants():
-    models = [json.loads(p.read_text()) for p in sorted((ROOT / "examples").glob("*.json"))]
+    models = [d for d in (json.loads(p.read_text()) for p in sorted((ROOT / "examples").glob("*.json")))
+              if d.get("schema", "tragwerk/0.1") == "tragwerk/0.1"]
     for seed in range(10):
         m = random_frame(seed)
         loads = m["load_cases"][0]["loads"]

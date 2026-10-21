@@ -137,9 +137,36 @@ class RCSection:
         key = int(flip)
         if key not in self._curves:
             ss = np.concatenate([np.linspace(k, k + 1, n, endpoint=(k == 3)) for k in range(4)])
-            pts = np.array([self.boundary_point(s, flip) for s in ss])
-            self._curves[key] = (pts[:, 0], pts[:, 1])
+            et, eb = np.array([self.plane(s, flip) for s in ss]).T
+            self._curves[key] = self.resultants_many(et, eb)
         return self._curves[key]
+
+    def resultants_many(self, et: np.ndarray, eb: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Vectorised :meth:`resultants` for many strain planes (same integration scheme)."""
+        h, c = self.h, self.c
+        de = eb - et
+        safe = np.where(np.abs(de) > 1e-15, de, 1.0)
+        cuts = []
+        for target in (0.0, c.eps_c2):
+            y = (target - et) * h / safe
+            cuts.append(np.where((np.abs(de) > 1e-15) & (y > 0) & (y < h), y, h))
+        knots = np.sort(np.stack([np.zeros_like(et), cuts[0], cuts[1], np.full_like(et, h)], axis=1), axis=1)
+        Nc = np.zeros_like(et)
+        Mc = np.zeros_like(et)
+        for k in range(3):
+            y0, y1 = knots[:, k:k + 1], knots[:, k + 1:k + 2]
+            yg = 0.5 * (y1 - y0) * _GL_X[None, :] + 0.5 * (y1 + y0)
+            wg = 0.5 * (y1 - y0) * _GL_W[None, :]
+            sg = c.sigma(et[:, None] + de[:, None] * yg / h)
+            Nc += self.b * np.sum(wg * sg, axis=1)
+            Mc += self.b * np.sum(wg * sg * (h / 2.0 - yg), axis=1)
+        es = et[:, None] + de[:, None] * self.ys[None, :] / h
+        ss = self.st.sigma(es)
+        if self.displaced:
+            ss = ss - c.sigma(es)
+        Ns = ss @ self.As
+        Ms = (ss * (h / 2.0 - self.ys[None, :])) @ self.As
+        return (Nc + Ns) * 1e-3, (Mc + Ms) * 1e-6
 
     def m_bounds(self, N) -> tuple[np.ndarray, np.ndarray]:
         """Interpolated (M_hi, M_lo) at axial force N (kN, compression +). Fast, approximate."""

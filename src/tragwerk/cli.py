@@ -1,6 +1,7 @@
 """Command-line interface.
 
   tragwerk run MODEL.json [--report R.html] [--pdf R.pdf] [--json R.json]
+  tragwerk building [--spec SPEC.json] --out MODEL.json
   tragwerk verify [--html V.html] [--crosscheck]
   tragwerk serve [--host 127.0.0.1] [--port 8000]
 
@@ -21,10 +22,13 @@ from .solver import StructureUnstable
 
 
 def _run(args) -> int:
+    from .model3d import load_any
     from .project import run, to_dict
+    from .project3d import run3d, to_dict3d
     try:
-        model = load_model(args.model)
-        res = run(model)
+        model = load_any(args.model)
+        is3d = getattr(model, "is3d", False)
+        res = run3d(model) if is3d else run(model)
     except (ModelError, StructureUnstable, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 3
@@ -42,12 +46,15 @@ def _run(args) -> int:
     print(f"result: {status.upper()}" + (f" (max utilisation {gov.utilisation:.3f}: {gov.member}, {gov.title})"
                                           if gov and gov.utilisation is not None and math.isfinite(gov.utilisation) else ""))
     if args.json:
-        Path(args.json).write_text(json.dumps(to_dict(res), indent=1, allow_nan=False))
+        Path(args.json).write_text(json.dumps(to_dict3d(res) if is3d else to_dict(res), indent=1, allow_nan=False))
         print(f"wrote {args.json}")
     if args.report or args.pdf:
         from .report.html import render
+        from .report.html3d import render3d
         from .verification.benchmarks import run_all
-        text = render(res, verification=run_all(), project_info={"author": args.author or "", "project": args.project or "Project"})
+        info = {"author": args.author or "", "project": args.project or "Project"}
+        text = (render3d(res, verification=run_all(), project_info=info, full=args.full) if is3d
+                else render(res, verification=run_all(), project_info=info))
         if args.report:
             Path(args.report).write_text(text, encoding="utf-8")
             print(f"wrote {args.report}")
@@ -56,6 +63,15 @@ def _run(args) -> int:
             html_to_pdf(text, args.pdf, model.name)
             print(f"wrote {args.pdf}")
     return {"pass": 0, "fail": 1}.get(status, 2)
+
+
+def _building(args) -> int:
+    from .building import generate_building
+    spec = json.loads(Path(args.spec).read_text()) if args.spec else None
+    model = generate_building(spec)
+    Path(args.out).write_text(json.dumps(model, indent=1))
+    print(f"wrote {args.out}: {len(model['nodes'])} nodes, {len(model['members'])} members, {len(model['load_cases'])} load cases")
+    return 0
 
 
 def _verify(args) -> int:
@@ -69,7 +85,8 @@ def _verify(args) -> int:
     cross = None
     if args.crosscheck:
         from .verification.crosscheck import run_crosschecks
-        cross = run_crosschecks()
+        from .verification.crosscheck3d import run_crosschecks3d
+        cross = run_crosschecks() + run_crosschecks3d()
         for r in cross:
             print(f"  {r['solver']:<8} frame {r['seed']:>2}: displacements {r['displacement']:.1e}, reactions {r['reaction']:.1e}")
     if args.html:
@@ -98,7 +115,12 @@ def main(argv=None) -> int:
     r.add_argument("--json", help="write all results as JSON")
     r.add_argument("--author")
     r.add_argument("--project")
+    r.add_argument("--full", action="store_true", help="3D: detailed checks for every member")
     r.set_defaults(fn=_run)
+    b = sub.add_parser("building", help="generate a 3D building model from a spec")
+    b.add_argument("--spec", help="JSON file with BuildingSpec fields (defaults for the rest)")
+    b.add_argument("--out", required=True)
+    b.set_defaults(fn=_building)
     v = sub.add_parser("verify", help="run the verification suite")
     v.add_argument("--html", help="write the verification report")
     v.add_argument("--crosscheck", action="store_true", help="also compare with PyNite/OpenSees if installed")
