@@ -7,15 +7,16 @@
 /*__CSS2D__*/
 </style>
 <style>
-/* 3D studio: same drafting-room tokens as the 2D workspace. The building is the
-   hero; the checker's yellow highlighter marks the member under inspection. */
+/* 3D studio: same drafting-room tokens as the 2D workspace. The structure is the
+   hero; the checker's yellow highlighter marks what is selected. */
 .mode { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 .modes { display: inline-flex; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; background: var(--sheet); flex: none; }
 .modes button { border: 0; background: transparent; padding: 0 12px; height: 30px; cursor: pointer; color: var(--ink-2); font-weight: 500; white-space: nowrap; }
 .modes button[aria-selected="true"] { background: var(--ink); color: var(--sheet); }
-.bench3 { grid-template-columns: minmax(290px, 330px) minmax(0, 1fr) minmax(330px, 410px); }
+.bench3 { grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) minmax(330px, 410px); }
+.bench3 .tabs .tab { padding: 6px 2px; font-size: 13.5px; }
 .vtools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; width: 100%; }
-.vtools select { height: 28px; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); max-width: 230px; min-width: 0; }
+.vtools select { height: 28px; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); max-width: 250px; min-width: 0; }
 .vtools label { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
 .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
 .seg button { border: 0; background: var(--sheet); padding: 0 9px; height: 26px; cursor: pointer; font-size: 12.5px; color: var(--ink-2); }
@@ -23,14 +24,25 @@
 .seg button:disabled { opacity: .45; cursor: default; }
 .canvas3 { flex: 1; min-height: 340px; position: relative; overflow: hidden; background: var(--sheet); border-radius: 0 0 6px 6px; }
 .canvas3 canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
-.canvas3 canvas:active { cursor: grabbing; }
+.canvas3[data-tool="node"] canvas, .canvas3[data-tool="member"] canvas { cursor: crosshair; }
+.canvas3[data-tool="box"] canvas { cursor: cell; }
+.canvas3[data-tool="support"] canvas, .canvas3[data-tool="load"] canvas, .canvas3[data-tool="delete"] canvas { cursor: pointer; }
 .canvas3 svg.fallback { position: absolute; inset: 0; width: 100%; height: 100%; }
 .views { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 2px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: 2px; z-index: 2; }
 .views button { border: 0; background: transparent; padding: 3px 8px; font-size: 12px; cursor: pointer; border-radius: 3px; color: var(--ink-2); }
 .views button[aria-pressed="true"] { background: var(--paper); color: var(--ink); font-weight: 600; }
 .views button:hover { color: var(--ink); }
-.legend3 { position: absolute; left: 10px; top: 8px; max-width: min(430px, calc(100% - 20px)); font-size: 12px; color: var(--ink-2); pointer-events: none; background: color-mix(in srgb, var(--sheet) 82%, transparent); border-radius: 4px; padding: 4px 6px; z-index: 2; }
+.toolbar { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 2px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 3px; z-index: 3; }
+.toolbar button { width: 32px; height: 32px; border: 0; border-radius: 4px; background: transparent; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+.toolbar button:hover { background: var(--paper); color: var(--ink); }
+.toolbar button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
+.toolbar button:disabled { opacity: .35; cursor: default; }
+.toolbar hr { border: 0; border-top: 1px solid var(--rule); margin: 2px 4px; }
+.toolbar svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.selbox { position: absolute; border: 1px dashed var(--ink); background: color-mix(in srgb, var(--mark) 18%, transparent); pointer-events: none; z-index: 4; }
+.legend3 { position: absolute; left: 10px; top: 8px; max-width: min(460px, calc(100% - 70px)); font-size: 12px; color: var(--ink-2); pointer-events: none; background: color-mix(in srgb, var(--sheet) 84%, transparent); border-radius: 4px; padding: 4px 6px; z-index: 2; }
 .legend3 b { color: var(--ink); font-weight: 600; }
+.legend3 .toolhint { display: block; margin-top: 3px; color: var(--ink); }
 .legend3 i.sw { display: inline-block; width: 14px; height: 8px; border-radius: 2px; vertical-align: 0; margin: 0 4px 0 8px; }
 .ramp { display: inline-block; width: 150px; height: 8px; border-radius: 4px; vertical-align: middle; margin: 0 6px; }
 .ramp-ticks { position: relative; height: 13px; width: 150px; margin-left: 6px; font: 500 10.5px var(--font-num); color: var(--ink-3); }
@@ -38,9 +50,12 @@
 .ramp-ticks span:first-child { transform: none; }
 .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--sheet); font-size: 12px; padding: 4px 8px; border-radius: 4px; white-space: nowrap; z-index: 4; }
 .busy { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: var(--ink); color: var(--sheet); padding: 4px 12px; border-radius: 12px; font-size: 12px; z-index: 5; }
-.canvas3 .titleblock { z-index: 2; }
-.canvas3 .banner { z-index: 3; top: 44px; }
+.canvas3 .titleblock { z-index: 2; right: 54px; }
+.canvas3 .banner { z-index: 3; top: 44px; right: 54px; }
 .fieldrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: end; }
+.field input[type="checkbox"] { width: auto; height: auto; margin: 0; }
+.checks { display: flex; gap: 12px; height: 28px; align-items: center; font-size: 13px; }
+.checks label { display: inline-flex; gap: 5px; align-items: center; }
 .field input[aria-invalid="true"] { border-color: var(--bad); background: var(--bad-bg); }
 .stepper { display: inline-flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; height: 28px; }
 .stepper button { border: 0; background: var(--sheet); width: 28px; cursor: pointer; font-size: 15px; color: var(--ink-2); }
@@ -52,12 +67,28 @@
 .kv dt { color: var(--ink-3); } .kv dd { margin: 0; font-family: var(--font-num); font-size: 12px; }
 .mini { width: 100%; height: auto; display: block; }
 .mini text { font-family: var(--font-num); font-size: 10.5px; }
-.edrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule-2); font-size: 13px; }
+.edrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--rule-2); font-size: 12.5px; }
 .edrow.inactive span { color: var(--ink-3); text-decoration: line-through; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .actions .btn { height: 30px; font-size: 13px; }
+.btn.sm { height: 28px; padding: 0 8px; font-size: 12.5px; }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
 .inline-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 6px; align-items: end; }
 .inline-form .btn { height: 28px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; align-items: end; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-items: end; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; align-items: end; }
+details.fold { border: 1px solid var(--rule); border-radius: 5px; }
+details.fold > summary { cursor: pointer; padding: 8px 10px; font: 600 14px var(--font-display); list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::after { content: "+"; color: var(--ink-3); font: 500 15px var(--font-num); }
+details.fold[open] > summary::after { content: "−"; }
+details.fold > summary .hint { font: 400 11.5px var(--font-body); }
+details.fold > .fold-bd { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.subhd { font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 4px 0 -2px; }
+table.ed td input[readonly] { background: transparent; border-color: transparent; }
+.tablewrap { max-height: 320px; overflow: auto; border: 1px solid var(--rule-2); border-radius: 4px; }
+table.ed thead th { position: sticky; top: 0; background: var(--sheet); }
 .crit { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 74px 64px; gap: 8px; align-items: center; padding: 6px 12px; border: 0; border-bottom: 1px solid var(--rule-2); background: transparent; cursor: pointer; text-align: left; font-size: 13px; }
 .crit:hover { background: var(--paper); }
 .crit.sel { background: color-mix(in srgb, var(--mark) 22%, transparent); }
@@ -70,18 +101,30 @@
 .diag { padding: 8px 12px 4px; border-bottom: 1px solid var(--rule); display: grid; gap: 4px; }
 .diag h3 { margin: 0; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
 .diag h3 span { font: 400 11.5px var(--font-body); color: var(--ink-3); }
-@media (max-width: 1180px) { .bench3 { grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); } }
+table.data tr.pick { cursor: pointer; }
+table.data tr.pick:hover td { background: var(--paper); }
+table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparent); }
+.spec-svg { width: 100%; height: auto; display: block; }
+.matx { overflow: auto; max-height: 280px; border: 1px solid var(--rule-2); border-radius: 4px; }
+.matx table { border-collapse: collapse; font: 10.5px var(--font-num); }
+.matx td, .matx th { padding: 2px 5px; text-align: right; white-space: nowrap; }
+.matx thead th { color: var(--ink-3); font-weight: 500; position: sticky; top: 0; background: var(--sheet); }
+.matx tbody th { color: var(--ink-3); font-weight: 500; position: sticky; left: 0; background: var(--sheet); }
+.eq3 { font: 12.5px/1.6 var(--font-body); background: var(--paper); border-radius: 4px; padding: 8px 10px; overflow-x: auto; }
+.eq3 div { white-space: nowrap; }
+.spec-svg text { font: 10.5px var(--font-num); fill: var(--ink-3); }
+@media (max-width: 1180px) { .bench3 { grid-template-columns: minmax(290px, 330px) minmax(0, 1fr); } }
 @media (max-width: 760px) {
-  .canvas3 { flex: none; height: 56vh; min-height: 340px; }
+  .canvas3 { flex: none; height: 58vh; min-height: 360px; }
   .modes button { padding: 0 9px; }
-  .legend3 { max-width: calc(100% - 20px); }
+  .legend3 { max-width: calc(100% - 64px); }
 }
 </style>
 
 <div id="mode-3d" class="mode">
 <header class="bar">
-  <div class="brand"><b>Tragwerk</b><span id="b-ver">v0.2</span></div>
-  <div class="modes" role="tablist" aria-label="Workspace"><button role="tab" data-mode="3d" aria-selected="true">3D building</button><button role="tab" data-mode="2d" aria-selected="false">2D frame</button></div>
+  <div class="brand"><b>Tragwerk</b><span id="b-ver">v0.3</span></div>
+  <div class="modes" role="tablist" aria-label="Workspace"><button role="tab" data-mode="3d" aria-selected="true">3D</button><button role="tab" data-mode="2d" aria-selected="false">2D frame</button><button role="tab" data-mode="fe" aria-selected="false">FE plate</button></div>
   <input id="b-name" class="model-name" aria-label="Model name" value="">
   <select id="b-preset" aria-label="Start from"></select>
   <button id="b-json" class="btn">Model JSON</button>
@@ -95,7 +138,8 @@
         <button class="tab" role="tab" data-btab="grid" aria-selected="true">Grid</button>
         <button class="tab" role="tab" data-btab="sections" aria-selected="false">Sections</button>
         <button class="tab" role="tab" data-btab="loads" aria-selected="false">Loads</button>
-        <button class="tab" role="tab" data-btab="edits" aria-selected="false">Edits</button>
+        <button class="tab" role="tab" data-btab="model" aria-selected="false">Model</button>
+        <button class="tab" role="tab" data-btab="dynamics" aria-selected="false">Dynamics</button>
       </div>
     </div>
     <div class="pane-bd" id="b-editor"></div>
@@ -105,10 +149,12 @@
     <div class="pane-hd">
       <div class="chips" role="group" aria-label="What to show" id="b-show">
         <button class="chip" data-show="model">Model</button>
+        <button class="chip" data-show="loads">Loads</button>
         <button class="chip" data-show="My">M<sub>y</sub></button>
         <button class="chip" data-show="Mz">M<sub>z</sub></button>
         <button class="chip" data-show="N">N</button>
         <button class="chip" data-show="def">Deformed</button>
+        <button class="chip" data-show="modes">Modes</button>
         <button class="chip" data-show="util">Utilisation</button>
       </div>
       <div class="vtools">
@@ -116,14 +162,29 @@
         <select id="b-level" aria-label="Levels to show"></select>
         <span class="seg" role="group" aria-label="Member display"><button data-look="solid">Solid</button><button data-look="lines">Lines</button></span>
         <label><input type="checkbox" id="b-slabs" checked> Slabs</label>
+        <label id="b-animate-l" hidden><input type="checkbox" id="b-animate" checked> Animate</label>
       </div>
     </div>
-    <div class="canvas3" id="b-canvas">
+    <div class="canvas3" id="b-canvas" data-tool="select">
       <div class="legend3" id="b-legend"></div>
+      <div class="toolbar" role="toolbar" aria-label="Modelling tools" id="b-tools">
+        <button data-tool="select" title="Select and inspect (click; Shift adds)" aria-label="Select"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></button>
+        <button data-tool="box" title="Box select (drag a rectangle; Shift adds)" aria-label="Box select"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="1" stroke-dasharray="3 2.5"/></svg></button>
+        <hr>
+        <button data-tool="node" title="Add nodes on the working plane" aria-label="Add node"><svg viewBox="0 0 24 24"><circle cx="9" cy="15" r="3"/><path d="M17 4v6M14 7h6"/></svg></button>
+        <button data-tool="member" title="Draw members (click points; Esc ends the chain)" aria-label="Draw member"><svg viewBox="0 0 24 24"><circle cx="5" cy="19" r="2.2"/><circle cx="19" cy="5" r="2.2"/><path d="M6.6 17.4L17.4 6.6"/></svg></button>
+        <button data-tool="support" title="Assign the support chosen in the Model tab" aria-label="Support"><svg viewBox="0 0 24 24"><path d="M12 6l6 10H6z"/><path d="M4 20h16"/></svg></button>
+        <button data-tool="load" title="Apply the load set in the Model tab (members or nodes)" aria-label="Load"><svg viewBox="0 0 24 24"><path d="M12 3v14M7 12l5 5 5-5M4 21h16"/></svg></button>
+        <button data-tool="delete" title="Delete a node or member" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button>
+        <hr>
+        <button data-act="undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 010 12h-2" transform="translate(0 -6)"/></svg></button>
+        <button data-act="redo" title="Redo (Ctrl+Y)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5"/><path d="M20 12H10a6 6 0 000 12h2" transform="translate(0 -6)"/></svg></button>
+      </div>
       <div class="views" role="group" aria-label="Camera">
         <button data-cam="iso">3D</button><button data-cam="plan">Plan</button><button data-cam="xz">X–Z</button><button data-cam="yz">Y–Z</button><button data-cam="fit" title="Fit the model in view">Fit</button>
       </div>
       <div class="titleblock" id="b-title"></div>
+      <div class="selbox" id="b-selbox" hidden></div>
       <div class="tip" id="b-tip" hidden></div>
       <div class="banner" id="b-banner" hidden></div>
       <div class="busy" id="b-busy" hidden>Analysing…</div>
@@ -133,10 +194,11 @@
   <section class="pane results" aria-label="Results">
     <div id="b-summary"></div>
     <div class="rtabs" role="tablist">
-      <button class="tab" role="tab" data-rtab="member" aria-selected="true">Member</button>
+      <button class="tab" role="tab" data-rtab="member" aria-selected="true">Inspect</button>
       <button class="tab" role="tab" data-rtab="critical" aria-selected="false">Critical</button>
+      <button class="tab" role="tab" data-rtab="modes" aria-selected="false">Modes</button>
       <button class="tab" role="tab" data-rtab="reactions" aria-selected="false">Reactions</button>
-      <button class="tab" role="tab" data-rtab="combos" aria-selected="false">Combinations</button>
+      <button class="tab" role="tab" data-rtab="combos" aria-selected="false">Combos</button>
     </div>
     <div class="pane-bd" id="b-results"></div>
   </section>
@@ -145,7 +207,7 @@
 <div class="drawer" id="b-drawer" hidden>
   <div class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="b-drawer-title">
     <div class="row" style="justify-content:space-between"><h2 id="b-drawer-title">Model JSON</h2><button class="btn" id="b-drawer-close">Close</button></div>
-    <p class="hint">The open <span class="num">tragwerk3d/0.1</span> format used by the Python package and the HTTP API, with your edits applied. Copy it to produce the full calculation report with <span class="num">tragwerk run building.json --pdf report.pdf</span>, or paste a 3D model here and load it.</p>
+    <p class="hint">The open <span class="num">tragwerk3d/0.1</span> format used by the Python package and the HTTP API, with your edits applied. Copy it to produce the full calculation report with <span class="num">tragwerk run model.json --pdf report.pdf</span>, or paste a 3D model here and load it.</p>
     <textarea id="b-json-text" spellcheck="false" aria-label="Model JSON"></textarea>
     <div class="row"><button class="btn primary" id="b-json-copy">Copy</button><button class="btn" id="b-json-load">Load pasted model</button><span class="hint" id="b-json-msg"></span></div>
   </div>
@@ -156,11 +218,27 @@
 <!--__MARKUP2D__-->
 </div>
 
+<div id="mode-fe" class="mode" hidden>
+<!--__MARKUPFE__-->
+</div>
+
 <script>
 /*__ENGINE__*/
 </script>
 <script>
 /*__ENGINE3D__*/
+</script>
+<script>
+/*__DYNAMICS__*/
+</script>
+<script>
+/*__MODELLER__*/
+</script>
+<script>
+/*__BRIDGE__*/
+</script>
+<script>
+/*__FE2D__*/
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -172,7 +250,7 @@
 <script>
 (function () {
   "use strict";
-  const T = window.Tragwerk;
+  const T = window.Tragwerk, MD = T.Modeller;
   const ROOT = document.getElementById("mode-3d");
   const $ = (s, el = ROOT) => el.querySelector(s);
   const $$ = (s, el = ROOT) => Array.from(el.querySelectorAll(s));
@@ -183,10 +261,12 @@
   const f3 = (v) => (v == null || !isFinite(v) ? "–" : T.fmt(v));
   const clone = (o) => JSON.parse(JSON.stringify(o));
   const r1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+  const n3 = (v) => String(+(+v).toFixed(3));
   const CONCRETE = { 20: "C20/25", 25: "C25/30", 30: "C30/37", 35: "C35/45", 40: "C40/50", 45: "C45/55", 50: "C50/60", 55: "C55/67", 60: "C60/75" };
-  const CAT_NAMES = { A: "A, residential", B: "B, office", C: "C, assembly", D: "D, shopping", E: "E, storage", F: "F, vehicles ≤ 30 kN", G: "G, vehicles ≤ 160 kN" };
+  const CAT_NAMES = { A: "A, residential", B: "B, office", C: "C, assembly", D: "D, shopping", E: "E, storage", F: "F, vehicles ≤ 30 kN", G: "G, vehicles ≤ 160 kN", H: "H, roofs", snow: "Snow", snow_high: "Snow, > 1000 m", wind: "Wind", temperature: "Temperature", traffic_TS: "Road traffic, tandem (LM1)", traffic_UDL: "Road traffic, UDL (LM1)" };
   const QLABEL = { My: "M<sub>y</sub>", Mz: "M<sub>z</sub>", N: "N", Vz: "V<sub>z</sub>", Vy: "V<sub>y</sub>", T: "T" };
   const QUNIT = { My: "kNm", Mz: "kNm", N: "kN", Vz: "kN", Vy: "kN", T: "kNm" };
+  const LINE_VIEWS = ["My", "Mz", "N", "def", "modes", "loads"];
   const MAX_NODES = 2500, MAX_ULS = 1500;
   const sec0 = (b, h, top, bottom, side, links, cover) => {
     const s = { type: "rc_rect", b_mm: b, h_mm: h, concrete: "concrete", rebar: "B500B", cover_mm: cover, top: { n: top[0], dia_mm: top[1] }, bottom: { n: bottom[0], dia_mm: bottom[1] },
@@ -204,16 +284,28 @@
       storeys: [3.0, 2.8, 2.8], imposed: 2.5, imposed_category: "F", finishes: 0.5, facade: 3.0, snow: 1.2, slab_mm: 250, wind: 0.7,
       column: sec0(450, 450, [4, 25], [4, 25], [1, 25], [10, 2, 250], 35), beam_x: sec0(400, 750, [5, 25], [4, 25], null, [10, 2, 250], 35),
       beam_y: sec0(400, 700, [5, 25], [4, 25], null, [10, 2, 250], 35) } },
+    bridge: { label: "Road bridge, 3 spans, 2 girders", gen: "bridge", spec: {} },
+    bridge4: { label: "Road bridge, 4 spans, 3 girders, single piers", gen: "bridge",
+      spec: { name: "Road bridge, 4 spans, 3 girders", spans: [15.0, 20.0, 20.0, 15.0], pier_heights: [5.5, 8.0, 5.5], girders: 3, width: 12.0, carriageway: 10.0, pier_columns: "single",
+        crossbeam: Object.assign(sec0(600, 1400, [7, 32], [7, 32], [2, 16], [12, 2, 200], 45), { torsion_factor: 0.1 }) } },
   };
+  const GEN = { building: { defaults: () => T.BUILDING_DEFAULTS(), make: (sp) => T.generateBuilding(sp) }, bridge: { defaults: () => T.BRIDGE_DEFAULTS(), make: (sp) => T.generateBridge(sp) } };
+  const LIST_RANGE = { spans_x: [1, 40], spans_y: [1, 40], storeys: [1, 40], spans: [5, 200], pier_heights: [1, 100], ts_stations: [0, 1] };
+  const DYN0 = () => ({ on: true, modes: 12, mass: "consistent", segments: 2, mass_cases: null });
+  const SEIS0 = () => ({ on: false, agR: 1.0, importance: 1.0, ground: "B", spectrum_type: 1, q: 1.5, X: true, Y: true, drift_limit: 0.005, nu: 0.5 });
 
   const S = {
-    spec: null, base: null, extraSections: {}, edits: [], data: null, result: null, error: null,
-    btab: "grid", rtab: "member", show: "util", source: "env", level: "all", look: "solid", slabs: true,
-    sel: null, hover: null, openCheck: null, critFilter: "all", formLoad: { w: 5, caseId: null, dir: "global_z" }, defInfo: null,
+    spec: null, gen: "building", base: null, extraSections: {}, edits: [], redo: [], data: null, result: null, error: null,
+    btab: "grid", rtab: "member", show: "util", source: "env", level: "all", look: "solid", slabs: true, animate: true,
+    sel: null, selNode: null, selM: new Set(), selN: new Set(), openCheck: null, critFilter: "all", defInfo: null,
+    tool: "select", plane: { kind: "XY", at: 0, step: 1.0 }, draw: null, activeSection: null, memberType: "auto", supportKind: "fixed",
+    formLoad: { kind: "udl", w: 5, p: 20, a: 1.0, caseId: null, dir: "global_z" }, formNodal: [0, 0, -50, 0, 0, 0], formFloor: { z: null, q: 3, dist: "two_way" },
+    formRepeat: { d: [0, 0, 3.2], n: 1, link: true, sup: null }, formMove: [0, 0, 0], formSplit: 2, newNode: [0, 0, 0], newMember: { i: "", j: "" },
+    newCase: { id: "", name: "", type: "variable", category: "B", group: "" }, tables: "", dyn: DYN0(), seis: SEIS0(),
   };
   try {
     const st = JSON.parse(localStorage.getItem("tragwerk3d.view") || "{}");
-    if (st.show) S.show = st.show; if (st.look) S.look = st.look; if (typeof st.slabs === "boolean") S.slabs = st.slabs;
+    if (st.show && st.show !== "modes") S.show = st.show; if (st.look) S.look = st.look; if (typeof st.slabs === "boolean") S.slabs = st.slabs;
   } catch (e) { /* storage unavailable */ }
   const saveView = () => { try { localStorage.setItem("tragwerk3d.view", JSON.stringify({ show: S.show, look: S.look, slabs: S.slabs })); } catch (e) { /* storage unavailable */ } };
   const sectionCache = new Map();
@@ -221,44 +313,38 @@
   // ================================================================ model building
   function concreteName(d) { const e = Object.entries(d.materials || {}).find(([, m]) => m.type === "concrete"); return e ? e[0] : null; }
   function buildModel() {
-    const d = S.spec ? T.generateBuilding(S.spec) : clone(S.base);
+    const d = S.spec ? GEN[S.gen].make(S.spec) : clone(S.base);
+    delete d.dynamics; delete d.seismic;            // owned by the Dynamics tab
     const cn = concreteName(d);
     for (const [name, def] of Object.entries(S.extraSections)) d.sections[name] = Object.assign(clone(def), cn ? { concrete: cn } : {});
-    for (const e of S.edits) e.active = applyEdit(d, e);
+    for (const e of S.edits) e.active = MD.applyEdit(d, e);
+    if (S.dyn.on || S.seis.on) {
+      d.dynamics = { modes: S.dyn.modes, mass: S.dyn.mass, segments: S.dyn.segments };
+      if (S.dyn.mass_cases) d.dynamics.mass_cases = Object.fromEntries(Object.entries(S.dyn.mass_cases).filter(([c]) => d.load_cases.some((x) => x.id === c)));
+    }
+    if (S.seis.on) {
+      const s = S.seis, dirs = ["X", "Y"].filter((k) => s[k]);
+      d.seismic = { agR: s.agR, importance: s.importance, ground: s.ground, spectrum_type: s.spectrum_type, q: s.q, directions: dirs.length ? dirs : ["X"], drift_limit: s.drift_limit, nu: s.nu };
+    }
     return d;
   }
-  function applyEdit(d, e) {
-    const m = d.members.find((x) => x.id === e.member);
-    if (!m) return false;
-    if (e.op === "remove") {
-      d.members = d.members.filter((x) => x !== m);
-      for (const lc of d.load_cases) lc.loads = (lc.loads || []).filter((l) => l.member !== m.id);
-      const used = new Set();
-      for (const x of d.members) { used.add(x.i); used.add(x.j); }
-      const gone = new Set(d.nodes.filter((n) => !used.has(n.id)).map((n) => n.id));
-      if (gone.size) {
-        d.nodes = d.nodes.filter((n) => !gone.has(n.id));
-        d.supports = (d.supports || []).filter((s) => !gone.has(s.node));
-        for (const lc of d.load_cases) lc.loads = lc.loads.filter((l) => !(l.node && gone.has(l.node)));
-      }
-      return true;
-    }
-    if (e.op === "section") { if (!(e.section in d.sections)) return false; m.section = e.section; return true; }
-    if (e.op === "release") { m.releases = { i: true, j: true }; return true; }
-    if (e.op === "load") {
-      const lc = d.load_cases.find((c) => c.id === e.caseId);
-      if (!lc) return false;
-      lc.loads = (lc.loads || []).concat([{ type: "udl", member: m.id, w: e.w, direction: e.dir }]);
-      return true;
-    }
-    return false;
+  function takenIds() {
+    const n = new Set((S.data ? S.data.nodes : []).map((x) => x.id)), m = new Set((S.data ? S.data.members : []).map((x) => x.id));
+    const scan = (e) => { if (e.op === "batch") e.ops.forEach(scan); if (e.op === "addNode") n.add(e.id); if (e.op === "addMember") m.add(e.id); };
+    S.edits.forEach(scan);
+    return { n, m };
   }
-  function editLabel(e) {
-    if (e.op === "remove") return `Removed ${e.member}`;
-    if (e.op === "section") return `${e.member}: section ${e.section}`;
-    if (e.op === "release") return `${e.member}: pinned at both ends`;
-    if (e.op === "load") return `${e.member}: ${f3(e.w)} kN/m ${e.dir.replace("global_", "along ").replace("local_", "local ")} in ${e.caseId}`;
-    return e.op;
+  function addEdit(e) {
+    S.edits.push(e); S.redo = [];
+    afterEdit();
+  }
+  function undo() { if (!S.edits.length) return; S.redo.push(S.edits.pop()); afterEdit(); toast("Undone."); }
+  function redo() { if (!S.redo.length) return; S.edits.push(S.redo.pop()); afterEdit(); toast("Redone."); }
+  function afterEdit() {
+    $$("[data-act=undo]").forEach((b) => { b.disabled = !S.edits.length; });
+    $$("[data-act=redo]").forEach((b) => { b.disabled = !S.redo.length; });
+    if (S.btab === "model" || S.btab === "loads") renderEditor();
+    schedule(60);
   }
 
   // ================================================================ run
@@ -272,29 +358,65 @@
     clearTimeout(timer);
     try {
       S.data = buildModel();
-      if (S.data.nodes.length > MAX_NODES) throw new Error(`${S.data.nodes.length} nodes: the browser studio handles up to ${MAX_NODES}. Use the Python package or the API for larger models.`);
-      S.result = T.runProject3d(S.data, { sectionCache, maxCombinations: MAX_ULS });
-      S.error = null;
-    } catch (e) { S.error = e.message; S.result = null; }
-    if (S.sel && !(S.data && S.data.members.some((m) => m.id === S.sel))) { S.sel = null; S.openCheck = null; }
+    } catch (e) { S.error = `Model could not be built: ${e.message}`; S.result = null; }
+    if (S.data) {
+      try {
+        if (S.data.nodes.length > MAX_NODES) throw new Error(`${S.data.nodes.length} nodes: the browser studio handles up to ${MAX_NODES}. Use the Python package or the API for larger models.`);
+        if (S.data.nodes.length < 2 || !S.data.members.length) throw new Error("Start drawing: pick the member tool (right of the 3D view) and click two points of the grid. Add supports with the support tool.");
+        S.result = T.runProject3d(S.data, { sectionCache, maxCombinations: MAX_ULS });
+        S.error = null;
+      } catch (e) { S.error = friendly(e.message); S.result = null; }
+    }
+    const nids = new Set((S.data ? S.data.nodes : []).map((n) => n.id)), mids = new Set((S.data ? S.data.members : []).map((m) => m.id));
+    for (const id of [...S.selM]) if (!mids.has(id)) S.selM.delete(id);
+    for (const id of [...S.selN]) if (!nids.has(id)) S.selN.delete(id);
+    if (S.sel && !mids.has(S.sel)) { S.sel = null; S.openCheck = null; }
+    if (S.selNode && !nids.has(S.selNode)) S.selNode = null;
+    if (S.show === "modes" && !(S.result && S.result.modal)) S.show = "util";
     $("#b-busy").hidden = true;
-    renderHeader(); renderSource(); renderLevels(); renderEditorHints(); renderResults();
+    renderHeader(); syncLookControls(); renderSource(); renderLevels(); renderEditorHints(); renderResults();
     V.rebuild(); V.refreshOverlay();
   }
+  function friendly(msg) {
+    if (/no supports/i.test(msg)) return "Add supports: pick the support tool (right of the view) and click the nodes that stand on the ground.";
+    if (/unstable|singular|mechanism/i.test(msg)) return `The structure is a mechanism, so it cannot carry load: ${msg} Add supports, members or bracing, or fix rotations at the supports.`;
+    return msg;
+  }
   function load(opts) {
-    S.spec = opts.spec ? Object.assign(T.BUILDING_DEFAULTS(), clone(opts.spec)) : null;
+    S.gen = opts.gen || "building";
+    S.spec = opts.spec ? Object.assign(GEN[S.gen].defaults(), clone(opts.spec)) : null;
     S.base = opts.base ? clone(opts.base) : null;
-    S.extraSections = {}; S.edits = []; S.sel = null; S.openCheck = null; S.source = "env"; S.level = "all";
+    S.extraSections = {}; S.edits = []; S.redo = []; S.sel = null; S.selNode = null; S.selM = new Set(); S.selN = new Set();
+    S.openCheck = null; S.source = "env"; S.level = "all"; S.draw = null; S.activeSection = null;
+    S.dyn = Object.assign(DYN0(), opts.dyn || {}); S.seis = Object.assign(SEIS0(), opts.seis || {});
+    if (S.show === "modes") S.show = "util";
+    afterEdit();
     renderEditor();
     runNow();
     V.setCamera("iso", true);
   }
   function loadData(data) {
-    const meta = data.meta || {};
-    if (meta.generator === "tragwerk.building" && meta.spec) {
-      try { if (JSON.stringify(T.generateBuilding(meta.spec)) === JSON.stringify(data)) return load({ spec: meta.spec }); } catch (e) { /* fall through to a free-form model */ }
+    const meta = data.meta || {}, extra = {};
+    if (data.dynamics) extra.dyn = Object.assign({ on: true }, { modes: data.dynamics.modes ?? 12, mass: data.dynamics.mass ?? "consistent", segments: data.dynamics.segments ?? 2, mass_cases: data.dynamics.mass_cases ?? null });
+    else extra.dyn = { on: false };
+    if (data.seismic) { const s = data.seismic, dirs = s.directions || ["X", "Y"]; extra.seis = Object.assign({ on: true }, s, { X: dirs.includes("X"), Y: dirs.includes("Y") }); delete extra.seis.directions; }
+    const gen = meta.generator === "tragwerk.building" ? "building" : meta.generator === "tragwerk.bridge" ? "bridge" : null;
+    if (gen && meta.spec) {
+      try {
+        const g = GEN[gen].make(meta.spec), cmp = clone(data);
+        delete g.dynamics; delete g.seismic; delete cmp.dynamics; delete cmp.seismic;
+        if (JSON.stringify(g) === JSON.stringify(cmp)) return load(Object.assign({ spec: meta.spec, gen }, extra));
+      } catch (e) { /* fall through to a free-form model */ }
     }
-    load({ base: data });
+    load(Object.assign({ base: data }, extra));
+  }
+  function toFreeModel() {
+    if (!S.spec) return;
+    const d = buildModel();
+    delete d.dynamics; delete d.seismic;
+    S.base = d; S.spec = null; S.edits = []; S.redo = []; S.extraSections = {};
+    afterEdit(); renderEditor(); runNow();
+    toast("Converted to a free model: every node and member can now be edited; the generator is off.");
   }
 
   // ================================================================ header
@@ -310,90 +432,94 @@
 
   // ================================================================ editor
   const listText = (a) => a.map((v) => +(+v).toFixed(3)).join(", ");
-  function parseList(text) {
-    const parts = String(text).split(/[,;\s]+/).filter(Boolean);
+  function parseList(text, key) {
+    const parts = String(text).split(/[,;\s]+/).filter(Boolean), [lo, hi] = LIST_RANGE[key] || [1, 40];
     if (!parts.length || parts.length > 40) return null;
     const vals = parts.map(Number);
-    return vals.every((v) => isFinite(v) && v >= 1 && v <= 40) ? vals : null;
+    return vals.every((v) => isFinite(v) && v >= lo && v <= hi) ? vals : null;
   }
+  const opt = (v, label, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? " selected" : ""}>${esc(label)}</option>`;
+  const numIn = (attr, v, step = "any", extra = "") => `<input type="number" step="${step}" ${attr} value="${esc(v)}" ${extra}>`;
+  function sectionsNow() { return S.data ? Object.keys(S.data.sections) : []; }
+  function casesNow() { return S.data ? S.data.load_cases : []; }
+
   function renderEditor() {
     $$("[data-btab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.btab === S.btab)));
     const ed = $("#b-editor");
     const custom = !S.spec;
-    if (S.btab === "grid") {
-      if (custom) {
-        ed.innerHTML = `<div class="tabpanel"><div class="group"><h3>Free-form model</h3><p class="hint">This model was loaded from JSON, so the building generator is off. Inspect and edit members in the 3D view, change sections in the Sections tab, or start a generated building.</p>
-          <div class="actions"><button class="btn" id="b-new">New generated building</button></div></div><div class="group" id="b-stats"></div></div>`;
-        $("#b-new").onclick = () => { $("#b-preset").value = "office"; load({ spec: PRESETS.office.spec }); };
-      } else {
-        const sp = S.spec;
-        ed.innerHTML = `<div class="tabpanel">
-          <div class="group"><div class="group-hd"><h3>Grid</h3><span class="hint">axes A, B, C … along X; 1, 2 … along Y</span></div>
-            <div class="fieldrow"><label class="field">Spans along X (m)<input data-list="spans_x" value="${listText(sp.spans_x)}" inputmode="decimal"></label><span class="stepper"><button data-step="spans_x:-1" aria-label="Remove a bay along X">−</button><button data-step="spans_x:1" aria-label="Add a bay along X">+</button></span></div>
-            <div class="fieldrow"><label class="field">Spans along Y (m)<input data-list="spans_y" value="${listText(sp.spans_y)}" inputmode="decimal"></label><span class="stepper"><button data-step="spans_y:-1" aria-label="Remove a bay along Y">−</button><button data-step="spans_y:1" aria-label="Add a bay along Y">+</button></span></div>
-            <div class="fieldrow"><label class="field">Storey heights, ground up (m)<input data-list="storeys" value="${listText(sp.storeys)}" inputmode="decimal"></label><span class="stepper"><button data-step="storeys:-1" aria-label="Remove the top storey">−</button><button data-step="storeys:1" aria-label="Add a storey">+</button></span></div>
-            <p class="hint" id="b-gridsum"></p>
-          </div>
-          <div class="group"><h3>Supports and stability</h3>
-            <div class="fields">
-              <label class="field">Column bases<select data-spec="base"><option value="fixed">Fixed</option><option value="pinned">Pinned</option></select></label>
-              <label class="field"><span>Column l<sub>0</sub>/L</span><input type="number" step="0.1" min="0.5" max="3" data-spec="column_l0_factor" value="${sp.column_l0_factor}"></label>
-              <label class="field">Combination<select data-spec="combination_rule"><option value="6.10">Eq. 6.10</option><option value="6.10ab">Eq. 6.10a/b</option></select></label>
-            </div>
-            <p class="hint">l<sub>0</sub>/L = 1.0 for a braced frame (cores or walls carry sway); about 2.0 if the frame itself must resist sway. Columns beyond the slenderness limit get the nominal curvature check (5.8.8).</p>
-          </div>
-          <div class="group" id="b-stats"></div>
-        </div>`;
-        $("[data-spec=base]", ed).value = sp.base;
-        $("[data-spec=combination_rule]", ed).value = sp.combination_rule;
-      }
-    } else if (S.btab === "sections") {
-      const secs = custom ? S.base.sections : { Column: S.spec.column, "Beam X": S.spec.beam_x, "Beam Y": S.spec.beam_y };
-      const all = Object.assign({}, secs, S.extraSections);
-      const fck = custom ? (S.base.materials[concreteName(S.base)] || {}).fck : S.spec.fck;
-      ed.innerHTML = `<div class="tabpanel">
-        <div class="fields"><label class="field">Concrete<select id="b-fck">${Object.entries(CONCRETE).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label><label class="field">Reinforcement<input value="B500B, f_yk 500 MPa" disabled></label></div>
-        ${Object.entries(all).map(([name, s]) => secCard(name, s, name in S.extraSections)).join("")}
-        <p class="hint">b is the width across the member's local y axis, h the depth along z (vertical for beams; for columns z is global X). Bars: n per face; side bars are per side face, between top and bottom rows.</p>
-      </div>`;
-      $("#b-fck").value = String(fck);
-    } else if (S.btab === "loads") {
-      if (custom) {
-        const lcs = S.base.load_cases || [];
-        ed.innerHTML = `<div class="tabpanel"><div class="group"><h3>Load cases from the model</h3><table class="data"><thead><tr><th>Id</th><th style="text-align:left">Name</th><th>Loads</th></tr></thead><tbody>
-          ${lcs.map((c) => `<tr><td>${esc(c.id)}</td><td style="text-align:left;font-family:var(--font-body)">${esc(c.name || "")} <span class="hint">${esc(c.type)}${c.category ? ", " + esc(c.category) : ""}</span></td><td>${(c.loads || []).length}${c.self_weight ? " + SW" : ""}</td></tr>`).join("")}</tbody></table>
-          <p class="hint">Add member loads from the Member tab after selecting a member. Edit the JSON for anything else.</p></div></div>`;
-      } else {
-        const sp = S.spec;
-        const num = (k, label, unit, step = 0.1, min = 0) => `<label class="field"><span>${label} <span class="hint">${unit}</span></span><input type="number" step="${step}" min="${min}" data-spec="${k}" value="${sp[k]}"></label>`;
-        ed.innerHTML = `<div class="tabpanel">
-          <div class="group"><h3>Permanent</h3><div class="fields">${num("slab_mm", "Slab", "mm", 10, 100)}${num("finishes", "Finishes", "kN/m²")}${num("facade", "Facade", "kN/m")}</div>
-            <p class="hint">Slab self weight at 25 kN/m³ and finishes act on every floor and the roof; the facade line load sits on the perimeter beams of every floor below the roof. Member self weight is added automatically.</p></div>
-          <div class="group"><h3>Imposed, snow, wind</h3><div class="fields">${num("imposed", "Imposed", "kN/m²")}
-            <label class="field">Category<select data-spec="imposed_category">${Object.entries(CAT_NAMES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>
-            ${num("snow", "Snow (roof)", "kN/m²")}${num("wind", "Wind pressure", "kN/m²")}</div>
-            <p class="hint">Wind acts in +X, −X, +Y and −Y as four mutually exclusive cases, applied at the floor nodes of the windward facade.</p></div>
-          <div class="group"><h3>Load path</h3><div class="fields" style="grid-template-columns:1fr">
-            <label class="field">Slabs span<select data-spec="distribution"><option value="two_way">Two-way, 45° yield lines</option><option value="one_way_x">One-way, onto beams along X</option><option value="one_way_y">One-way, onto beams along Y</option></select></label></div>
-            <label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink-2)"><input type="checkbox" data-spec="pattern_by_storey" ${sp.pattern_by_storey ? "checked" : ""}> One imposed load case per storey (pattern loading; more combinations)</label></div>
-        </div>`;
-        $("[data-spec=imposed_category]", ed).value = sp.imposed_category;
-        $("[data-spec=distribution]", ed).value = sp.distribution;
-      }
-    } else {
-      ed.innerHTML = `<div class="tabpanel"><div class="group"><div class="group-hd"><h3>Edits to the model</h3>${S.edits.length ? `<button class="link-btn" id="b-clear">Clear all</button>` : ""}</div>
-        <p class="hint">Select a member in the 3D view, then remove it, change its section, pin its ends or load it from the Member tab. Edits are kept when you change the grid, as long as the member still exists.</p>
-        ${S.edits.length ? S.edits.map((e, k) => `<div class="edrow${e.active === false ? " inactive" : ""}"><span>${esc(editLabel(e))}${e.active === false ? ` <span class="hint">(not applied: member gone)</span>` : ""}</span><button class="icon-btn" data-undo="${k}" aria-label="Undo this edit">×</button></div>`).join("") : `<p class="empty" style="padding:8px 0">No edits yet.</p>`}
-      </div></div>`;
-    }
+    if (S.btab === "grid") ed.innerHTML = custom ? gridFree() : S.gen === "bridge" ? gridBridge() : gridGen();
+    else if (S.btab === "sections") ed.innerHTML = sectionsTab(custom);
+    else if (S.btab === "loads") ed.innerHTML = loadsTab(custom);
+    else if (S.btab === "model") ed.innerHTML = modelTab();
+    else ed.innerHTML = dynamicsTab();
     bindEditor();
     renderEditorHints();
   }
-  function secCard(name, s, extra) {
+  function gridFree() {
+    return `<div class="tabpanel"><div class="group"><h3>Free model</h3><p class="hint">Every node and member is edited directly: use the tools to the right of the 3D view and the Model tab, like a general frame program. Sections, loads and dynamics work as for a generated building.</p>
+      <div class="actions"><button class="btn" id="b-new">New generated building</button><button class="btn" id="b-blank">New blank model</button></div></div><div class="group" id="b-stats"></div></div>`;
+  }
+  function gridGen() {
+    const sp = S.spec;
+    return `<div class="tabpanel">
+      <div class="group"><div class="group-hd"><h3>Grid</h3><span class="hint">axes A, B, C … along X; 1, 2 … along Y</span></div>
+        <div class="fieldrow"><label class="field">Spans along X (m)<input data-list="spans_x" value="${listText(sp.spans_x)}" inputmode="decimal"></label><span class="stepper"><button data-step="spans_x:-1" aria-label="Remove a bay along X">−</button><button data-step="spans_x:1" aria-label="Add a bay along X">+</button></span></div>
+        <div class="fieldrow"><label class="field">Spans along Y (m)<input data-list="spans_y" value="${listText(sp.spans_y)}" inputmode="decimal"></label><span class="stepper"><button data-step="spans_y:-1" aria-label="Remove a bay along Y">−</button><button data-step="spans_y:1" aria-label="Add a bay along Y">+</button></span></div>
+        <div class="fieldrow"><label class="field">Storey heights, ground up (m)<input data-list="storeys" value="${listText(sp.storeys)}" inputmode="decimal"></label><span class="stepper"><button data-step="storeys:-1" aria-label="Remove the top storey">−</button><button data-step="storeys:1" aria-label="Add a storey">+</button></span></div>
+        <p class="hint" id="b-gridsum"></p>
+      </div>
+      <div class="group"><h3>Supports and stability</h3>
+        <div class="fields">
+          <label class="field">Column bases<select data-spec="base">${opt("fixed", "Fixed", sp.base)}${opt("pinned", "Pinned", sp.base)}</select></label>
+          <label class="field"><span>Column l<sub>0</sub>/L</span><input type="number" step="0.1" min="0.5" max="3" data-spec="column_l0_factor" value="${sp.column_l0_factor}"></label>
+          <label class="field">Combination<select data-spec="combination_rule">${opt("6.10", "Eq. 6.10", sp.combination_rule)}${opt("6.10ab", "Eq. 6.10a/b", sp.combination_rule)}</select></label>
+        </div>
+        <p class="hint">l<sub>0</sub>/L = 1.0 for a braced frame (cores or walls carry sway); about 2.0 if the frame itself must resist sway. Columns beyond the slenderness limit get the nominal curvature check (5.8.8).</p>
+      </div>
+      <div class="group"><h3>Edit beyond the grid</h3><p class="hint">Members can be added, removed and loaded with the tools right of the 3D view and in the Model tab; those edits are kept when you change the grid. To edit node by node without the generator, convert the building.</p>
+        <div class="actions"><button class="btn sm" id="b-tofree">Convert to a free model</button></div></div>
+      <div class="group" id="b-stats"></div>
+    </div>`;
+  }
+  function gridBridge() {
+    const sp = S.spec;
+    const num = (k, label, step = 0.1, min = 0, max = "") => `<label class="field"><span>${label}</span><input type="number" step="${step}" min="${min}"${max !== "" ? ` max="${max}"` : ""} data-spec="${k}" value="${sp[k]}"></label>`;
+    return `<div class="tabpanel">
+      <div class="group"><div class="group-hd"><h3>Spans and piers</h3><span class="hint">supports A0, P1 … along X</span></div>
+        <div class="fieldrow"><label class="field">Spans (m)<input data-list="spans" value="${listText(sp.spans)}" inputmode="decimal"></label><span class="stepper"><button data-step="spans:-1" aria-label="Remove the last span">−</button><button data-step="spans:1" aria-label="Add a span">+</button></span></div>
+        ${sp.spans.length > 1 ? `<label class="field">Pier heights, foundation to deck axis (m)<input data-list="pier_heights" value="${listText(sp.pier_heights)}" inputmode="decimal"></label>` : ""}
+        <div class="fields">${num("width", "Deck width (m)", 0.5, 3, 40)}${num("carriageway", "Carriageway (m)", 0.5, 2.5, 40)}${num("girders", "Girders", 1, 1, 6)}${num("divisions", "Elements per span", 2, 2, 40)}</div>
+        <div class="fields"><label class="field">Piers<select data-spec="pier_columns">${opt("under_girders", "A column under each girder", sp.pier_columns)}${opt("single", "One column and a pier cap", sp.pier_columns)}</select></label>
+          ${num("pier_l0_factor", "Pier l<sub>0</sub>/L", 0.1, 0.5, 3)}
+          <label class="field">Combination<select data-spec="combination_rule">${opt("6.10", "Eq. 6.10", sp.combination_rule)}${opt("6.10ab", "Eq. 6.10a/b", sp.combination_rule)}</select></label></div>
+        <p class="hint" id="b-gridsum"></p>
+        <p class="hint">Bearings at the abutments (fixed in X at A0, free at the far end, one guided line in Y); piers built into the crossbeams and fixed at the foundation. Crossbeams at every support and at midspan.</p></div>
+      <div class="group"><h3>Edit beyond the generator</h3><p class="hint">Add, remove or load members with the tools right of the 3D view; the edits stay when you change the spans. Convert to edit node by node.</p>
+        <div class="actions"><button class="btn sm" id="b-tofree">Convert to a free model</button></div></div>
+      <div class="group" id="b-stats"></div>
+    </div>`;
+  }
+  function genSections() {
+    const sp = S.spec;
+    if (S.gen === "bridge") return Object.assign({ Girder: sp.girder, Crossbeam: sp.crossbeam, Pier: sp.pier }, sp.pier_columns === "single" && sp.girders > 1 ? { "Pier cap": sp.pier_cap } : {});
+    return { Column: sp.column, "Beam X": sp.beam_x, "Beam Y": sp.beam_y };
+  }
+  function sectionsTab(custom) {
+    const secs = custom ? S.base.sections : genSections();
+    const all = Object.assign({}, secs, S.extraSections);
+    const fck = custom ? (S.base.materials[concreteName(S.base)] || {}).fck : S.spec.fck;
+    return `<div class="tabpanel">
+      <div class="fields"><label class="field">Concrete<select id="b-fck">${Object.entries(CONCRETE).map(([k, v]) => opt(k, v, fck)).join("")}</select></label><label class="field">Reinforcement<input value="B500B, f_yk 500 MPa" disabled></label></div>
+      ${Object.entries(all).map(([name, s]) => secCard(name, s, name in S.extraSections || custom)).join("")}
+      <div class="actions"><button class="btn sm" id="b-addsec">New section</button></div>
+      <p class="hint">b is the width across the member's local y axis, h the depth along z (vertical for beams; for columns z is global X). Bars: n per face; side bars are per side face, between top and bottom rows.</p>
+    </div>`;
+  }
+  function secCard(name, s, deletable) {
     const n = (lay) => (lay && lay.n) || 0, dia = (lay, d) => (lay && lay.dia_mm) || d;
     const L = s.links || { dia_mm: 8, legs: 2, spacing_mm: 200 };
     const inp = (k, v, step = 1, min = 0) => `<input type="number" step="${step}" min="${min}" data-sec="${esc(name)}" data-k="${k}" value="${v}">`;
-    return `<div class="card" data-card="${esc(name)}"><div class="group-hd"><h3 style="margin:0">${esc(name)}</h3>${extra ? `<button class="link-btn" data-delsec="${esc(name)}">Delete</button>` : ""}</div>
+    return `<div class="card" data-card="${esc(name)}"><div class="group-hd"><h3 style="margin:0">${esc(name)}</h3>${deletable ? `<button class="link-btn" data-delsec="${esc(name)}">Delete</button>` : ""}</div>
       <div class="secgrid">
         <label class="field">b mm${inp("b_mm", s.b_mm, 10, 150)}</label><label class="field">h mm${inp("h_mm", s.h_mm, 10, 150)}</label><label class="field">cover${inp("cover_mm", s.cover_mm, 5, 15)}</label><span></span>
         <span class="lab">Bars, number × diameter (mm)</span>
@@ -407,21 +533,191 @@
   function secObj(name) {
     if (name in S.extraSections) return S.extraSections[name];
     if (!S.spec) return S.base.sections[name];
-    return { Column: S.spec.column, "Beam X": S.spec.beam_x, "Beam Y": S.spec.beam_y }[name];
+    return genSections()[name];
   }
-  function secNote(s) {
-    const a = (l) => (l && l.n ? l.n * Math.PI * l.dia_mm ** 2 / 4 : 0);
-    const As = a(s.top) + a(s.bottom) + 2 * a(s.side);
-    return `A<sub>s</sub> = ${Math.round(As).toLocaleString("en-US").replace(/,/g, " ")} mm², ρ = ${(100 * As / (s.b_mm * s.h_mm)).toFixed(2)} %. Used by ${S.data ? S.data.members.filter((m) => m.section === Object.keys(S.data.sections).find((k) => S.data.sections[k] && k === m.section) && sectionNameOf(s) === m.section).length : 0} members.`;
+  function casesTable() {
+    const cases = casesNow();
+    const rows = cases.map((c) => `<tr><td><b class="num">${esc(c.id)}</b></td><td><input data-case="${esc(c.id)}" data-cf="name" value="${esc(c.name || "")}" aria-label="Name of ${esc(c.id)}"></td>
+      <td><select data-case="${esc(c.id)}" data-cf="type" aria-label="Type of ${esc(c.id)}">${opt("permanent", "G", c.type)}${opt("variable", "Q", c.type)}</select></td>
+      <td>${c.type === "variable" ? `<select data-case="${esc(c.id)}" data-cf="category" aria-label="Category of ${esc(c.id)}">${Object.entries(CAT_NAMES).map(([k, v]) => opt(k, k, c.category)).join("")}</select>` : `<label class="hint" title="Self weight of the members"><input type="checkbox" data-case="${esc(c.id)}" data-cf="self_weight" ${c.self_weight ? "checked" : ""}> SW</label>`}</td>
+      <td><input data-case="${esc(c.id)}" data-cf="group" value="${esc(c.group || "")}" placeholder="–" aria-label="Exclusive group of ${esc(c.id)}"></td>
+      <td><span class="hint">${(c.loads || []).length}</span></td><td><button class="icon-btn" data-delcase="${esc(c.id)}" aria-label="Delete case ${esc(c.id)}">×</button></td></tr>`).join("");
+    const nc = S.newCase;
+    return `<div class="group"><div class="group-hd"><h3>Load cases</h3><span class="hint">G permanent, Q variable</span></div>
+      <div class="tablewrap"><table class="ed"><thead><tr><th>Id</th><th>Name</th><th>Type</th><th>Cat.</th><th>Group</th><th>Loads</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="grid4"><label class="field">Id<input id="b-nc-id" value="${esc(nc.id)}" placeholder="e.g. Q2"></label><label class="field">Name<input id="b-nc-name" value="${esc(nc.name)}"></label>
+        <label class="field">Type<select id="b-nc-type">${opt("variable", "Variable", nc.type)}${opt("permanent", "Permanent", nc.type)}</select></label>
+        <label class="field">Category<select id="b-nc-cat">${Object.entries(CAT_NAMES).map(([k, v]) => opt(k, v, nc.category)).join("")}</select></label></div>
+      <div class="grid2"><label class="field">Exclusive group <span class="hint">(optional)</span><input id="b-nc-group" value="${esc(nc.group)}" placeholder="e.g. wind"></label><button class="btn sm" id="b-nc-add">Add load case</button></div>
+      <p class="hint">Cases in the same group never act together (e.g. wind directions). Put loads into a case with the load tool or the Model tab.</p></div>`;
   }
-  function sectionNameOf(s) {
-    for (const k of Object.keys(S.extraSections)) if (S.extraSections[k] === s) return k;
-    if (!S.spec) { for (const k of Object.keys(S.base.sections)) if (S.base.sections[k] === s) return k; return null; }
-    return s === S.spec.column ? "Column" : s === S.spec.beam_x ? "Beam X" : s === S.spec.beam_y ? "Beam Y" : null;
+  function loadsTab(custom) {
+    if (custom) return `<div class="tabpanel">${casesTable()}</div>`;
+    const sp = S.spec;
+    if (S.gen === "bridge") {
+      const n2 = (k, label, unit, step = 0.1, min = 0) => `<label class="field"><span>${label} <span class="hint">${unit}</span></span><input type="number" step="${step}" min="${min}" data-spec="${k}" value="${sp[k]}"></label>`;
+      const [nl, wl] = T.notionalLanes(sp.carriageway);
+      return `<div class="tabpanel">
+        <div class="group"><h3>Permanent</h3><div class="fields">${n2("slab_mm", "Deck slab", "mm", 10, 150)}${n2("surfacing", "Surfacing", "kN/m²")}${n2("parapet", "Parapets", "kN/m")}</div>
+          <p class="hint">The slab (25 kN/m³) and the surfacing on the carriageway go to the girders by the lever rule; the parapets act on both edges. Member self weight is added automatically.</p></div>
+        <div class="group"><div class="group-hd"><h3>Road traffic, EN 1991-2 LM1</h3><label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" data-spec="traffic" ${sp.traffic ? "checked" : ""}> On</label></div>
+          <p class="hint">${nl} notional lane${nl > 1 ? "s" : ""} of ${r1(wl)} m on a ${r1(sp.carriageway)} m carriageway (Table 4.1), placed from the left kerb. UDL 9 kN/m² on lane 1 and 2.5 kN/m² elsewhere, one load case per span for pattern loading; tandem axles 300 / 200 / 100 kN, 1.2 m apart.</p>
+          <label class="field">Tandem positions, fraction of each span<input data-list="ts_stations" value="${listText(sp.ts_stations)}" inputmode="decimal"></label>
+          <p class="hint">Each position is a load case in the exclusive group TS, so the combinations move the tandem along the bridge. γ<sub>Q</sub> = 1.35; ψ<sub>0</sub> = 0.75 (TS) and 0.40 (UDL), ψ<sub>2</sub> = 0 (EN 1990 A2). Not included: braking, wind, temperature, fatigue.</p></div>
+        ${casesTable()}
+      </div>`;
+    }
+    const num = (k, label, unit, step = 0.1, min = 0) => `<label class="field"><span>${label} <span class="hint">${unit}</span></span><input type="number" step="${step}" min="${min}" data-spec="${k}" value="${sp[k]}"></label>`;
+    return `<div class="tabpanel">
+      <div class="group"><h3>Permanent</h3><div class="fields">${num("slab_mm", "Slab", "mm", 10, 100)}${num("finishes", "Finishes", "kN/m²")}${num("facade", "Facade", "kN/m")}</div>
+        <p class="hint">Slab self weight at 25 kN/m³ and finishes act on every floor and the roof; the facade line load sits on the perimeter beams of every floor below the roof. Member self weight is added automatically.</p></div>
+      <div class="group"><h3>Imposed, snow, wind</h3><div class="fields">${num("imposed", "Imposed", "kN/m²")}
+        <label class="field">Category<select data-spec="imposed_category">${["A", "B", "C", "D", "E", "F", "G"].map((k) => opt(k, CAT_NAMES[k], sp.imposed_category)).join("")}</select></label>
+        ${num("snow", "Snow (roof)", "kN/m²")}${num("wind", "Wind pressure", "kN/m²")}</div>
+        <p class="hint">Wind acts in +X, −X, +Y and −Y as four mutually exclusive cases, applied at the floor nodes of the windward facade.</p></div>
+      <div class="group"><h3>Load path</h3><div class="fields" style="grid-template-columns:1fr">
+        <label class="field">Slabs span<select data-spec="distribution">${opt("two_way", "Two-way, 45° yield lines", sp.distribution)}${opt("one_way_x", "One-way, spanning in X (onto beams along Y)", sp.distribution)}${opt("one_way_y", "One-way, spanning in Y (onto beams along X)", sp.distribution)}</select></label></div>
+        <label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink-2)"><input type="checkbox" data-spec="pattern_by_storey" ${sp.pattern_by_storey ? "checked" : ""}> One imposed load case per storey (pattern loading; more combinations)</label></div>
+      ${casesTable()}
+    </div>`;
+  }
+  function levelsList() { return levelsOf(S.data); }
+  function modelTab() {
+    const secs = sectionsNow();
+    if (!S.activeSection || !secs.includes(S.activeSection)) S.activeSection = secs.find((s) => /beam/i.test(s)) || secs[0] || null;
+    const cases = casesNow();
+    if (!S.formLoad.caseId || !cases.some((c) => c.id === S.formLoad.caseId)) S.formLoad.caseId = (cases.find((c) => c.type === "variable") || cases[0] || {}).id;
+    const pl = S.plane, lv = levelsList(), nm = S.selM.size, nn = S.selN.size, fl = S.formLoad;
+    if (S.formFloor.z == null && lv.length > 1) S.formFloor.z = lv[1];
+    const caseOpts = cases.map((c) => opt(c.id, `${c.id} · ${c.name || ""}`, fl.caseId)).join("");
+    const nodeIds = S.data ? S.data.nodes.map((n) => n.id) : [];
+    const editRows = S.edits.map((e, k) => `<div class="edrow${e.active === false ? " inactive" : ""}"><span>${esc(MD.editLabel(e))}${e.active === false ? ` <span class="hint">(no longer applies)</span>` : ""}</span><button class="icon-btn" data-undo="${k}" aria-label="Remove this edit">×</button></div>`).reverse().join("");
+    return `<div class="tabpanel">
+      ${S.spec ? `<p class="hint">Edits here are layered on the generated ${S.gen === "bridge" ? "bridge and kept when its spans change" : "building and kept when its grid changes"}. <button class="link-btn" id="b-tofree2">Convert to a free model</button> to edit it without the generator.</p>` : ""}
+      <details class="fold" open data-fold="draw"><summary>Draw <span class="hint">tools right of the 3D view</span></summary><div class="fold-bd">
+        <div class="grid2"><label class="field">Section for new members<select id="b-actsec">${secs.map((s) => opt(s, s, S.activeSection)).join("")}</select></label>
+          <label class="field">Design as<select id="b-mtype">${opt("auto", "Auto", S.memberType)}${opt("beam", "Beam", S.memberType)}${opt("column", "Column", S.memberType)}${opt("none", "Not designed", S.memberType)}</select></label></div>
+        <div class="subhd">Working plane and snap grid</div>
+        <div class="grid3"><label class="field">Plane<select id="b-pl-kind">${opt("XY", "XY (floor)", pl.kind)}${opt("XZ", "XZ (frame along X)", pl.kind)}${opt("YZ", "YZ (frame along Y)", pl.kind)}</select></label>
+          <label class="field">${pl.kind === "XY" ? "at z" : pl.kind === "XZ" ? "at y" : "at x"} (m)<input type="number" step="any" id="b-pl-at" value="${pl.at}" list="b-levels"></label>
+          <label class="field">Grid (m)<input type="number" step="0.05" min="0.05" id="b-pl-step" value="${pl.step}"></label></div>
+        <datalist id="b-levels">${lv.map((z) => `<option value="${z}">`).join("")}</datalist>
+        <div class="actions"><button class="btn sm" id="b-pl-node"${S.selNode ? "" : " disabled"}>Plane through selected node</button></div>
+        <div class="subhd">Node by coordinates</div>
+        <div class="grid4"><label class="field">x${numIn('data-nn="0"', S.newNode[0])}</label><label class="field">y${numIn('data-nn="1"', S.newNode[1])}</label><label class="field">z${numIn('data-nn="2"', S.newNode[2])}</label><button class="btn sm" id="b-nn-add">Add</button></div>
+        <div class="subhd">Member between nodes</div>
+        <div class="grid3"><label class="field">From<input id="b-nm-i" list="b-nodeids" value="${esc(S.newMember.i)}"></label><label class="field">To<input id="b-nm-j" list="b-nodeids" value="${esc(S.newMember.j)}"></label><button class="btn sm" id="b-nm-add">Add</button></div>
+        <datalist id="b-nodeids">${nodeIds.slice(0, 3000).map((id) => `<option value="${esc(id)}">`).join("")}</datalist>
+      </div></details>
+      <details class="fold" open data-fold="sel"><summary>Selection <span class="hint">${nm} member${nm === 1 ? "" : "s"}, ${nn} node${nn === 1 ? "" : "s"}</span></summary><div class="fold-bd">
+        <div class="actions"><button class="btn sm" data-selby="all">All</button><button class="btn sm" data-selby="column">Columns</button><button class="btn sm" data-selby="beam">Beams</button><button class="btn sm" data-selby="level">At plane</button><button class="btn sm" data-selby="none">None</button></div>
+        <div class="subhd">Translational repeat</div>
+        <div class="grid4"><label class="field">dx${numIn('data-rep="0"', S.formRepeat.d[0])}</label><label class="field">dy${numIn('data-rep="1"', S.formRepeat.d[1])}</label><label class="field">dz${numIn('data-rep="2"', S.formRepeat.d[2])}</label><label class="field">copies${numIn('id="b-rep-n"', S.formRepeat.n, 1, 'min="1" max="50"')}</label></div>
+        <div class="grid3"><label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink-2)"><input type="checkbox" id="b-rep-link" ${S.formRepeat.link ? "checked" : ""}> Link</label><label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink-2)" title="Copies of supported nodes get the same support; on by default for horizontal repeats"><input type="checkbox" id="b-rep-sup" ${repSup() ? "checked" : ""}> Supports</label><button class="btn sm" id="b-rep-go"${nm + nn ? "" : " disabled"}>Repeat</button></div>
+        <p class="hint">Link joins each node to its copy with a member (columns when repeating a floor upwards). Supports copies the supports, for frames repeated sideways.</p>
+        <div class="subhd">Move, split, delete</div>
+        <div class="grid4"><label class="field">dx${numIn('data-mv="0"', S.formMove[0])}</label><label class="field">dy${numIn('data-mv="1"', S.formMove[1])}</label><label class="field">dz${numIn('data-mv="2"', S.formMove[2])}</label><button class="btn sm" id="b-mv-go"${nm + nn ? "" : " disabled"}>Move</button></div>
+        <div class="grid3"><label class="field">Split into${numIn('id="b-split-n"', S.formSplit, 1, 'min="2" max="20"')}</label><button class="btn sm" id="b-split-go"${nm ? "" : " disabled"}>Split</button><button class="btn sm" id="b-del-go"${nm + nn ? "" : " disabled"}>Delete</button></div>
+        <div class="grid2"><label class="field">Section<select id="b-sel-sec"><option value="">–</option>${secs.map((s) => opt(s, s, "")).join("")}</select></label><button class="btn sm" id="b-merge">Merge coincident nodes</button></div>
+      </div></details>
+      <details class="fold" open data-fold="loads"><summary>Supports and loads <span class="hint">apply to the selection, or click with the tools</span></summary><div class="fold-bd">
+        <div class="subhd">Support</div>
+        <div class="actions" role="group" aria-label="Support type">${[["fixed", "Fixed"], ["pinned", "Pinned"], ["roller", "Roller Z"], ["none", "Free"]].map(([k, l]) => `<button class="btn sm" data-sup="${k}" aria-pressed="${S.supportKind === k}">${l}</button>`).join("")}<button class="btn sm" id="b-sup-go"${nn ? "" : " disabled"}>Apply to ${nn} node${nn === 1 ? "" : "s"}</button></div>
+        <div class="subhd">Load case</div>
+        <label class="field"><select id="b-fl-case" aria-label="Load case">${caseOpts}</select></label>
+        <div class="subhd">Member load</div>
+        <div class="grid4"><label class="field">Kind<select id="b-fl-kind">${opt("udl", "Line", fl.kind)}${opt("point", "Point", fl.kind)}</select></label>
+          <label class="field">${fl.kind === "udl" ? "w kN/m" : "P kN"}${numIn('id="b-fl-w"', fl.kind === "udl" ? fl.w : fl.p)}</label>
+          ${fl.kind === "point" ? `<label class="field">a (m)${numIn('id="b-fl-a"', fl.a)}</label>` : `<span></span>`}
+          <label class="field">Direction<select id="b-fl-dir">${opt("global_z", "Down (−Z)", fl.dir)}${opt("global_x", "+X", fl.dir)}${opt("global_y", "+Y", fl.dir)}${opt("local_y", "local +y", fl.dir)}${opt("local_z", "local +z", fl.dir)}</select></label></div>
+        <div class="actions"><button class="btn sm" id="b-fl-go"${nm ? "" : " disabled"}>Apply to ${nm} member${nm === 1 ? "" : "s"}</button></div>
+        <div class="subhd">Nodal load (kN, kNm)</div>
+        <div class="grid3">${["Fx", "Fy", "Fz", "Mx", "My", "Mz"].map((l, q) => `<label class="field">${l}${numIn(`data-nl="${q}"`, S.formNodal[q])}</label>`).join("")}</div>
+        <div class="actions"><button class="btn sm" id="b-nl-go"${nn ? "" : " disabled"}>Apply to ${nn} node${nn === 1 ? "" : "s"}</button></div>
+        <div class="subhd">Floor load to beams</div>
+        <div class="grid3"><label class="field">Level z (m)<input type="number" step="any" id="b-ff-z" value="${S.formFloor.z ?? ""}" list="b-levels"></label><label class="field">q kN/m²${numIn('id="b-ff-q"', S.formFloor.q)}</label>
+          <label class="field">Spanning<select id="b-ff-dist">${opt("two_way", "Two-way", S.formFloor.dist)}${opt("one_way_x", "One-way in X", S.formFloor.dist)}${opt("one_way_y", "One-way in Y", S.formFloor.dist)}</select></label></div>
+        <div class="grid2"><span class="hint" id="b-ff-hint"></span><button class="btn sm" id="b-ff-go">Apply floor load</button></div>
+      </div></details>
+      <details class="fold" data-fold="tables"${S.tables ? " open" : ""}><summary>Tables <span class="hint">nodes and members</span></summary><div class="fold-bd">
+        <div class="actions"><button class="btn sm" data-tbl="nodes" aria-pressed="${S.tables === "nodes"}">Nodes</button><button class="btn sm" data-tbl="members" aria-pressed="${S.tables === "members"}">Members</button></div>
+        <div id="b-table"></div>
+      </div></details>
+      <details class="fold" open data-fold="hist"><summary>History <span class="hint">${S.edits.length} edit${S.edits.length === 1 ? "" : "s"}</span></summary><div class="fold-bd">
+        <div class="actions"><button class="btn sm" data-act="undo"${S.edits.length ? "" : " disabled"}>Undo</button><button class="btn sm" data-act="redo"${S.redo.length ? "" : " disabled"}>Redo</button>${S.edits.length ? `<button class="btn sm" id="b-clear">Clear all</button>` : ""}</div>
+        ${editRows || `<p class="hint">No edits yet.</p>`}
+      </div></details>
+    </div>`;
+  }
+  function tableHtml() {
+    if (!S.data || !S.tables) return "";
+    const selOnly = S.selM.size + S.selN.size > 0;
+    if (S.tables === "nodes") {
+      const sup = new Map((S.data.supports || []).map((s) => [s.node, MD.supportKind(s)]));
+      let rows = S.data.nodes;
+      if (selOnly && S.selN.size) rows = rows.filter((n) => S.selN.has(n.id));
+      const shown = rows.slice(0, 300);
+      return `<div class="tablewrap"><table class="ed"><thead><tr><th>Node</th><th>x</th><th>y</th><th>z</th><th>Support</th></tr></thead><tbody>${shown.map((n) => `<tr${S.selN.has(n.id) ? ' class="active"' : ""}>
+        <td><button class="link-btn" data-pnode="${esc(n.id)}">${esc(n.id)}</button></td>${["x", "y", "z"].map((k) => `<td><input type="number" step="any" data-tn="${esc(n.id)}" data-k="${k}" value="${n3(n[k] ?? 0)}"></td>`).join("")}
+        <td><select data-tsup="${esc(n.id)}">${[["none", "–"], ["fixed", "Fixed"], ["pinned", "Pinned"], ["roller", "Roller"], ["custom", "Custom"]].map(([k, l]) => opt(k, l, sup.get(n.id) || "none")).join("")}</select></td></tr>`).join("")}</tbody></table></div>
+        <p class="hint">${rows.length > 300 ? `First 300 of ${rows.length}. ` : ""}${selOnly && S.selN.size ? "Selected nodes only." : "All nodes."}</p>`;
+    }
+    let rows = S.data.members;
+    if (selOnly && S.selM.size) rows = rows.filter((m) => S.selM.has(m.id));
+    const shown = rows.slice(0, 300), secs = sectionsNow();
+    return `<div class="tablewrap"><table class="ed"><thead><tr><th>Member</th><th>i</th><th>j</th><th>Section</th><th>Type</th><th>Roll°</th></tr></thead><tbody>${shown.map((m) => `<tr${S.selM.has(m.id) ? ' class="active"' : ""}>
+      <td><button class="link-btn" data-pmem="${esc(m.id)}">${esc(m.id)}</button></td><td class="num">${esc(m.i)}</td><td class="num">${esc(m.j)}</td>
+      <td><select data-tm="${esc(m.id)}" data-k="section">${secs.map((s) => opt(s, s, m.section)).join("")}</select></td>
+      <td><select data-tm="${esc(m.id)}" data-k="type">${[["auto", "auto"], ["beam", "beam"], ["column", "column"], ["none", "none"]].map(([k, l]) => opt(k, l, (m.design && m.design.type) || "auto")).join("")}</select></td>
+      <td><input type="number" step="15" data-tm="${esc(m.id)}" data-k="roll_deg" value="${m.roll_deg || 0}" style="width:56px"></td></tr>`).join("")}</tbody></table></div>
+      <p class="hint">${rows.length > 300 ? `First 300 of ${rows.length}. ` : ""}${selOnly && S.selM.size ? "Selected members only." : "All members."}</p>`;
+  }
+  function dynamicsTab() {
+    const d = S.dyn, s = S.seis, cases = casesNow();
+    const psi = (c) => (c.type === "permanent" ? 1 : ((T.PSI[c.category] || [0, 0, 0])[2]));
+    const mc = (c) => (d.mass_cases && c.id in d.mass_cases ? d.mass_cases[c.id] : psi(c));
+    return `<div class="tabpanel">
+      <div class="group"><div class="group-hd"><h3>Modal analysis</h3><label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="b-dyn-on" ${d.on || s.on ? "checked" : ""}${s.on ? " disabled" : ""}> On</label></div>
+        <p class="hint">(K − ω²M)φ = 0 with consistent element mass matrices M<sub>e</sub> = ∫ m̄ N<sup>T</sup>N dx (or lumped masses), every member divided into elements; mode shapes normalised to φ<sup>T</sup>Mφ = 1.</p>
+        <div class="grid3"><label class="field">Modes${numIn('id="b-dyn-modes"', d.modes, 1, 'min="1" max="60"')}</label>
+          <label class="field">Mass<select id="b-dyn-mass">${opt("consistent", "Consistent", d.mass)}${opt("lumped", "Lumped", d.mass)}</select></label>
+          <label class="field">Elements per member${numIn('id="b-dyn-seg"', d.segments, 1, 'min="1" max="8"')}</label></div>
+        <div class="subhd">Mass from load cases (factor × gravity load / g)</div>
+        <div class="tablewrap"><table class="ed"><thead><tr><th>Case</th><th>Type</th><th>Factor</th></tr></thead><tbody>${cases.map((c) => `<tr><td class="num">${esc(c.id)}</td><td class="hint">${c.type === "permanent" ? "G" : esc(c.category)}${c.self_weight ? " + SW" : ""}</td><td>${numIn(`data-mc="${esc(c.id)}"`, mc(c), 0.1, 'min="0"')}</td></tr>`).join("")}</tbody></table></div>
+        <p class="hint">Default EN 1998-1 3.2.4: permanent 1.0, variable ψ<sub>E</sub> = ψ<sub>2</sub> (φ = 1.0). Only downward loads become mass. <button class="link-btn" id="b-mc-reset">Reset to defaults</button></p>
+      </div>
+      <div class="group"><div class="group-hd"><h3>Seismic, EN 1998-1</h3><label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="b-seis-on" ${s.on ? "checked" : ""}> On</label></div>
+        <p class="hint">Modal response spectrum analysis, CQC, 30 % directional rule; G + ψ<sub>2</sub>Q ± A<sub>Ed</sub> joins the ULS checks, plus a drift check for every column. Low ductility (DCL): no capacity design.</p>
+        <div class="grid3"><label class="field"><span>a<sub>gR</sub> m/s²</span>${numIn('data-se="agR"', s.agR, 0.1, 'min="0.1"')}</label>
+          <label class="field">Importance<select data-se="importance">${[[0.8, "I, γ 0.8"], [1.0, "II, γ 1.0"], [1.2, "III, γ 1.2"], [1.4, "IV, γ 1.4"]].map(([k, l]) => opt(k, l, s.importance)).join("")}</select></label>
+          <label class="field">Ground<select data-se="ground">${["A", "B", "C", "D", "E"].map((k) => opt(k, k, s.ground)).join("")}</select></label>
+          <label class="field">Spectrum<select data-se="spectrum_type">${opt(1, "Type 1", s.spectrum_type)}${opt(2, "Type 2", s.spectrum_type)}</select></label>
+          <label class="field">q${numIn('data-se="q"', s.q, 0.1, 'min="1" max="6"')}</label>
+          <div class="field"><span>Directions</span><span class="checks"><label><input type="checkbox" data-se="X" ${s.X ? "checked" : ""}> X</label><label><input type="checkbox" data-se="Y" ${s.Y ? "checked" : ""}> Y</label></span></div>
+          <label class="field">Drift limit α<select data-se="drift_limit">${[[0.005, "0.005 brittle"], [0.0075, "0.0075 ductile"], [0.01, "0.010 none"]].map(([k, l]) => opt(k, l, s.drift_limit)).join("")}</select></label>
+          <label class="field">ν<select data-se="nu">${opt(0.5, "0.5 (I, II)", s.nu)}${opt(0.4, "0.4 (III, IV)", s.nu)}</select></label></div>
+        ${s.q > 1.5 ? `<p class="hint" style="color:var(--nc)">q > 1.5 assumes ductile design (DCM/DCH); its capacity design rules are not checked here.</p>` : ""}
+        <div id="b-spec-svg"></div>
+      </div>
+    </div>`;
+  }
+  function spectrumSvg(curve, marks) {
+    const W = 300, H = 120, l = 30, r = 6, t = 8, b = 18, smax = Math.max(...curve.map((p) => p[1]), 1e-9) * 1.1;
+    const X = (v) => l + v / 4 * (W - l - r), Y = (v) => t + (1 - v / smax) * (H - t - b);
+    return `<svg class="spec-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Design spectrum">
+      <polyline points="${curve.map(([a, c]) => `${X(a).toFixed(1)},${Y(c).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--plot-pos)" stroke-width="1.6"/>
+      <line x1="${l}" y1="${H - b}" x2="${W - r}" y2="${H - b}" stroke="var(--ink-3)"/><line x1="${l}" y1="${t}" x2="${l}" y2="${H - b}" stroke="var(--ink-3)"/>
+      ${[0, 1, 2, 3, 4].map((v) => `<text x="${X(v)}" y="${H - 5}" text-anchor="middle">${v}</text>`).join("")}
+      <text x="${l - 4}" y="${Y(smax / 1.1) + 4}" text-anchor="end">${(smax / 1.1).toFixed(2)}</text><text x="${l - 4}" y="${H - b}" text-anchor="end">0</text>
+      ${(marks || []).filter(([a]) => a <= 4).map(([a, c]) => `<circle cx="${X(a).toFixed(1)}" cy="${Y(c).toFixed(1)}" r="2.6" fill="var(--plot-neg)"/>`).join("")}
+      <text x="${W - r}" y="${t + 9}" text-anchor="end">S_d(T) m/s² · T s</text></svg>`;
   }
   function renderEditorHints() {
     const gs = $("#b-gridsum");
-    if (gs && S.spec) {
+    if (gs && S.spec && S.gen === "bridge") {
+      const L = S.spec.spans.reduce((a, b) => a + b, 0);
+      gs.textContent = `${S.spec.spans.length} span${S.spec.spans.length > 1 ? "s" : ""}, ${r1(L)} m long, ${r1(S.spec.width)} m wide, ${S.spec.girders} girder${S.spec.girders > 1 ? "s" : ""}.`;
+    } else if (gs && S.spec) {
       const sx = S.spec.spans_x.reduce((a, b) => a + b, 0), sy = S.spec.spans_y.reduce((a, b) => a + b, 0), hz = S.spec.storeys.reduce((a, b) => a + b, 0);
       gs.textContent = `${S.spec.spans_x.length} × ${S.spec.spans_y.length} bays, ${r1(sx)} × ${r1(sy)} m on plan, ${S.spec.storeys.length} storeys, ${r1(hz)} m high.`;
     }
@@ -429,9 +725,9 @@
     if (st && S.data) {
       const nCol = S.data.members.filter((m) => (m.design || {}).type === "column").length;
       const r = S.result;
-      st.innerHTML = `<h3>Model</h3><dl class="kv"><dt>Nodes</dt><dd>${S.data.nodes.length}</dd><dt>Members</dt><dd>${S.data.members.length} (${nCol} columns)</dd>
+      st.innerHTML = `<h3>Model</h3><dl class="kv"><dt>Nodes</dt><dd>${S.data.nodes.length}</dd><dt>Members</dt><dd>${S.data.members.length}${nCol ? ` (${nCol} columns)` : ""}</dd>
         <dt>Degrees of freedom</dt><dd>${S.data.nodes.length * 6}</dd><dt>Load cases</dt><dd>${S.data.load_cases.length}</dd>
-        ${r ? `<dt>Combinations</dt><dd>${r.combos.combos.filter((c) => c.kind === "ULS").length} ULS, ${r.combos.combos.filter((c) => c.kind !== "ULS").length} SLS</dd><dt>Analysis</dt><dd>${(r.summary.analysis_ms / 1000).toFixed(2)} s, checks ${((r.summary.runtime_ms - r.summary.analysis_ms) / 1000).toFixed(2)} s</dd>` : ""}</dl>`;
+        ${r ? `<dt>Combinations</dt><dd>${r.combos.combos.filter((c) => c.kind === "ULS").length} ULS, ${r.combos.combos.filter((c) => c.kind !== "ULS").length} SLS</dd><dt>Analysis</dt><dd>${(r.summary.analysis_ms / 1000).toFixed(2)} s static${r.modal ? `, ${(r.summary.dynamics_ms / 1000).toFixed(2)} s dynamics` : ""}, checks ${((r.summary.runtime_ms - r.summary.analysis_ms - (r.summary.dynamics_ms || 0)) / 1000).toFixed(2)} s</dd>` : ""}</dl>`;
     }
     $$("[data-secnote]").forEach((p) => {
       const s = secObj(p.dataset.secnote);
@@ -441,17 +737,48 @@
       const used = S.data ? S.data.members.filter((m) => m.section === p.dataset.secnote).length : 0;
       p.innerHTML = `A<sub>s</sub> = ${Math.round(As).toLocaleString("en-US").replace(/,/g, " ")} mm², ρ = ${(100 * As / (s.b_mm * s.h_mm)).toFixed(2)} %, ${used} member${used === 1 ? "" : "s"}.`;
     });
+    const tb = $("#b-table");
+    if (tb) { tb.innerHTML = tableHtml(); bindTable(tb); }
+    const ff = $("#b-ff-hint");
+    if (ff && S.data && S.formFloor.z != null && isFinite(S.formFloor.z)) {
+      const { panels, skipped } = MD.floorPanels(S.data, Number(S.formFloor.z));
+      ff.textContent = `${panels.length} panel${panels.length === 1 ? "" : "s"} framed by beams at this level${skipped ? `, ${skipped} open` : ""}.`;
+    }
+    const sp = $("#b-spec-svg");
+    if (sp && S.seis.on) {
+      const s = S.seis, set = { agR: s.agR, importance: s.importance, ground: s.ground, spectrum_type: s.spectrum_type, q: s.q, beta: 0.2 };
+      const curve = Array.from({ length: 121 }, (_, i) => { const t = 4 * i / 120; return [t, T.designSpectrum(t, set)]; });
+      const marks = S.result && S.result.modal ? S.result.modal.period.map((t) => [t, T.designSpectrum(t, set)]) : [];
+      sp.innerHTML = spectrumSvg(curve, marks);
+    } else if (sp) sp.innerHTML = "";
+  }
+  function bindTable(tb) {
+    $$("[data-tn]", tb).forEach((inp) => inp.addEventListener("change", () => {
+      const n = S.data.nodes.find((x) => x.id === inp.dataset.tn), v = Number(inp.value);
+      if (!n || !isFinite(v)) return;
+      const p = { x: n.x, y: n.y, z: n.z ?? 0 }; p[inp.dataset.k] = v;
+      addEdit({ op: "moveNode", node: n.id, x: p.x, y: p.y, z: p.z });
+    }));
+    $$("[data-tsup]", tb).forEach((sel) => sel.addEventListener("change", () => { if (sel.value !== "custom") addEdit({ op: "support", node: sel.dataset.tsup, kind: sel.value }); }));
+    $$("[data-tm]", tb).forEach((el) => el.addEventListener("change", () => {
+      const k = el.dataset.k, v = k === "roll_deg" ? Number(el.value) : el.value;
+      addEdit({ op: "setMember", member: el.dataset.tm, patch: { [k]: v } });
+    }));
+    $$("[data-pnode]", tb).forEach((b) => b.onclick = () => selectNode(b.dataset.pnode, false));
+    $$("[data-pmem]", tb).forEach((b) => b.onclick = () => select(b.dataset.pmem, true));
   }
   function bindEditor() {
     const ed = $("#b-editor");
+    const on = (sel, ev, fn) => { const el = $(sel, ed); if (el) el.addEventListener(ev, fn); };
     $$("[data-list]", ed).forEach((inp) => inp.addEventListener("input", () => {
-      const v = parseList(inp.value);
+      const v = parseList(inp.value, inp.dataset.list);
       inp.setAttribute("aria-invalid", String(!v));
       if (v) { S.spec[inp.dataset.list] = v; renderEditorHints(); schedule(); }
     }));
     $$("[data-step]", ed).forEach((b) => b.onclick = () => {
       const [k, dir] = b.dataset.step.split(":"), arr = S.spec[k];
-      if (+dir > 0 && arr.length < 40) arr.push(arr[arr.length - 1]);
+      if (+dir > 0 && arr.length < (k === "spans" ? 8 : 40)) arr.push(arr[arr.length - 1]);
+      if (k === "spans") { const ph = S.spec.pier_heights; while (ph.length < arr.length - 1) ph.push(ph[ph.length - 1] ?? 6); const pin = $('[data-list="pier_heights"]', ed); if (pin) pin.value = listText(ph); }
       if (+dir < 0 && arr.length > 1) arr.pop();
       const inp = $(`[data-list="${k}"]`, ed); inp.value = listText(arr); inp.setAttribute("aria-invalid", "false");
       renderEditorHints(); schedule(120);
@@ -463,12 +790,15 @@
       else S.spec[k] = el.value;
       schedule();
     }));
-    const fck = $("#b-fck", ed);
-    if (fck) fck.onchange = () => {
-      const v = Number(fck.value);
-      if (S.spec) S.spec.fck = v; else { const cn = concreteName(S.base); S.base.materials[cn].fck = v; }
+    on("#b-new", "click", () => { $("#b-preset").value = "office"; load({ spec: PRESETS.office.spec }); });
+    on("#b-blank", "click", () => { $("#b-preset").value = "blank"; startBlank(); });
+    on("#b-tofree", "click", toFreeModel);
+    on("#b-tofree2", "click", toFreeModel);
+    on("#b-fck", "change", (e) => {
+      const v = Number(e.target.value);
+      if (S.spec) S.spec.fck = v; else { const cn = concreteName(S.base); if (cn) S.base.materials[cn].fck = v; }
       schedule(120);
-    };
+    });
     $$("[data-sec]", ed).forEach((inp) => inp.addEventListener("input", () => {
       const s = secObj(inp.dataset.sec), v = Number(inp.value);
       if (!s || inp.value === "" || !isFinite(v)) return;
@@ -480,19 +810,173 @@
       renderEditorHints(); schedule();
     }));
     $$("[data-delsec]", ed).forEach((b) => b.onclick = () => {
-      delete S.extraSections[b.dataset.delsec];
-      S.edits = S.edits.filter((e) => !(e.op === "section" && e.section === b.dataset.delsec));
+      const name = b.dataset.delsec;
+      if (S.data && S.data.members.some((m) => m.section === name)) { toast(`'${name}' is used by members; assign them another section first.`); return; }
+      if (name in S.extraSections) delete S.extraSections[name]; else if (S.base) delete S.base.sections[name];
       renderEditor(); schedule(60);
     });
-    $$("[data-undo]", ed).forEach((b) => b.onclick = () => { S.edits.splice(+b.dataset.undo, 1); renderEditor(); schedule(60); });
-    const clr = $("#b-clear", ed);
-    if (clr) clr.onclick = () => { S.edits = []; renderEditor(); schedule(60); };
+    on("#b-addsec", "click", () => {
+      const names = new Set(sectionsNow());
+      let k = 1; while (names.has(`Section ${k}`)) k++;
+      const base = S.data && S.data.sections[S.activeSection || Object.keys(S.data.sections)[0]];
+      S.extraSections[`Section ${k}`] = base ? clone(base) : sec0(300, 500, [3, 16], [3, 16], null, [8, 2, 200], 30);
+      renderEditor(); schedule(60);
+    });
+    // load cases
+    $$("[data-case]", ed).forEach((el) => el.addEventListener("change", () => {
+      const cf = el.dataset.cf, v = el.type === "checkbox" ? el.checked : el.value;
+      addEdit({ op: "editCase", caseId: el.dataset.case, patch: { [cf]: cf === "self_weight" ? (v || null) : v } });
+    }));
+    $$("[data-delcase]", ed).forEach((b) => b.onclick = () => addEdit({ op: "delCase", caseId: b.dataset.delcase }));
+    on("#b-nc-add", "click", () => {
+      const nc = S.newCase;
+      nc.id = $("#b-nc-id", ed).value.trim(); nc.name = $("#b-nc-name", ed).value.trim(); nc.type = $("#b-nc-type", ed).value; nc.category = $("#b-nc-cat", ed).value; nc.group = $("#b-nc-group", ed).value.trim();
+      if (!nc.id) { toast("Give the load case an id."); return; }
+      if (casesNow().some((c) => c.id === nc.id)) { toast(`Load case ${nc.id} exists already.`); return; }
+      addEdit({ op: "addCase", id: nc.id, name: nc.name || nc.id, type: nc.type, category: nc.category, group: nc.group || null });
+      S.formLoad.caseId = nc.id; S.newCase = { id: "", name: "", type: nc.type, category: nc.category, group: "" };
+    });
+    // model tab
+    on("#b-actsec", "change", (e) => { S.activeSection = e.target.value; });
+    on("#b-mtype", "change", (e) => { S.memberType = e.target.value; });
+    on("#b-pl-kind", "change", (e) => { S.plane.kind = e.target.value; S.plane.at = 0; renderEditor(); V.toolChanged(); });
+    on("#b-pl-at", "input", (e) => { const v = Number(e.target.value); if (isFinite(v)) { S.plane.at = v; V.toolChanged(); } });
+    on("#b-pl-step", "input", (e) => { const v = Number(e.target.value); if (v > 0.01) { S.plane.step = v; V.toolChanged(); } });
+    on("#b-pl-node", "click", () => {
+      const n = S.data.nodes.find((x) => x.id === S.selNode);
+      if (!n) return;
+      S.plane.at = S.plane.kind === "XY" ? (n.z ?? 0) : S.plane.kind === "XZ" ? n.y : n.x;
+      renderEditor(); V.toolChanged();
+    });
+    $$("[data-nn]", ed).forEach((inp) => inp.addEventListener("input", () => { S.newNode[+inp.dataset.nn] = Number(inp.value); }));
+    on("#b-nn-add", "click", () => {
+      const [x, y, z] = S.newNode;
+      if (![x, y, z].every(isFinite)) return;
+      if (S.data && MD.findNodeAt(S.data, x, y, z)) { toast("A node exists at this point."); return; }
+      const { n } = takenIds(), id = MD.nextId(n, "N");
+      addEdit({ op: "addNode", id, x, y, z });
+      toast(`Node ${id} added.`);
+    });
+    on("#b-nm-add", "click", () => {
+      const i = $("#b-nm-i", ed).value.trim(), j = $("#b-nm-j", ed).value.trim();
+      S.newMember = { i, j };
+      const nodes = new Set(S.data.nodes.map((x) => x.id));
+      if (!nodes.has(i) || !nodes.has(j) || i === j) { toast("Give two different existing nodes."); return; }
+      const { m } = takenIds(), id = MD.nextId(m, "M");
+      addEdit({ op: "addMember", id, i, j, section: S.activeSection, type: S.memberType });
+    });
+    $$("[data-selby]", ed).forEach((b) => b.onclick = () => selectBy(b.dataset.selby));
+    $$("[data-rep]", ed).forEach((inp) => inp.addEventListener("input", () => { S.formRepeat.d[+inp.dataset.rep] = Number(inp.value); const c = $("#b-rep-sup", ed); if (c && S.formRepeat.sup == null) c.checked = repSup(); }));
+    on("#b-rep-sup", "change", (e) => { S.formRepeat.sup = e.target.checked; });
+    on("#b-rep-n", "input", (e) => { S.formRepeat.n = Math.max(1, Math.min(50, Math.round(Number(e.target.value)) || 1)); });
+    on("#b-rep-link", "change", (e) => { S.formRepeat.link = e.target.checked; });
+    on("#b-rep-go", "click", () => {
+      const r = S.formRepeat;
+      if (!r.d.every(isFinite) || r.d.every((v) => v === 0)) { toast("Give a non-zero repeat distance."); return; }
+      addEdit({ op: "repeat", members: [...S.selM], nodes: [...S.selN], d: r.d.slice(), n: r.n, link: r.link, linkSection: S.activeSection, supports: repSup() });
+    });
+    $$("[data-mv]", ed).forEach((inp) => inp.addEventListener("input", () => { S.formMove[+inp.dataset.mv] = Number(inp.value); }));
+    on("#b-mv-go", "click", () => {
+      const nodes = new Set(S.selN);
+      for (const id of S.selM) { const m = S.data.members.find((x) => x.id === id); if (m) { nodes.add(m.i); nodes.add(m.j); } }
+      if (!S.formMove.every(isFinite) || !nodes.size) return;
+      addEdit({ op: "move", nodes: [...nodes], d: S.formMove.slice() });
+    });
+    on("#b-split-n", "input", (e) => { S.formSplit = Math.max(2, Math.min(20, Math.round(Number(e.target.value)) || 2)); });
+    on("#b-split-go", "click", () => {
+      const ops = [...S.selM].map((id) => ({ op: "split", member: id, n: S.formSplit }));
+      if (ops.length) addEdit(ops.length === 1 ? ops[0] : { op: "batch", ops, label: `Split ${ops.length} members into ${S.formSplit}` });
+    });
+    on("#b-del-go", "click", deleteSelection);
+    on("#b-sel-sec", "change", (e) => {
+      if (!e.target.value || !S.selM.size) return;
+      const ops = [...S.selM].map((id) => ({ op: "section", member: id, section: e.target.value }));
+      addEdit(ops.length === 1 ? ops[0] : { op: "batch", ops, label: `${ops.length} members: section ${e.target.value}` });
+    });
+    on("#b-merge", "click", () => addEdit({ op: "merge", tol: 1e-4 }));
+    $$("[data-sup]", ed).forEach((b) => b.onclick = () => { S.supportKind = b.dataset.sup; $$("[data-sup]", ed).forEach((x) => x.setAttribute("aria-pressed", String(x === b))); });
+    on("#b-sup-go", "click", () => {
+      const ops = [...S.selN].map((id) => ({ op: "support", node: id, kind: S.supportKind }));
+      if (ops.length) addEdit(ops.length === 1 ? ops[0] : { op: "batch", ops, label: `${ops.length} supports: ${S.supportKind}` });
+    });
+    on("#b-fl-case", "change", (e) => { S.formLoad.caseId = e.target.value; });
+    on("#b-fl-kind", "change", (e) => { S.formLoad.kind = e.target.value; renderEditor(); });
+    on("#b-fl-w", "input", (e) => { const v = Number(e.target.value); if (S.formLoad.kind === "udl") S.formLoad.w = v; else S.formLoad.p = v; });
+    on("#b-fl-a", "input", (e) => { S.formLoad.a = Number(e.target.value); });
+    on("#b-fl-dir", "change", (e) => { S.formLoad.dir = e.target.value; });
+    on("#b-fl-go", "click", () => { const ops = [...S.selM].map(memberLoadOp).filter(Boolean); if (ops.length) addEdit(ops.length === 1 ? ops[0] : { op: "batch", ops, label: `Loads on ${ops.length} members in ${S.formLoad.caseId}` }); });
+    $$("[data-nl]", ed).forEach((inp) => inp.addEventListener("input", () => { S.formNodal[+inp.dataset.nl] = Number(inp.value) || 0; }));
+    on("#b-nl-go", "click", () => {
+      const ops = [...S.selN].map((id) => ({ op: "nodal", node: id, caseId: S.formLoad.caseId, f: S.formNodal.slice() }));
+      if (ops.length) addEdit(ops.length === 1 ? ops[0] : { op: "batch", ops, label: `Nodal loads on ${ops.length} nodes in ${S.formLoad.caseId}` });
+    });
+    on("#b-ff-z", "input", (e) => { S.formFloor.z = e.target.value === "" ? null : Number(e.target.value); renderEditorHints(); });
+    on("#b-ff-q", "input", (e) => { S.formFloor.q = Number(e.target.value); });
+    on("#b-ff-dist", "change", (e) => { S.formFloor.dist = e.target.value; });
+    on("#b-ff-go", "click", () => {
+      const f = S.formFloor;
+      if (!isFinite(f.z) || !isFinite(f.q) || !f.q) { toast("Give a level and a load."); return; }
+      const { panels } = MD.floorPanels(S.data, f.z);
+      if (!panels.length) { toast("No panels framed by beams at this level."); return; }
+      addEdit({ op: "floor", z: f.z, q: f.q, caseId: S.formLoad.caseId, dist: f.dist });
+    });
+    $$("[data-tbl]", ed).forEach((b) => b.onclick = () => { S.tables = S.tables === b.dataset.tbl ? "" : b.dataset.tbl; renderEditor(); });
+    $$("[data-fold]", ed).forEach((d) => d.addEventListener("toggle", () => { if (d.dataset.fold === "tables" && !d.open) S.tables = ""; }));
+    $$("[data-undo]", ed).forEach((b) => b.onclick = () => { S.edits.splice(+b.dataset.undo, 1); S.redo = []; afterEdit(); });
+    $$("[data-act=undo]", ed).forEach((b) => b.onclick = undo);
+    $$("[data-act=redo]", ed).forEach((b) => b.onclick = redo);
+    on("#b-clear", "click", () => { S.edits = []; S.redo = []; afterEdit(); });
+    // dynamics tab
+    on("#b-dyn-on", "change", (e) => { S.dyn.on = e.target.checked; schedule(60); });
+    on("#b-dyn-modes", "input", (e) => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= 60) { S.dyn.modes = v; schedule(); } });
+    on("#b-dyn-mass", "change", (e) => { S.dyn.mass = e.target.value; schedule(60); });
+    on("#b-dyn-seg", "input", (e) => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= 8) { S.dyn.segments = v; schedule(); } });
+    $$("[data-mc]", ed).forEach((inp) => inp.addEventListener("input", () => {
+      const v = Number(inp.value);
+      if (!isFinite(v) || v < 0) return;
+      if (!S.dyn.mass_cases) S.dyn.mass_cases = Object.fromEntries(casesNow().map((c) => [c.id, c.type === "permanent" ? 1 : ((T.PSI[c.category] || [0, 0, 0])[2])]));
+      S.dyn.mass_cases[inp.dataset.mc] = v; schedule();
+    }));
+    on("#b-mc-reset", "click", () => { S.dyn.mass_cases = null; renderEditor(); schedule(60); });
+    on("#b-seis-on", "change", (e) => { S.seis.on = e.target.checked; renderEditor(); schedule(60); });
+    $$("[data-se]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
+      const k = el.dataset.se;
+      if (el.type === "checkbox") S.seis[k] = el.checked;
+      else { const v = Number(el.value); if (!isFinite(v)) return; S.seis[k] = k === "ground" ? el.value : v; }
+      if (k === "ground") S.seis.ground = el.value;
+      renderEditorHints();
+      if (S.seis.on) schedule();
+    }));
   }
-  function addEdit(e) {
-    S.edits = S.edits.filter((x) => !(x.member === e.member && x.op === e.op && e.op !== "load"));
-    S.edits.push(e);
-    if (S.btab === "edits") renderEditor();
-    schedule(60);
+  function repSup() { const r = S.formRepeat; return r.sup == null ? r.d[2] === 0 : r.sup; }
+  function memberLoadOp(mid) {
+    const f = S.formLoad;
+    if (!f.caseId) return null;
+    if (f.kind === "udl") { if (!isFinite(f.w) || !f.w) return null; return { op: "load", member: mid, w: f.dir === "global_z" ? -Math.abs(f.w) : f.w, dir: f.dir, caseId: f.caseId }; }
+    if (!isFinite(f.p) || !f.p) return null;
+    return { op: "point", member: mid, p: f.dir === "global_z" ? -Math.abs(f.p) : f.p, a: f.a, dir: f.dir, caseId: f.caseId };
+  }
+  function deleteSelection() {
+    const ops = [...S.selM].map((id) => ({ op: "remove", member: id })).concat([...S.selN].map((id) => ({ op: "delNode", node: id })));
+    if (!ops.length) return;
+    addEdit(ops.length === 1 ? ops[0] : { op: "batch", ops, label: `Deleted ${S.selM.size} members, ${S.selN.size} nodes` });
+    S.selM.clear(); S.selN.clear(); S.sel = null; S.selNode = null;
+  }
+  function selectBy(kind) {
+    if (!S.data) return;
+    S.selM = new Set(); S.selN = new Set(); S.sel = null; S.selNode = null;
+    if (kind === "all") S.data.members.forEach((m) => S.selM.add(m.id));
+    if (kind === "column" || kind === "beam") {
+      const types = S.result ? Object.fromEntries(Object.entries(S.result.model.members).map(([k, m]) => [k, m.design.type])) : {};
+      S.data.members.forEach((m) => { const t = types[m.id] || (m.design && m.design.type); if (t === kind) S.selM.add(m.id); });
+    }
+    if (kind === "level") {
+      const nm = new Map(S.data.nodes.map((n) => [n.id, n])), pl = S.plane, c = (n) => (pl.kind === "XY" ? (n.z ?? 0) : pl.kind === "XZ" ? n.y : n.x);
+      S.data.nodes.forEach((n) => { if (Math.abs(c(n) - pl.at) < 1e-6) S.selN.add(n.id); });
+      S.data.members.forEach((m) => { if (S.selN.has(m.i) && S.selN.has(m.j)) S.selM.add(m.id); });
+      void nm;
+    }
+    afterSelection();
   }
 
   // ================================================================ results helpers
@@ -508,22 +992,27 @@
   }
   function sourceFactors(src) {
     const r = S.result;
-    if (!r || src === "env") return null;
-    if (src.startsWith("case:")) { const id = src.slice(5); return r.combos.caseIds.map((c) => (c === id ? 1 : 0)); }
-    const c = r.combos.combos.find((x) => x.id === src.slice(6));
-    return c ? c.factors : null;
+    if (!r || src === "env" || !src) return null;
+    if (src.startsWith("case:")) { const id = src.slice(5); if (!r.combos.caseIds.includes(id)) return null; return r.combos.caseIds.map((c) => (c === id ? 1 : 0)); }
+    if (src.startsWith("combo:")) { const c = r.combos.combos.find((x) => x.id === src.slice(6)); return c ? c.factors : null; }
+    return null;
   }
   function sourceLabel(src) {
     const r = S.result;
     if (src === "env") return "ULS envelope";
-    if (src.startsWith("case:")) { const lc = r.model.load_cases[src.slice(5)]; return lc ? `${lc.id}, ${lc.name}` : src; }
-    const c = r.combos.combos.find((x) => x.id === src.slice(6));
+    if (src.startsWith("case:")) {
+      const id = src.slice(5);
+      if (id === T.CASE_E || id === T.CASE_E2) return `${id}, design seismic action effects (CQC magnitudes)`;
+      const lc = r && r.model.load_cases[id]; return lc ? `${lc.id}, ${lc.name}` : id;
+    }
+    if (src.startsWith("mode:")) return `mode ${+src.slice(5) + 1}`;
+    const c = r && r.combos.combos.find((x) => x.id === src.slice(6));
     return c ? `${c.id}: ${c.label}` : src;
   }
   function series(mid, q, fac) {
     const r = S.result, ids = r.combos.caseIds;
     const rows = ids.map((c) => r.cases[c].members[mid][q]);
-    return rows[0].map((_, j) => fac.reduce((s, f, k) => s + f * rows[k][j], 0));
+    return rows[0].map((_, j) => fac.reduce((s, f, k) => (f ? s + f * rows[k][j] : s), 0));
   }
   function deformFactors() {
     const f = sourceFactors(S.source);
@@ -534,7 +1023,7 @@
       let v = 0;
       r.analysis.nodeIds.forEach((_, k) => {
         let ux = 0, uy = 0, uz = 0;
-        c.factors.forEach((fv, q) => { const d = r.cases[ids[q]].displacements[k]; ux += fv * d[0]; uy += fv * d[1]; uz += fv * d[2]; });
+        c.factors.forEach((fv, q) => { if (!fv) return; const d = r.cases[ids[q]].displacements[k]; ux += fv * d[0]; uy += fv * d[1]; uz += fv * d[2]; });
         v = Math.max(v, Math.hypot(ux, uy, uz));
       });
       if (v > bv) { bv = v; best = c; }
@@ -546,20 +1035,39 @@
   // ================================================================ source / level selects
   function renderSource() {
     const sel = $("#b-source"), r = S.result;
+    const show = S.show;
+    $("#b-animate-l").hidden = show !== "modes";
+    if (show === "loads") {
+      const cases = casesNow();
+      sel.disabled = !cases.length;
+      sel.innerHTML = cases.map((c) => `<option value="case:${esc(c.id)}">${esc(c.id)} · ${esc(c.name || "")}</option>`).join("") || `<option>–</option>`;
+      if (![...sel.options].some((o) => o.value === S.source)) S.source = cases.length ? `case:${cases.find((c) => (c.loads || []).length) ? cases.find((c) => (c.loads || []).length).id : cases[0].id}` : "";
+      sel.value = S.source;
+      return;
+    }
     if (!r) { sel.innerHTML = `<option>–</option>`; sel.disabled = true; return; }
-    sel.disabled = S.show === "model" || S.show === "util";
+    if (show === "modes") {
+      const mr = r.modal;
+      sel.disabled = !mr;
+      sel.innerHTML = mr ? mr.period.map((t, k) => `<option value="mode:${k}">Mode ${k + 1} · T ${t.toFixed(3)} s · X ${(100 * mr.ratio("X")[k]).toFixed(0)} % · Y ${(100 * mr.ratio("Y")[k]).toFixed(0)} %</option>`).join("") : "";
+      if (![...sel.options].some((o) => o.value === S.source)) S.source = "mode:0";
+      sel.value = S.source;
+      return;
+    }
+    sel.disabled = show === "model" || show === "util";
+    if (sel.disabled) { sel.innerHTML = `<option>${show === "util" ? "All ULS combinations" : "–"}</option>`; return; }
     const cases = Object.values(r.model.load_cases);
     const combos = (k) => r.combos.combos.filter((c) => c.kind === k);
-    sel.innerHTML = `<option value="env">ULS envelope</option><optgroup label="Load cases (characteristic)">${cases.map((c) => `<option value="case:${esc(c.id)}">${esc(c.id)} · ${esc(c.name)}</option>`).join("")}</optgroup>
+    const pseudo = r.seismic && show !== "def" ? `<optgroup label="Seismic (EN 1998)"><option value="case:${T.CASE_E}">A<sub>Ed</sub> · design seismic action effects</option></optgroup>` : "";
+    sel.innerHTML = `<option value="env">${show === "def" ? "Largest characteristic combination" : "ULS envelope"}</option><optgroup label="Load cases (characteristic)">${cases.map((c) => `<option value="case:${esc(c.id)}">${esc(c.id)} · ${esc(c.name)}</option>`).join("")}</optgroup>${pseudo.replace("<sub>Ed</sub>", "Ed")}
       <optgroup label="Characteristic combinations">${combos("SLS_char").map((c) => `<option value="combo:${esc(c.id)}">${esc(c.id)} · ${esc(c.label)}</option>`).join("")}</optgroup>
       <optgroup label="ULS combinations">${combos("ULS").slice(0, 400).map((c) => `<option value="combo:${esc(c.id)}">${esc(c.id)} · ${esc(c.label)}</option>`).join("")}</optgroup>`;
     if (![...sel.options].some((o) => o.value === S.source)) S.source = "env";
     sel.value = S.source;
   }
   function levelsOf(d) {
-    if (d && d.meta && d.meta.grid && d.meta.grid.levels) return d.meta.grid.levels;
-    const zs = Array.from(new Set((d ? d.nodes : []).map((n) => Math.round((n.z ?? 0) * 1000) / 1000))).sort((a, b) => a - b);
-    return zs;
+    if (d && d.meta && d.meta.grid && d.meta.grid.levels && S.spec) return d.meta.grid.levels;
+    return Array.from(new Set((d ? d.nodes : []).map((n) => Math.round((n.z ?? 0) * 1000) / 1000))).sort((a, b) => a - b);
   }
   function renderLevels() {
     const sel = $("#b-level"), lv = levelsOf(S.data);
@@ -594,7 +1102,7 @@
   function miniDiagram(x, mx, mn, q) {
     const W = 340, H = 84, pl = 6, pr = 6, pt = 15, pb = 15, L = x[x.length - 1] || 1;
     const amax = Math.max(1e-9, ...mx.map(Math.abs), ...mn.map(Math.abs));
-    const dir = q === "My" || q === "Mz" ? -1 : 1;           // moments drawn on the tension side, like the 3D view
+    const dir = q === "My" || q === "Mz" ? -1 : 1;
     const sx = (v) => pl + (v / L) * (W - pl - pr), mid = pt + (H - pt - pb) / 2, sy = (v) => mid - dir * (v / amax) * (H - pt - pb) / 2;
     const area = (arr) => `M${sx(x[0]).toFixed(1)},${mid} ` + arr.map((v, k) => `L${sx(x[k]).toFixed(1)},${sy(v).toFixed(1)}`).join(" ") + ` L${sx(x[x.length - 1]).toFixed(1)},${mid} Z`;
     const ext = (arr, wantMax) => { let k = 0; arr.forEach((v, j) => { if (wantMax ? v > arr[k] : v < arr[k]) k = j; }); return k; };
@@ -616,51 +1124,111 @@
   function renderResults() {
     $$("[data-rtab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.rtab === S.rtab)));
     const sum = $("#b-summary"), out = $("#b-results"), r = S.result;
-    if (!r) {
-      sum.innerHTML = `<div class="empty"><b>The model cannot be analysed yet.</b><br>${esc(S.error || "")}</div>`;
-      out.innerHTML = "";
-      return;
+    if (!r) sum.innerHTML = `<div class="empty"><b>${S.data && S.data.members.length ? "The model cannot be analysed yet." : "An empty model."}</b><br>${esc(S.error || "")}</div>`;
+    else {
+      const s = r.summary, nU = r.combos.combos.filter((c) => c.kind === "ULS").length;
+      const nFail = Object.keys(r.checks).filter((m) => memberUtil(m).st === "fail").length;
+      sum.innerHTML = `<div class="summary"><span class="big" style="color:${s.status === "fail" ? "var(--bad)" : s.status === "pass" ? "var(--ok)" : "var(--nc)"}">${s.max_utilisation != null ? s.max_utilisation.toFixed(3) : "–"}</span>
+        <span>${pill(s.status)} <span class="gov">${s.status === "pass" ? "All members pass" : s.status === "fail" ? `${nFail} member${nFail === 1 ? "" : "s"} fail` : "Some checks are not covered"}</span></span>
+        <span class="gov">${s.governing ? `Governing: <button class="link-btn" data-goto="${esc(s.governing.member)}">${esc(s.governing.member)}</button>, ${esc(s.governing.check.toLowerCase())}.` : ""} ${Object.keys(r.model.members).length} members, ${nU} ULS combinations${r.modal ? `, T₁ = ${r.modal.period[0].toFixed(2)} s` : ""}, ${(s.runtime_ms / 1000).toFixed(2)} s.</span></div>
+        ${r.warnings.map((w) => `<div class="banner" style="position:static;margin:8px 12px 0;background:var(--nc-bg);color:var(--nc)">${esc(w)}</div>`).join("")}`;
+      sum.querySelectorAll("[data-goto]").forEach((b) => b.onclick = () => select(b.dataset.goto, true));
     }
-    const s = r.summary, nU = r.combos.combos.filter((c) => c.kind === "ULS").length;
-    const nFail = Object.keys(r.checks).filter((m) => memberUtil(m).st === "fail").length;
-    sum.innerHTML = `<div class="summary"><span class="big" style="color:${s.status === "fail" ? "var(--bad)" : s.status === "pass" ? "var(--ok)" : "var(--nc)"}">${s.max_utilisation != null ? s.max_utilisation.toFixed(3) : "–"}</span>
-      <span>${pill(s.status)} <span class="gov">${s.status === "pass" ? "All members pass" : s.status === "fail" ? `${nFail} member${nFail === 1 ? "" : "s"} fail` : "Some checks are not covered"}</span></span>
-      <span class="gov">${s.governing ? `Governing: <button class="link-btn" data-goto="${esc(s.governing.member)}">${esc(s.governing.member)}</button>, ${esc(s.governing.check.toLowerCase())}.` : ""} ${Object.keys(r.model.members).length} members, ${nU} ULS combinations, ${(s.runtime_ms / 1000).toFixed(2)} s.</span></div>
-      ${r.warnings.map((w) => `<div class="banner" style="position:static;margin:8px 12px 0;background:var(--nc-bg);color:var(--nc)">${esc(w)}</div>`).join("")}`;
-    sum.querySelectorAll("[data-goto]").forEach((b) => b.onclick = () => select(b.dataset.goto, true));
-    if (S.rtab === "member") out.innerHTML = memberPanel();
+    if (S.rtab === "member") out.innerHTML = S.selNode && !S.sel ? nodePanel() : memberPanel();
+    else if (!r) out.innerHTML = `<p class="empty">Results appear once the model can be analysed.</p>`;
     else if (S.rtab === "critical") out.innerHTML = criticalPanel();
+    else if (S.rtab === "modes") out.innerHTML = modesPanel();
     else if (S.rtab === "reactions") out.innerHTML = reactionsPanel();
-    else out.innerHTML = `<div style="padding:10px 12px"><p class="hint">EN 1990 with recommended ψ factors (Table A1.1). Every variable case is switched on and off and takes a turn as the leading action; the four wind directions are mutually exclusive.</p>
+    else out.innerHTML = `<div style="padding:10px 12px"><p class="hint">EN 1990 with recommended ψ factors (Table A1.1). Every variable case is switched on and off and takes a turn as the leading action; cases in one group are mutually exclusive.${r.seismic ? " SEI combinations are the seismic design situation (6.4.3.4)." : ""}</p>
       <table class="data"><thead><tr><th>Id</th><th style="text-align:left">Combination</th></tr></thead><tbody>${r.combos.combos.slice(0, 600).map((c) => `<tr><td>${esc(c.id)}</td><td style="text-align:left;font-family:var(--font-num)">${esc(c.label)}</td></tr>`).join("")}</tbody></table>
       ${r.combos.combos.length > 600 ? `<p class="hint">First 600 of ${r.combos.combos.length} shown.</p>` : ""}</div>`;
     bindResults();
   }
+  function memberEditBlock(mid) {
+    const dm = S.data.members.find((m) => m.id === mid);
+    if (!dm) return "";
+    const secs = sectionsNow(), type = (dm.design && dm.design.type) || "auto";
+    const cases = casesNow();
+    if (!S.formLoad.caseId || !cases.some((c) => c.id === S.formLoad.caseId)) S.formLoad.caseId = (cases.find((c) => c.type === "variable") || cases[0] || {}).id;
+    const pinned = dm.releases && dm.releases.i === true && dm.releases.j === true;
+    return `<div class="grid3"><label class="field">Section<select id="b-msec">${secs.map((k) => `<option value="${esc(k)}"${k === dm.section ? " selected" : ""}>${esc(k)}</option>`).join("")}<option value="__new">New section from this one…</option></select></label>
+        <label class="field">Design as<select id="b-mtype2">${[["auto", "auto"], ["beam", "beam"], ["column", "column"], ["none", "none"]].map(([k, l]) => opt(k, l, type)).join("")}</select></label>
+        <label class="field">Roll°<input type="number" step="15" id="b-mroll" value="${dm.roll_deg || 0}"></label></div>
+      <div class="actions"><button class="btn sm" id="b-mrem">Delete</button><button class="btn sm" id="b-mrel"${pinned ? " disabled" : ""}>${pinned ? "Ends pinned" : "Pin both ends"}</button><button class="btn sm" id="b-msplit">Split in 2</button><button class="btn sm" id="b-mfit">Zoom to</button></div>
+      <div class="inline-form"><label class="field"><span>Line load <span class="hint">kN/m</span></span><input type="number" step="0.5" id="b-lw" value="${S.formLoad.w}"></label>
+        <label class="field">Direction<select id="b-ldir">${opt("global_z", "Down (−Z)", S.formLoad.dir)}${opt("global_x", "+X", S.formLoad.dir)}${opt("global_y", "+Y", S.formLoad.dir)}</select></label>
+        <label class="field">Case<select id="b-lcase">${cases.map((c) => opt(c.id, c.id, S.formLoad.caseId)).join("")}</select></label><button class="btn" id="b-ladd">Add</button></div>`;
+  }
   function memberPanel() {
     const r = S.result, mid = S.sel;
-    if (!mid || !r.model.members[mid]) {
-      return `<div class="empty"><b>Click a member in the 3D view</b> to see its forces, every design check with the calculation steps, and to edit it.<br><br>Or open the <button class="link-btn" data-rt="critical">critical members</button>.</div>`;
+    if (!mid || !S.data || !S.data.members.some((m) => m.id === mid)) {
+      return `<div class="empty"><b>Click a member or node in the 3D view</b> to see its forces, every design check with the calculation steps, and to edit it. Shift-click or the box tool select several for the Model tab.<br><br>${r ? `Or open the <button class="link-btn" data-rt="critical">critical members</button>.` : ""}</div>`;
+    }
+    if (!r || !r.model.members[mid]) {
+      const dm = S.data.members.find((m) => m.id === mid);
+      return `<div class="mhead"><h2><mark>${esc(mid)}</mark></h2><dl class="kv"><dt>Nodes</dt><dd>${esc(dm.i)} → ${esc(dm.j)}</dd><dt>Section</dt><dd>${esc(dm.section)}</dd></dl>${memberEditBlock(mid)}</div>`;
     }
     const m = r.model.members[mid], md = r.analysis.members[mid], sec = r.model.sections[m.section], env = r.envelopes[mid];
     const { u, st } = memberUtil(mid), lst = r.checks[mid] || [];
-    const secOpts = Object.keys(r.model.sections).map((k) => `<option value="${esc(k)}"${k === m.section ? " selected" : ""}>${esc(k)}, ${r.model.sections[k].b_mm}×${r.model.sections[k].h_mm}</option>`).join("");
-    const cases = Object.values(r.model.load_cases);
-    if (!S.formLoad.caseId || !r.model.load_cases[S.formLoad.caseId]) S.formLoad.caseId = (cases.find((c) => c.type === "variable") || cases[0]).id;
-    const released = m.rel_i.my && m.rel_j.my;
     const diag = (q, note) => `<div class="diag"><h3><span style="font:inherit;color:inherit">${QLABEL[q]}</span><span>${note}, ${QUNIT[q]}</span></h3>${miniDiagram(env.x, env.max[q], env.min[q], q)}</div>`;
     const ext = (q) => { const a = Math.max(...env.max[q]), b = Math.min(...env.min[q]); return Math.abs(a) >= Math.abs(b) ? a : b; };
     return `<div class="mhead"><h2><mark>${esc(mid)}</mark></h2>
-        <dl class="kv"><dt>Type</dt><dd>${esc(m.design.type)}${m.design.type === "beam" ? `, ${esc(m.design.deflection_system.replace(/_/g, " "))}` : `, l<sub>0</sub>/L = ${m.design.l0_factor_y}`}</dd>
+        <dl class="kv"><dt>Type</dt><dd>${esc(m.design.type)}${m.design.type === "beam" ? `, ${esc(m.design.deflection_system.replace(/_/g, " "))}` : m.design.type === "column" ? `, l<sub>0</sub>/L = ${m.design.l0_factor_y}` : ""}</dd>
           <dt>Length</dt><dd>${md.L.toFixed(3)} m, ${esc(m.i)} → ${esc(m.j)}</dd><dt>Section</dt><dd>${esc(m.section)}: ${sec.b_mm} × ${sec.h_mm} mm, ${esc(sec.concrete.name)}</dd>
           <dt>Utilisation</dt><dd>${u == null ? "–" : (u >= 9.99 ? "≫ 1" : u.toFixed(3))} ${pill(st)}</dd><dt>V<sub>y</sub>, T</dt><dd>${f3(ext("Vy"))} kN, ${f3(ext("T"))} kNm (largest)</dd></dl>
-        <div class="fields" style="grid-template-columns:minmax(0,1fr) auto"><label class="field">Section<select id="b-msec">${secOpts}<option value="__new">New section from this one…</option></select></label></div>
-        <div class="actions"><button class="btn" id="b-mrem">Remove member</button><button class="btn" id="b-mrel"${released ? " disabled" : ""}>${released ? "Ends pinned" : "Pin both ends"}</button><button class="btn" id="b-mfit">Zoom to</button></div>
-        <div class="inline-form"><label class="field"><span>Line load <span class="hint">kN/m</span></span><input type="number" step="0.5" id="b-lw" value="${S.formLoad.w}"></label>
-          <label class="field">Direction<select id="b-ldir"><option value="global_z">Down (−Z)</option><option value="global_x">+X</option><option value="global_y">+Y</option></select></label>
-          <label class="field">Case<select id="b-lcase">${cases.map((c) => `<option value="${esc(c.id)}">${esc(c.id)}</option>`).join("")}</select></label><button class="btn" id="b-ladd">Add</button></div>
+        ${memberEditBlock(mid)}
       </div>
       ${diag("My", `x-z plane, ULS envelope, on the tension side, L = ${md.L.toFixed(2)} m`)}${diag("Mz", "x-y plane, on the tension side")}${diag("N", "+ tension")}${diag("Vz", "x-z plane")}
-      <div class="member-block">${lst.map((c, k) => { const key = `${mid}|${k}`, open = S.openCheck === key; return `<button class="crow" aria-expanded="${open}" data-open="${esc(key)}"><span>${esc(c.title)}<span class="cl">${esc(c.clause.replace("EN 1992-1-1 ", "EC2 "))}</span></span>${ubar(c.utilisation, c.status)}${pill(c.status)}</button>${open ? detail(c) : ""}`; }).join("")}</div>`;
+      <div class="member-block">${lst.map((c, k) => { const key = `${mid}|${k}`, open = S.openCheck === key; return `<button class="crow" aria-expanded="${open}" data-open="${esc(key)}"><span>${esc(c.title)}<span class="cl">${esc(c.clause.replace("EN 1992-1-1 ", "EC2 ").replace("EN 1998-1 ", "EC8 "))}</span></span>${ubar(c.utilisation, c.status)}${pill(c.status)}</button>${open ? detail(c) : ""}`; }).join("")}</div>
+      <details class="fold" style="margin:10px 12px" id="b-mat"${S.matOpen ? " open" : ""}><summary>Element matrices <span class="hint">k, T and M of this member</span></summary><div class="fold-bd" id="b-mat-bd">${S.matOpen ? matricesHtml(mid) : ""}</div></details>`;
+  }
+  function matTable(A, rows, cols) {
+    let mx = 0; A.forEach((r) => r.forEach((v) => { mx = Math.max(mx, Math.abs(v)); }));
+    const f = (v) => (Math.abs(v) < 1e-12 * mx ? "0" : Math.abs(v) >= 1e5 || Math.abs(v) < 1e-3 ? v.toExponential(2) : (+v.toPrecision(4)).toString());
+    const cell = (v) => { const a = mx ? Math.abs(v) / mx : 0; return `<td style="${a > 1e-12 ? `background:color-mix(in srgb, ${v >= 0 ? "var(--plot-pos)" : "var(--plot-neg)"} ${Math.round(6 + 34 * Math.sqrt(a))}%, transparent)` : ""}">${f(v)}</td>`; };
+    return `<div class="matx"><table><thead><tr><th></th>${cols.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${A.map((r, i) => `<tr><th>${rows[i]}</th>${r.map(cell).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
+  function matricesHtml(mid) {
+    const r = S.result, md = r && r.analysis.members[mid];
+    if (!md) return "";
+    const lam = md.lam, L = md.L, kl = md.k_local, n12 = [...Array(12).keys()];
+    const Tm = n12.map((i) => n12.map((j) => (Math.floor(i / 3) === Math.floor(j / 3) ? lam[i % 3][j % 3] : 0)));
+    const kg = n12.map((i) => n12.map((j) => { let s = 0; for (let a = 0; a < 12; a++) { if (!Tm[a][i]) continue; for (let b = 0; b < 12; b++) if (Tm[b][j]) s += Tm[a][i] * kl[a][b] * Tm[b][j]; } return s; }));
+    const sec = r.model.sections[r.model.members[mid].section], mbar = sec.concrete.density * sec.area_m2 / 9.81;
+    let Ml = T.elementMassLocal(L, { msw: mbar, r2: (sec.Iy_m4 + sec.Iz_m4) / sec.area_m2, dist: [], point: [] }, "consistent");
+    if (md.cidx.length) { const Tr = T.releaseTransform(md); Ml = n12.map((i) => n12.map((j) => { let s = 0; for (let a = 0; a < 12; a++) for (let b = 0; b < 12; b++) s += Tr[a][i] * Ml[a][b] * Tr[b][j]; return s; })); }
+    const dl = ["u", "v", "w", "θx", "θy", "θz"], lab = [1, 2].flatMap((e) => dl.map((q) => `${q}${e}`));
+    const k = (v) => T.fmt(v);
+    return `<div class="eq3"><div>EA/L = ${k(md.EA / L)} kN/m,  GJ/L = ${k(md.GJ / L)} kNm</div>
+        <div>12EI<sub>z</sub>/L³ = ${k(12 * md.EIz / L ** 3)} kN/m,  6EI<sub>z</sub>/L² = ${k(6 * md.EIz / L ** 2)} kN,  4EI<sub>z</sub>/L = ${k(4 * md.EIz / L)} kNm</div>
+        <div>12EI<sub>y</sub>/L³ = ${k(12 * md.EIy / L ** 3)} kN/m,  6EI<sub>y</sub>/L² = ${k(6 * md.EIy / L ** 2)} kN,  4EI<sub>y</sub>/L = ${k(4 * md.EIy / L)} kNm</div>
+        <div>L = ${L.toFixed(3)} m, E = ${k(md.EA / sec.area_m2 / 1000)} MPa (cracked-section factor included)${md.cidx.length ? `; released DOFs ${md.cidx.map((c) => lab[c]).join(", ")} condensed out: k = k<sub>aa</sub> − k<sub>ac</sub>k<sub>cc</sub>⁻¹k<sub>ca</sub>` : ""}</div></div>
+      <div class="subhd">Local stiffness k (Euler–Bernoulli, 12 × 12; kN, m, rad)</div>${matTable(kl, lab, lab)}
+      <div class="subhd">Rotation λ (rows: local x, y, z in global X, Y, Z); T = diag(λ, λ, λ, λ)</div>${matTable(lam, ["x", "y", "z"], ["X", "Y", "Z"])}
+      <div class="subhd">Global stiffness K<sub>e</sub> = Tᵀ k T</div>${matTable(kg, lab.map((q) => q.replace("u", "U").replace("v", "V").replace("w", "W")), lab.map((q) => q.replace("u", "U").replace("v", "V").replace("w", "W")))}
+      <div class="subhd">Consistent mass m<sub>e</sub> from self weight, m̄ = ρA = ${k(mbar)} t/m (local)</div>${matTable(Ml, lab, lab)}
+      <p class="hint">m<sub>e</sub> = ∫ m̄ Nᵀ N dx with cubic Hermite N for bending and linear N for axial and torsion (polar inertia r² = (I<sub>y</sub> + I<sub>z</sub>)/A). Modal analysis adds the masses of the loads and divides members into elements.</p>`;
+  }
+  function nodePanel() {
+    const nid = S.selNode, n = S.data && S.data.nodes.find((x) => x.id === nid);
+    if (!n) return memberPanel();
+    const sup = (S.data.supports || []).find((s) => s.node === nid), kind = MD.supportKind(sup);
+    const conn = S.data.members.filter((m) => m.i === nid || m.j === nid);
+    const r = S.result;
+    let res = "";
+    if (r && r.analysis.nidx[nid] != null) {
+      const k = r.analysis.nidx[nid];
+      const rows = Object.entries(r.cases).filter(([, cr]) => !cr.pseudo).map(([cid, cr]) => { const d = cr.displacements[k]; return `<tr><td>${esc(cid)}</td><td>${(d[0] * 1000).toFixed(2)}</td><td>${(d[1] * 1000).toFixed(2)}</td><td>${(d[2] * 1000).toFixed(2)}</td></tr>`; }).join("");
+      res += `<div class="diag"><h3>Displacements <span>per load case, mm</span></h3><table class="data"><thead><tr><th>Case</th><th>u<sub>x</sub></th><th>u<sub>y</sub></th><th>u<sub>z</sub></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      if (r.reactions[nid]) {
+        const rr = r.reactions[nid], lab = ["F<sub>x</sub>", "F<sub>y</sub>", "F<sub>z</sub>", "M<sub>x</sub>", "M<sub>y</sub>", "M<sub>z</sub>"];
+        res += `<div class="diag"><h3>Support reactions <span>ULS envelope, kN and kNm</span></h3><table class="data"><thead><tr><th></th><th>min</th><th>max</th></tr></thead><tbody>${lab.map((l, q) => `<tr><td>${l}</td><td>${f3(rr.uls_min[q])}</td><td>${f3(rr.uls_max[q])}</td></tr>`).join("")}</tbody></table></div>`;
+      }
+    }
+    return `<div class="mhead"><h2><mark>${esc(nid)}</mark> <span class="hint" style="font:400 12px var(--font-body)">node</span></h2>
+      <div class="grid4"><label class="field">x<input type="number" step="any" id="b-nx" value="${n3(n.x)}"></label><label class="field">y<input type="number" step="any" id="b-ny" value="${n3(n.y)}"></label><label class="field">z<input type="number" step="any" id="b-nz" value="${n3(n.z ?? 0)}"></label><button class="btn sm" id="b-nmove">Move</button></div>
+      <div class="grid2"><label class="field">Support<select id="b-nsup">${[["none", "Free"], ["fixed", "Fixed"], ["pinned", "Pinned (rotations free)"], ["roller", "Roller, Z only"]].map(([k, l]) => opt(k, l, kind)).concat(kind === "custom" ? [opt("custom", "Custom", "custom")] : []).join("")}</select></label><button class="btn sm" id="b-ndel">Delete node</button></div>
+      <p class="hint">Members here: ${conn.map((m) => `<button class="link-btn" data-pick="${esc(m.id)}">${esc(m.id)}</button>`).join(", ") || "none"}.</p></div>${res}`;
   }
   function criticalPanel() {
     const r = S.result;
@@ -673,13 +1241,36 @@
       ${rows.length ? rows.slice(0, 80).map((x) => { const g = gov(x.mid); return `<button class="crit${x.mid === S.sel ? " sel" : ""}" data-pick="${esc(x.mid)}"><span><b>${esc(x.mid)}</b><span class="meta">${esc(x.m.design.type)} · ${esc(x.m.section)}${g ? " · " + esc(g.title.toLowerCase()) : ""}</span></span>${ubar(x.u, x.st)}${pill(x.st)}</button>`; }).join("") : `<p class="empty">No members match.</p>`}
       ${rows.length > 80 ? `<p class="hint" style="padding:8px 12px">Top 80 of ${rows.length} shown.</p>` : ""}`;
   }
+  function modesPanel() {
+    const r = S.result, mr = r.modal;
+    if (!mr) return `<div class="empty"><b>Modal analysis is off.</b><br>Switch it on in the Dynamics tab to get natural frequencies, mode shapes and participating masses. <button class="link-btn" id="b-dyn-enable">Switch on</button></div>`;
+    const cur = S.source && S.source.startsWith("mode:") && S.show === "modes" ? +S.source.slice(5) : -1;
+    let cx = 0, cy = 0;
+    const sr = r.seismic;
+    const rows = mr.omega.map((w, k) => {
+      cx += mr.ratio("X")[k]; cy += mr.ratio("Y")[k];
+      return `<tr class="pick${k === cur ? " on" : ""}" data-mode="${k}" tabindex="0"><td>${k + 1}</td><td>${mr.period[k].toFixed(3)}</td><td>${mr.freq[k].toFixed(2)}</td><td>${(100 * mr.ratio("X")[k]).toFixed(1)}</td><td>${(100 * mr.ratio("Y")[k]).toFixed(1)}</td><td>${(100 * mr.ratio("Z")[k]).toFixed(1)}</td><td>${(100 * cx).toFixed(0)}</td><td>${(100 * cy).toFixed(0)}</td>${sr ? `<td>${sr.Sd[k].toFixed(2)}</td>` : ""}</tr>`;
+    }).join("");
+    let html = `<div style="padding:10px 12px" class="group"><p class="hint">Click a mode to animate it. Total mass ${mr.mtot.X.toFixed(1)} t; ${mr.settings.mass} mass, ${mr.settings.segments} element${mr.settings.segments > 1 ? "s" : ""} per member; ${mr.iterations} subspace iterations.</p>
+      <div class="scroll-x"><table class="data"><thead><tr><th>Mode</th><th>T s</th><th>f Hz</th><th>X %</th><th>Y %</th><th>Z %</th><th>ΣX</th><th>ΣY</th>${sr ? "<th>S<sub>d</sub></th>" : ""}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    if (sr) {
+      const W = mr.mtot.X * 9.81;
+      html += `<h3 style="margin-top:6px">Response spectrum, EN 1998-1</h3>
+        ${spectrumSvg(sr.spectrumCurve(121), mr.period.map((t, k) => [t, sr.Sd[k]]))}
+        <dl class="kv"><dt>a<sub>g</sub></dt><dd>${(sr.settings.agR * sr.settings.importance).toFixed(2)} m/s², ground ${esc(sr.settings.ground)}, type ${sr.settings.spectrum_type}, q = ${sr.settings.q}</dd>
+          ${Object.entries(sr.base_shear).map(([d, v]) => `<dt>Base shear ${d}</dt><dd>${f3(v)} kN (${(100 * v / W).toFixed(1)} % of W)</dd>`).join("")}</dl>
+        ${sr.storeys.length ? `<div class="scroll-x"><table class="data"><thead><tr><th>Storey m</th><th>P<sub>tot</sub> kN</th><th>V<sub>x</sub></th><th>V<sub>y</sub></th><th>d<sub>r</sub> mm</th><th>θ</th></tr></thead><tbody>${sr.storeys.map((s) => `<tr><td>${s.z0.toFixed(1)}–${s.z1.toFixed(1)}</td><td>${f3(s.P)}</td><td>${f3(s.V.x)}</td><td>${f3(s.V.y)}</td><td>${(1000 * Math.max(s.dr.x, s.dr.y)).toFixed(1)}</td><td>${Math.max(s.theta.x, s.theta.y).toFixed(3)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+        <p class="hint">d<sub>r</sub> = q·d<sub>r,e</sub> (mean of the storey's columns); θ = P<sub>tot</sub>d<sub>r</sub>/(V<sub>tot</sub>h). Show A<sub>Ed</sub> on the members with the M<sub>y</sub>, M<sub>z</sub> or N view and the "A<sub>Ed</sub>" source.</p>`;
+    }
+    return html + "</div>";
+  }
   function reactionsPanel() {
     const r = S.result;
     const rows = Object.entries(r.reactions).map(([nid, rr]) => {
       const absmax = (q) => Math.max(Math.abs(rr.uls_max[q]), Math.abs(rr.uls_min[q]));
-      return `<tr><td>${esc(nid)}</td><td>${f3(rr.uls_max[2])}</td><td>${f3(rr.uls_min[2])}</td><td>${f3(Math.hypot(absmax(0), absmax(1)))}</td><td>${f3(absmax(3))}</td><td>${f3(absmax(4))}</td></tr>`;
+      return `<tr><td><button class="link-btn" data-pnode="${esc(nid)}">${esc(nid)}</button></td><td>${f3(rr.uls_max[2])}</td><td>${f3(rr.uls_min[2])}</td><td>${f3(Math.hypot(absmax(0), absmax(1)))}</td><td>${f3(absmax(3))}</td><td>${f3(absmax(4))}</td></tr>`;
     }).join("");
-    const caseRows = Object.entries(r.cases).map(([cid, cr]) => {
+    const caseRows = Object.entries(r.cases).filter(([, cr]) => !cr.pseudo).map(([cid, cr]) => {
       const R = Object.values(cr.reactions).reduce((s, v) => s + v[2], 0);
       const res = Math.max(...Object.values(cr.equilibrium).map(Math.abs));
       return `<tr><td>${esc(cid)}</td><td>${f3(-cr.applied.Fz)}</td><td>${f3(R)}</td><td>${res.toExponential(1)}</td></tr>`;
@@ -692,18 +1283,32 @@
   }
   function bindResults() {
     const out = $("#b-results");
+    const on = (sel, ev, fn) => { const el = $(sel, out); if (el) el.addEventListener(ev, fn); };
     out.querySelectorAll("[data-open]").forEach((b) => b.onclick = () => { S.openCheck = S.openCheck === b.dataset.open ? null : b.dataset.open; renderResults(); });
     out.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => select(b.dataset.pick, false, true));
+    out.querySelectorAll("[data-pnode]").forEach((b) => b.onclick = () => selectNode(b.dataset.pnode, false));
     out.querySelectorAll("[data-crit]").forEach((b) => b.onclick = () => { S.critFilter = b.dataset.crit; renderResults(); });
     out.querySelectorAll("[data-rt]").forEach((b) => b.onclick = () => { S.rtab = b.dataset.rt; renderResults(); });
-    const msec = $("#b-msec", out);
-    if (!msec) return;
+    out.querySelectorAll("[data-mode]").forEach((row) => {
+      const go = () => { S.source = `mode:${row.dataset.mode}`; setShow("modes", true); renderResults(); };
+      row.onclick = go; row.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
+    });
+    on("#b-dyn-enable", "click", () => { S.dyn.on = true; S.btab = "dynamics"; renderEditor(); schedule(30); });
+    // node inspector
+    const nid = S.selNode;
+    on("#b-nmove", "click", () => {
+      const x = Number($("#b-nx", out).value), y = Number($("#b-ny", out).value), z = Number($("#b-nz", out).value);
+      if ([x, y, z].every(isFinite)) addEdit({ op: "moveNode", node: nid, x, y, z });
+    });
+    on("#b-nsup", "change", (e) => { if (e.target.value !== "custom") addEdit({ op: "support", node: nid, kind: e.target.value }); });
+    on("#b-ndel", "click", () => { addEdit({ op: "delNode", node: nid }); S.selN.delete(nid); S.selNode = null; });
+    // member inspector
     const mid = S.sel;
-    msec.onchange = () => {
-      let name = msec.value;
+    on("#b-msec", "change", (e) => {
+      let name = e.target.value;
       if (name === "__new") {
-        const cur = S.data.sections[S.result.model.members[mid].section];
-        let k = 2; const baseName = S.result.model.members[mid].section.replace(/ \d+$/, "");
+        const curName = S.data.members.find((m) => m.id === mid).section, cur = S.data.sections[curName];
+        let k = 2; const baseName = curName.replace(/ \d+$/, "");
         while (`${baseName} ${k}` in S.data.sections) k++;
         name = `${baseName} ${k}`;
         S.extraSections[name] = clone(cur);
@@ -711,27 +1316,46 @@
         toast(`Section '${name}' created; edit it in the Sections tab.`);
       }
       addEdit({ op: "section", member: mid, section: name });
-    };
-    $("#b-mrem", out).onclick = () => { addEdit({ op: "remove", member: mid }); toast(`Removed ${mid}. Undo it in the Edits tab.`); };
-    $("#b-mrel", out).onclick = () => addEdit({ op: "release", member: mid });
-    $("#b-mfit", out).onclick = () => V.fitTo(mid);
-    $("#b-lw", out).oninput = (e) => { S.formLoad.w = Number(e.target.value); };
-    $("#b-ldir", out).value = S.formLoad.dir;
-    $("#b-ldir", out).onchange = (e) => { S.formLoad.dir = e.target.value; };
-    $("#b-lcase", out).value = S.formLoad.caseId;
-    $("#b-lcase", out).onchange = (e) => { S.formLoad.caseId = e.target.value; };
-    $("#b-ladd", out).onclick = () => {
+    });
+    on("#b-mtype2", "change", (e) => addEdit({ op: "setMember", member: mid, patch: { type: e.target.value } }));
+    on("#b-mroll", "change", (e) => addEdit({ op: "setMember", member: mid, patch: { roll_deg: Number(e.target.value) || 0 } }));
+    on("#b-mrem", "click", () => { addEdit({ op: "remove", member: mid }); toast(`Deleted ${mid}. Undo with Ctrl+Z.`); });
+    on("#b-mrel", "click", () => addEdit({ op: "release", member: mid }));
+    on("#b-msplit", "click", () => addEdit({ op: "split", member: mid, n: 2 }));
+    on("#b-mfit", "click", () => V.fitTo(mid));
+    on("#b-mat", "toggle", (e) => { S.matOpen = e.target.open; if (S.matOpen && mid) $("#b-mat-bd", out).innerHTML = matricesHtml(mid); });
+    on("#b-lw", "input", (e) => { S.formLoad.w = Number(e.target.value); });
+    on("#b-ldir", "change", (e) => { S.formLoad.dir = e.target.value; });
+    on("#b-lcase", "change", (e) => { S.formLoad.caseId = e.target.value; });
+    on("#b-ladd", "click", () => {
       const w = S.formLoad.w;
       if (!isFinite(w) || w === 0) return;
       addEdit({ op: "load", member: mid, w: S.formLoad.dir === "global_z" ? -Math.abs(w) : w, dir: S.formLoad.dir, caseId: S.formLoad.caseId });
       toast(`Line load added to ${mid} in ${S.formLoad.caseId}.`);
-    };
+    });
   }
-  function select(mid, toMember = false, fromList = false) {
-    S.sel = mid; S.openCheck = null;
-    if (toMember || !fromList) S.rtab = "member";
+  function afterSelection() {
     renderResults(); V.updateSelection();
-    if (mid && fromList) V.flash();
+    if (S.btab === "model") renderEditor();
+  }
+  function select(mid, toMember = false, fromList = false, additive = false) {
+    if (additive && mid) {
+      if (S.selM.has(mid)) { S.selM.delete(mid); if (S.sel === mid) S.sel = null; }
+      else { S.selM.add(mid); S.sel = mid; }
+    } else {
+      S.selM = new Set(mid ? [mid] : []); S.selN = new Set(); S.sel = mid; S.selNode = null;
+      if (!mid) S.selN.clear();
+    }
+    S.openCheck = null;
+    if (mid) S.selNode = additive ? S.selNode : null;
+    if (toMember || !fromList) S.rtab = "member";
+    afterSelection();
+  }
+  function selectNode(nid, additive = false) {
+    if (additive) { if (S.selN.has(nid)) S.selN.delete(nid); else S.selN.add(nid); }
+    else { S.selN = new Set([nid]); S.selM = new Set(); }
+    S.selNode = nid; S.sel = null; S.rtab = "member";
+    afterSelection();
   }
 
   // ================================================================ 3D viewer
@@ -739,10 +1363,11 @@
     const THREE = window.THREE;
     const v = { ok: false };
     const container = () => $("#b-canvas");
-    let renderer, scene, camP, camO, world, gStatic, gMembers, gOverlay, gSel, inst = null, instIds = [], ray, pending = false;
-    let colors = {};
+    let renderer, scene, camP, camO, world, gStatic, gMembers, gOverlay, gSel, gTool, inst = null, instIds = [], ray, pending = false;
+    let colors = {}, nodePts = null, nodeIds = [], anim = null, snapNow = null;
     const ctl = { az: -55 * Math.PI / 180, el: 26 * Math.PI / 180, dist: 60, target: null, ortho: false, cam: "iso", size: 20 };
     const DEG = Math.PI / 180;
+    const look = () => (LINE_VIEWS.includes(S.show) || S.tool === "node" || S.tool === "member" ? "lines" : S.look);
 
     function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888"; }
     function readColors() {
@@ -751,6 +1376,7 @@
         bg: css("--sheet"), ink: css("--ink"), ink3: css("--ink-3"), rule: css("--rule"), pos: css("--plot-pos"), neg: css("--plot-neg"), def: css("--plot-def"),
         mark: css("--mark"), ok: css("--ok"), bad: css("--bad"), dark,
         concrete: dark ? "#6f7d8c" : "#c5ccd4", column: dark ? "#7b8999" : "#b7c0ca", edge: dark ? "#1b242e" : "#5f6c7a", slab: dark ? "#8aa0b8" : "#9db1c6",
+        load: dark ? "#f0a35c" : "#b4520f", grid: dark ? "#3a4757" : "#cfd8e2",
       };
     }
     function init() {
@@ -762,7 +1388,7 @@
       v.ok = true;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       container().prepend(renderer.domElement);
-      renderer.domElement.setAttribute("aria-label", "3D model of the structure. Drag to orbit, right-drag or shift-drag to pan, scroll or pinch to zoom, click a member to select it.");
+      renderer.domElement.setAttribute("aria-label", "3D model of the structure. Drag to orbit, right-drag or shift-drag to pan, scroll or pinch to zoom, click a member or node to select it.");
       renderer.domElement.setAttribute("role", "img");
       scene = new THREE.Scene();
       camP = new THREE.PerspectiveCamera(35, 1, 0.1, 10000); camP.up.set(0, 0, 1);
@@ -771,8 +1397,8 @@
       const hemi = new THREE.HemisphereLight(0xffffff, 0x8d939b, 0.78); hemi.position.set(0, 0, 1); scene.add(hemi);
       const sun = new THREE.DirectionalLight(0xffffff, 0.62); sun.position.set(-0.55, -1.0, 1.35); scene.add(sun);
       world = new THREE.Group(); scene.add(world);
-      gStatic = new THREE.Group(); gMembers = new THREE.Group(); gOverlay = new THREE.Group(); gSel = new THREE.Group();
-      world.add(gStatic, gMembers, gOverlay, gSel);
+      gStatic = new THREE.Group(); gMembers = new THREE.Group(); gOverlay = new THREE.Group(); gSel = new THREE.Group(); gTool = new THREE.Group();
+      world.add(gStatic, gMembers, gOverlay, gSel, gTool);
       ray = new THREE.Raycaster();
       readColors();
       bindControls();
@@ -802,31 +1428,35 @@
       request();
     }
     function request() {
-      if (!v.ok || pending) return;
+      if (!v.ok || pending || anim) return;
       pending = true;
       requestAnimationFrame(() => { pending = false; renderer.setClearColor(colors.bg, 1); renderer.render(scene, cam()); });
     }
 
-    // ---------------------------------------------------------- controls
+    // ---------------------------------------------------------- controls and tools
     function bindControls() {
       const el = renderer.domElement, pts = new Map();
-      let mode = null, last = null, down = null, pinch = null, hoverRaf = null;
+      let mode = null, last = null, down = null, pinch = null, hoverRaf = null, boxStart = null;
       el.addEventListener("contextmenu", (e) => e.preventDefault());
       el.addEventListener("pointerdown", (e) => {
         el.setPointerCapture(e.pointerId);
         pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        down = { x: e.clientX, y: e.clientY, t: performance.now() };
-        mode = e.button === 2 || e.button === 1 || e.shiftKey || e.ctrlKey || e.metaKey ? "pan" : "orbit";
+        down = { x: e.clientX, y: e.clientY, t: performance.now(), shift: e.shiftKey };
+        mode = e.button === 2 || e.button === 1 || ((e.shiftKey || e.ctrlKey || e.metaKey) && S.tool !== "box" && S.tool !== "select") ? "pan" : "orbit";
+        if (S.tool === "box" && e.button === 0 && e.pointerType === "mouse") { mode = "box"; boxStart = { x: e.clientX, y: e.clientY }; }
+        if (S.tool === "select" && e.button === 0 && e.shiftKey) mode = "pan";
         last = { x: e.clientX, y: e.clientY };
         if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; mode = "pinch"; }
         hideTip();
       });
       el.addEventListener("pointermove", (e) => {
         if (!pts.has(e.pointerId)) {
-          if (e.pointerType === "mouse") { const cx = e.clientX, cy = e.clientY; if (!hoverRaf) hoverRaf = requestAnimationFrame(() => { hoverRaf = null; hover(cx, cy); }); }
+          const cx = e.clientX, cy = e.clientY;
+          if (!hoverRaf) hoverRaf = requestAnimationFrame(() => { hoverRaf = null; hover(cx, cy, e.pointerType); });
           return;
         }
         pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (mode === "box") { drawBox(boxStart, { x: e.clientX, y: e.clientY }); return; }
         if (mode === "pinch" && pts.size === 2) {
           const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
           if (pinch.d > 0 && d > 0) ctl.dist = clampDist(ctl.dist * pinch.d / d);
@@ -837,6 +1467,7 @@
         }
         const dx = e.clientX - last.x, dy = e.clientY - last.y;
         last = { x: e.clientX, y: e.clientY };
+        if (Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4) return;
         if (mode === "orbit") {
           ctl.az -= dx * 0.0085; ctl.el = Math.min(Math.max(ctl.el + dy * 0.0085, -10 * DEG), 89.9 * DEG);
           if (ctl.cam !== "iso") { ctl.cam = "iso"; ctl.ortho = false; markCam(); }
@@ -846,22 +1477,117 @@
       const up = (e) => {
         if (!pts.has(e.pointerId)) return;
         pts.delete(e.pointerId);
-        if (down && pts.size === 0 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && mode !== "pinch") {
-          const mid = pick(e.clientX, e.clientY);
-          select(mid, true);
+        if (mode === "box" && boxStart) {
+          $("#b-selbox").hidden = true;
+          const moved = Math.hypot(e.clientX - boxStart.x, e.clientY - boxStart.y) > 4;
+          if (moved) boxSelect(boxStart, { x: e.clientX, y: e.clientY }, e.shiftKey);
+          else clickAt(e.clientX, e.clientY, e.shiftKey);
+          boxStart = null;
+        } else if (down && pts.size === 0 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && mode !== "pinch" && e.button !== 2) {
+          clickAt(e.clientX, e.clientY, down.shift);
         }
         if (pts.size < 2) pinch = null;
         if (pts.size === 0) { mode = null; down = null; }
       };
       el.addEventListener("pointerup", up);
-      el.addEventListener("pointercancel", (e) => { pts.delete(e.pointerId); mode = null; down = null; });
-      el.addEventListener("pointerleave", () => { if (!pts.size) { hideTip(); setHover(null); } });
+      el.addEventListener("pointercancel", (e) => { pts.delete(e.pointerId); mode = null; down = null; $("#b-selbox").hidden = true; });
+      el.addEventListener("pointerleave", () => { if (!pts.size) { hideTip(); setHover(null); snapNow = null; drawTool(); } });
       el.addEventListener("wheel", (e) => { e.preventDefault(); ctl.dist = clampDist(ctl.dist * Math.exp(e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015))); updateCamera(); }, { passive: false });
       el.addEventListener("dblclick", () => { if (S.sel) fitTo(S.sel); else setCamera(ctl.cam === "iso" ? "fit" : ctl.cam); });
+    }
+    function drawBox(a, b) {
+      const r = container().getBoundingClientRect(), box = $("#b-selbox");
+      box.hidden = false;
+      box.style.left = `${Math.min(a.x, b.x) - r.left}px`; box.style.top = `${Math.min(a.y, b.y) - r.top}px`;
+      box.style.width = `${Math.abs(a.x - b.x)}px`; box.style.height = `${Math.abs(a.y - b.y)}px`;
+    }
+    function project(p) {
+      const q = new THREE.Vector3(p[0], p[1], p[2]).project(cam()), r = renderer.domElement.getBoundingClientRect();
+      return { x: r.left + (q.x + 1) / 2 * r.width, y: r.top + (1 - q.y) / 2 * r.height, z: q.z };
+    }
+    function boxSelect(a, b, additive) {
+      const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y);
+      const inside = (p) => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && p.z < 1;
+      if (!additive) { S.selM = new Set(); S.selN = new Set(); S.sel = null; S.selNode = null; }
+      const cut = zCut(), proj = new Map();
+      for (const n of S.data.nodes) if ((n.z ?? 0) <= cut + 1e-6) { const p = project([n.x, n.y, n.z ?? 0]); proj.set(n.id, p); if (inside(p)) S.selN.add(n.id); }
+      for (const m of S.data.members) { const a1 = proj.get(m.i), b1 = proj.get(m.j); if (a1 && b1 && inside(a1) && inside(b1)) S.selM.add(m.id); }
+      toast(`${S.selM.size} members and ${S.selN.size} nodes selected.`);
+      afterSelection();
+    }
+    function nodeAt(x, y, px = 9) {
+      if (!S.data) return null;
+      const cut = zCut();
+      let best = null, bd = px;
+      for (const n of S.data.nodes) {
+        if ((n.z ?? 0) > cut + 1e-6) continue;
+        const p = project([n.x, n.y, n.z ?? 0]);
+        if (p.z > 1) continue;
+        const d = Math.hypot(p.x - x, p.y - y);
+        if (d < bd) { bd = d; best = n.id; }
+      }
+      return best;
+    }
+    function planeSnap(x, y) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      ray.setFromCamera(new THREE.Vector2(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1), cam());
+      const pl = S.plane, n = pl.kind === "XY" ? [0, 0, 1] : pl.kind === "XZ" ? [0, 1, 0] : [1, 0, 0];
+      const plane = new THREE.Plane(new THREE.Vector3(...n), -pl.at), hit = new THREE.Vector3();
+      if (!ray.ray.intersectPlane(plane, hit)) return null;
+      const st = pl.step, rd = (v) => Math.round(Math.round(v / st) * st * 1e6) / 1e6;
+      const p = [hit.x, hit.y, hit.z].map(rd);
+      if (pl.kind === "XY") p[2] = pl.at; else if (pl.kind === "XZ") p[1] = pl.at; else p[0] = pl.at;
+      return p;
+    }
+    function snapAt(x, y) {
+      const nid = nodeAt(x, y, 11);
+      if (nid) { const n = S.data.nodes.find((q) => q.id === nid); return { node: nid, p: [n.x, n.y, n.z ?? 0] }; }
+      const p = planeSnap(x, y);
+      if (!p) return null;
+      const ex = S.data && MD.findNodeAt(S.data, p[0], p[1], p[2]);
+      return ex ? { node: ex.id, p } : { node: null, p };
+    }
+    function clickAt(x, y, shift) {
+      const tool = S.tool;
+      if (tool === "node") {
+        const s = snapAt(x, y);
+        if (!s) return;
+        if (s.node) { selectNode(s.node, shift); return; }
+        const { n } = takenIds(), id = MD.nextId(n, "N");
+        addEdit({ op: "addNode", id, x: s.p[0], y: s.p[1], z: s.p[2] });
+        return;
+      }
+      if (tool === "member") {
+        const s = snapAt(x, y);
+        if (!s) return;
+        if (!S.draw) { S.draw = s; drawTool(); return; }
+        const a = S.draw;
+        if (a.p.every((v, k) => Math.abs(v - s.p[k]) < 1e-9)) return;
+        const ids = takenIds(), ops = [];
+        const ensure = (q) => { if (q.node) return q.node; const id = MD.nextId(ids.n, "N"); ids.n.add(id); ops.push({ op: "addNode", id, x: q.p[0], y: q.p[1], z: q.p[2] }); return id; };
+        const i = ensure(a), j = ensure(s), id = MD.nextId(ids.m, "M");
+        ops.push({ op: "addMember", id, i, j, section: S.activeSection || sectionsNow()[0], type: S.memberType });
+        addEdit(ops.length === 1 ? ops[0] : { op: "batch", ops, label: `Member ${id}: ${i} → ${j}` });
+        S.draw = { node: j, p: s.p };
+        drawTool();
+        return;
+      }
+      const nid = nodeAt(x, y, 9);
+      const mid = nid ? null : pick(x, y);
+      if (tool === "support") { if (nid) addEdit({ op: "support", node: nid, kind: S.supportKind }); else toast("Click a node to give it a support."); return; }
+      if (tool === "load") {
+        if (mid) { const op = memberLoadOp(mid); if (op) addEdit(op); }
+        else if (nid) addEdit({ op: "nodal", node: nid, caseId: S.formLoad.caseId, f: S.formNodal.slice() });
+        return;
+      }
+      if (tool === "delete") { if (nid) addEdit({ op: "delNode", node: nid }); else if (mid) addEdit({ op: "remove", member: mid }); return; }
+      if (nid) selectNode(nid, shift);
+      else if (mid || !shift) select(mid, true, false, shift);
     }
     const clampDist = (d) => Math.min(Math.max(d, ctl.size * 0.05), ctl.size * 12);
     function pan(dx, dy) {
       const c = cam(), h = container().clientHeight || 1;
+      c.updateMatrixWorld();
       const worldPerPx = (2 * ctl.dist * Math.tan(17.5 * DEG)) / h;
       const right = new THREE.Vector3().setFromMatrixColumn(c.matrixWorld, 0), upv = new THREE.Vector3().setFromMatrixColumn(c.matrixWorld, 1);
       ctl.target.addScaledVector(right, -dx * worldPerPx).addScaledVector(upv, dy * worldPerPx);
@@ -871,11 +1597,14 @@
       const g = v.geom || [];
       const box = new THREE.Box3();
       for (const m of g) if (!only || m.id === only) { box.expandByPoint(new THREE.Vector3(...m.a)); box.expandByPoint(new THREE.Vector3(...m.b)); }
-      if (box.isEmpty()) box.set(new THREE.Vector3(-5, -5, 0), new THREE.Vector3(5, 5, 5));
+      if (!only && S.data) for (const n of S.data.nodes) box.expandByPoint(new THREE.Vector3(n.x, n.y, n.z ?? 0));
+      if (box.isEmpty()) box.set(new THREE.Vector3(-1, -1, 0), new THREE.Vector3(10, 8, 5));
       return box;
     }
+    const toolbarPx = () => ($("#b-tools").offsetWidth || 0) + 12;
     function setCamera(kind, reset) {
       if (!v.ok) return;
+      const tb = toolbarPx();
       const box = bounds();
       if (v.labelBox) box.union(v.labelBox);
       const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
@@ -888,26 +1617,26 @@
       ctl.target.copy(c);
       const r = sz.length() / 2 || 5;
       if (ctl.ortho) {
-        const el = container(), aspect = Math.max(el.clientWidth, 10) / Math.max(el.clientHeight, 10);
+        const el = container(), aspect = Math.max(el.clientWidth - tb, 10) / Math.max(el.clientHeight, 10);
         const wv = kind === "plan" ? sz.x : kind === "xz" ? sz.x : sz.y, hv = kind === "plan" ? sz.y : sz.z;
         const hh = Math.max(hv / 2, wv / 2 / aspect) * 1.18 + 0.5;
         ctl.dist = hh / Math.tan(17.5 * DEG);
       } else {
-        // exact fit: the camera distance at which every corner of the box is inside the view frustum
-        const el = container(), aspect = Math.max(el.clientWidth, 10) / Math.max(el.clientHeight, 10);
+        const el = container(), aspect = Math.max(el.clientWidth - tb, 10) / Math.max(el.clientHeight, 10);
         const tv = Math.tan(17.5 * DEG), th = tv * aspect;
         const dir = new THREE.Vector3(Math.cos(ctl.el) * Math.cos(ctl.az), Math.cos(ctl.el) * Math.sin(ctl.az), Math.sin(ctl.el));
         const right = new THREE.Vector3().crossVectors(dir.clone().negate(), new THREE.Vector3(0, 0, 1)).normalize();
         const upv = new THREE.Vector3().crossVectors(right, dir.clone().negate()).normalize();
-        let need = r;
+        let need = 0.2 * r;
         for (const cx of [box.min.x, box.max.x]) for (const cy of [box.min.y, box.max.y]) for (const cz of [box.min.z, box.max.z]) {
           const rel = new THREE.Vector3(cx, cy, cz).sub(c);
           need = Math.max(need, rel.dot(dir) + Math.abs(rel.dot(right)) / th, rel.dot(dir) + Math.abs(rel.dot(upv)) / tv);
         }
-        ctl.dist = need * 1.06;
+        ctl.dist = need * (v.labelBox ? 1.06 : 1.12);
       }
       markCam();
       updateCamera();
+      if (tb) { pan(-tb / 2, 0); updateCamera(); }
     }
     function fitTo(mid) {
       if (!v.ok) return;
@@ -925,18 +1654,36 @@
       const hits = ray.intersectObject(inst);
       return hits.length ? instIds[hits[0].instanceId] : null;
     }
-    function hover(x, y) {
+    function hover(x, y, ptype) {
+      const tip = $("#b-tip"), rect = container().getBoundingClientRect();
+      const place = () => {
+        tip.hidden = false;
+        const left = Math.min(x - rect.left + 14, rect.width - tip.offsetWidth - 6);
+        tip.style.left = `${Math.max(left, 4)}px`; tip.style.top = `${Math.max(y - rect.top - 30, 4)}px`;
+      };
+      if (S.tool === "node" || S.tool === "member") {
+        snapNow = snapAt(x, y);
+        drawTool();
+        if (snapNow && ptype === "mouse") { tip.innerHTML = snapNow.node ? `node <b>${esc(snapNow.node)}</b>` : `x ${n3(snapNow.p[0])} · y ${n3(snapNow.p[1])} · z ${n3(snapNow.p[2])}`; place(); }
+        else hideTip();
+        return;
+      }
+      if (ptype !== "mouse") return;
+      const nid = nodeAt(x, y, 8);
+      if (nid && (S.tool !== "select" || S.btab === "model" || look() === "lines")) {
+        setHover(null);
+        const sup = (S.data.supports || []).find((s) => s.node === nid);
+        tip.innerHTML = `node <b>${esc(nid)}</b>${sup ? ` · ${MD.supportKind(sup)}` : ""}`;
+        place(); renderer.domElement.style.cursor = "pointer";
+        return;
+      }
       const mid = pick(x, y);
       setHover(mid);
-      const tip = $("#b-tip");
       if (!mid) { hideTip(); return; }
       const m = S.data.members.find((q) => q.id === mid);
       const { u, st } = memberUtil(mid);
       tip.innerHTML = `<b>${esc(mid)}</b> · ${esc(m ? m.section : "")}${u != null ? ` · η ${u >= 9.99 ? "≫1" : u.toFixed(2)}${st === "fail" ? " ✕" : ""}` : ""}`;
-      const rect = container().getBoundingClientRect();
-      tip.hidden = false;
-      const left = Math.min(x - rect.left + 14, rect.width - tip.offsetWidth - 6);
-      tip.style.left = `${Math.max(left, 4)}px`; tip.style.top = `${Math.max(y - rect.top - 30, 4)}px`;
+      place();
       renderer.domElement.style.cursor = "pointer";
     }
     function hideTip() { $("#b-tip").hidden = true; if (v.ok) renderer.domElement.style.cursor = ""; }
@@ -965,8 +1712,7 @@
         o.traverse((q) => { if (q.geometry) q.geometry.dispose(); if (q.material) { if (q.material.map) q.material.map.dispose(); q.material.dispose(); } });
       }
     }
-    const hangs = () => !!(S.data && S.data.meta && S.data.meta.slabs && S.data.meta.slabs.length);
-    const look = () => (["My", "Mz", "N", "def"].includes(S.show) ? "lines" : S.look);
+    const hangs = () => !!(S.data && S.data.meta && S.data.meta.slabs && S.data.meta.slabs.length && S.spec);
     function memberMatrix(m, grow = 0, thin = false) {
       const mat = new THREE.Matrix4();
       let bw = m.bw, h = m.h;
@@ -1015,20 +1761,44 @@
       if (dashed) l.computeLineDistances();
       return l;
     }
+    function tubes(pts, t, color, lambert = true) {      // segments as slim boxes: pts = [x0,y0,z0,x1,y1,z1, ...]
+      const nseg = pts.length / 6;
+      const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), lambert ? new THREE.MeshLambertMaterial({ color }) : new THREE.MeshBasicMaterial({ color }), Math.max(nseg, 1));
+      setTubes(mesh, pts, t, 1, null);
+      mesh.count = nseg;
+      return mesh;
+    }
+    const _a = () => new THREE.Vector3();
+    const tv = { a: null, b: null, d: null, up: null, side: null, m: null };
+    function setTubes(mesh, pts, t, amp, disp) {
+      if (!tv.a) { tv.a = _a(); tv.b = _a(); tv.d = _a(); tv.up = _a(); tv.side = _a(); tv.m = new THREE.Matrix4(); }
+      const nseg = pts.length / 6;
+      for (let k = 0; k < nseg; k++) {
+        tv.a.fromArray(pts, 6 * k); tv.b.fromArray(pts, 6 * k + 3);
+        if (disp) { tv.a.x += amp * disp[6 * k]; tv.a.y += amp * disp[6 * k + 1]; tv.a.z += amp * disp[6 * k + 2]; tv.b.x += amp * disp[6 * k + 3]; tv.b.y += amp * disp[6 * k + 4]; tv.b.z += amp * disp[6 * k + 5]; }
+        tv.d.subVectors(tv.b, tv.a);
+        const len = tv.d.length() || 1e-6;
+        tv.up.set(0, 0, 1); if (Math.abs(tv.d.z) > 0.9 * len) tv.up.set(1, 0, 0);
+        tv.side.crossVectors(tv.up, tv.d).normalize().multiplyScalar(t); tv.up.crossVectors(tv.d, tv.side).normalize().multiplyScalar(t);
+        tv.m.makeBasis(tv.d.multiplyScalar(1 + t / len), tv.side, tv.up); tv.m.setPosition(tv.a.add(tv.b).multiplyScalar(0.5));
+        mesh.setMatrixAt(k, tv.m);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    }
     v.rebuild = function () {
       if (!v.ok) { v.geom = geomFrom(S.data); if (v.fallback) drawFallback(); renderLegend(); renderTitle(); return; }
       readColors();
-      disposeGroup(gStatic); disposeGroup(gMembers); inst = null; instIds = [];
+      disposeGroup(gStatic); disposeGroup(gMembers); inst = null; instIds = []; nodePts = null;
       const all = geomFrom(S.data), cut = zCut();
       const g = all.filter((m) => m.zmax <= cut + 1e-6);
-      const first = !v.geom || !v.geom.length;
+      const first = !v.geom;
       v.geom = all;
-      if (!all.length) { request(); return; }
+      const d = S.data;
+      if (!d) { request(); return; }
       const box = bounds(), sz = box.getSize(new THREE.Vector3());
-      ctl.size = Math.max(sz.x, sz.y, sz.z, 1);
+      ctl.size = Math.max(sz.x, sz.y, sz.z, 4);
       const z0 = box.min.z;
-      // ground grid and grid axes
-      const d = S.data, grid = d.meta && d.meta.grid;
+      const grid = d.meta && d.meta.grid && S.spec ? d.meta.grid : null;
       const lab = Math.max(0.8, Math.min(ctl.size * 0.05, 2.6));
       v.labelBox = null;
       if (grid) {
@@ -1041,13 +1811,17 @@
         for (const [n, x] of gx) { const s = textSprite(n, { circle: true, size: lab }); s.position.set(x, Math.min(...ys) - ext - lab * 0.6, z0); gStatic.add(s); }
         for (const [n, y] of gy) { const s = textSprite(n, { circle: true, size: lab }); s.position.set(Math.min(...xs) - ext - lab * 0.6, y, z0); gStatic.add(s); }
         const lv = grid.levels || [];
-        lv.forEach((z, k) => { if (k === 0 || z > cut + 1e-6) return; const s = textSprite(`L${k} +${z.toFixed(2)}`, { size: lab * 0.92 }); s.position.set(Math.min(...xs) - ext - lab * 1.2, Math.min(...ys) - ext - lab * 1.2, z); gStatic.add(s); });
+        lv.forEach((z, k) => { if (k === 0 || z > cut + 1e-6) return; const s = textSprite(`${S.gen === "bridge" && k === lv.length - 1 ? "Deck" : `L${k}`} +${z.toFixed(2)}`, { size: lab * 0.92 }); s.position.set(Math.min(...xs) - ext - lab * 1.2, Math.min(...ys) - ext - lab * 1.2, z); gStatic.add(s); });
         v.labelBox = new THREE.Box3(new THREE.Vector3(Math.min(...xs) - ext - lab * 3.4, Math.min(...ys) - ext - lab * 3.4, z0), new THREE.Vector3(Math.max(...xs) + ext * 0.4, Math.max(...ys) + ext * 0.4, z0));
       } else {
-        const gh = new THREE.GridHelper(Math.ceil(ctl.size * 1.4), Math.ceil(ctl.size * 1.4 / 2), colors.rule, colors.rule);
-        gh.rotation.x = Math.PI / 2; gh.position.set((box.min.x + box.max.x) / 2, (box.min.y + box.max.y) / 2, z0);
-        gh.material.transparent = true; gh.material.opacity = 0.6;
+        const span = Math.ceil(Math.max(ctl.size * 1.4, 20));
+        const gh = new THREE.GridHelper(span, Math.max(4, Math.round(span / 2)), colors.grid, colors.grid);
+        gh.rotation.x = Math.PI / 2; gh.position.set(Math.round((box.min.x + box.max.x) / 2), Math.round((box.min.y + box.max.y) / 2), z0);
+        gh.material.transparent = true; gh.material.opacity = 0.7;
         gStatic.add(gh);
+        const ax = Math.max(1, ctl.size * 0.08);
+        gStatic.add(lineSeg([0, 0, z0, ax, 0, z0], "#c4541c"), lineSeg([0, 0, z0, 0, ax, z0], "#17803d"), lineSeg([0, 0, z0, 0, 0, z0 + ax], "#1f5fa8"));
+        for (const [t, p, c] of [["X", [ax * 1.15, 0, z0], "#c4541c"], ["Y", [0, ax * 1.15, z0], "#17803d"], ["Z", [0, 0, z0 + ax * 1.15], "#1f5fa8"]]) { const s = textSprite(t, { size: lab * 0.7, color: c }); s.position.set(...p); gStatic.add(s); }
       }
       // supports
       const sup = Math.max(0.28, Math.min(ctl.size * 0.022, 0.8));
@@ -1056,15 +1830,16 @@
       for (const s of d.supports || []) {
         const n = nodes.get(s.node);
         if (!n || (n.z ?? 0) > cut + 1e-6) continue;
-        const fixed = s.rx && s.ry;
-        const geo = fixed ? new THREE.BoxGeometry(sup * 1.9, sup * 1.9, sup * 0.5) : new THREE.ConeGeometry(sup * 0.95, sup * 1.1, 4);
+        const kind = MD.supportKind(s);
+        const geo = kind === "fixed" ? new THREE.BoxGeometry(sup * 1.9, sup * 1.9, sup * 0.5) : kind === "roller" ? new THREE.CylinderGeometry(sup * 0.45, sup * 0.45, sup * 1.4, 16) : new THREE.ConeGeometry(sup * 0.95, sup * 1.1, 4);
         const mesh = new THREE.Mesh(geo, supMat.clone());
-        if (fixed) mesh.position.set(n.x, n.y, (n.z ?? 0) - sup * 0.25);
+        if (kind === "fixed") mesh.position.set(n.x, n.y, (n.z ?? 0) - sup * 0.25);
+        else if (kind === "roller") { mesh.rotation.z = Math.PI / 2; mesh.position.set(n.x, n.y, (n.z ?? 0) - sup * 0.45); }
         else { mesh.rotation.x = Math.PI / 2; mesh.rotation.y = Math.PI / 4; mesh.position.set(n.x, n.y, (n.z ?? 0) - sup * 0.55); }
         gStatic.add(mesh);
       }
       // slabs
-      if (S.slabs && d.meta && d.meta.slabs && look() === "solid") {
+      if (S.slabs && hangs() && look() === "solid") {
         const slabs = d.meta.slabs.filter((s) => s.z <= cut + 1e-6);
         if (slabs.length) {
           const sm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: colors.slab, transparent: true, opacity: colors.dark ? 0.2 : 0.26, depthWrite: false }), slabs.length);
@@ -1097,21 +1872,41 @@
           }
         });
         inst.instanceMatrix.needsUpdate = true;
-        if (look() === "lines") { inst.material.visible = false; gMembers.add(lineSeg(cp, S.show === "model" || S.show === "util" ? colors.ink : colors.ink3, S.show === "model" || S.show === "util" ? 0.85 : 0.75)); }
+        const strong = S.show === "model" || S.show === "util";
+        if (look() === "lines") { inst.material.visible = false; gMembers.add(lineSeg(cp, strong ? colors.ink : colors.ink3, strong ? 0.85 : 0.6)); }
         else gMembers.add(lineSeg(ep, colors.edge, colors.dark ? 0.9 : 0.55));
         gMembers.add(inst);
-        v.colorMembers();
       }
-      if (first) setCamera("iso");
+      // nodes as points
+      const showNodes = S.btab === "model" || S.tool !== "select" || S.selN.size > 0 || !S.spec && S.show === "model";
+      const vis = d.nodes.filter((n) => (n.z ?? 0) <= cut + 1e-6);
+      nodeIds = vis.map((n) => n.id);
+      if (showNodes && vis.length) {
+        const gp = new THREE.BufferGeometry();
+        gp.setAttribute("position", new THREE.Float32BufferAttribute(vis.flatMap((n) => [n.x, n.y, n.z ?? 0]), 3));
+        gp.setAttribute("color", new THREE.Float32BufferAttribute(new Float32Array(vis.length * 3), 3));
+        nodePts = new THREE.Points(gp, new THREE.PointsMaterial({ size: 6, sizeAttenuation: false, vertexColors: true, depthTest: false }));
+        nodePts.renderOrder = 7;
+        gMembers.add(nodePts);
+      }
+      v.colorMembers();
+      if (first || !all.length) setCamera("iso");
       v.updateSelection();
+      drawTool();
       renderTitle();
       request();
     };
     v.colorMembers = function () {
-      if (!v.ok || !inst) return;
+      if (!v.ok) return;
+      if (nodePts) {
+        const col = nodePts.geometry.getAttribute("color"), cI = new THREE.Color(colors.ink), cM = new THREE.Color(colors.mark);
+        nodeIds.forEach((id, k) => { const c = S.selN.has(id) ? cM : cI; col.setXYZ(k, c.r, c.g, c.b); });
+        col.needsUpdate = true;
+      }
+      if (!inst) { request(); return; }
+      const old = gMembers.getObjectByName("utilLines");
+      if (old) { gMembers.remove(old); old.geometry.dispose(); old.material.dispose(); }
       if (look() === "lines" && S.show === "util" && S.result) {
-        const old = gMembers.getObjectByName("utilLines");
-        if (old) { gMembers.remove(old); old.geometry.dispose(); old.material.dispose(); }
         const pos = [], col = [];
         for (const m of (v.geom || []).filter((q) => instIds.includes(q.id))) {
           const { u, st } = memberUtil(m.id), c = utilColor(u, st);
@@ -1128,6 +1923,7 @@
         if (showU) { const { u, st } = memberUtil(mid); c = utilColor(u, st); }
         else c = new THREE.Color(colors.concrete);
         if (!showU && S.show !== "model") c.lerp(new THREE.Color(colors.bg), 0.45);
+        if (S.selM.size > 1 && !S.selM.has(mid)) c.lerp(new THREE.Color(colors.bg), 0.62);
         inst.setColorAt(k, c);
       });
       if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
@@ -1145,45 +1941,93 @@
     v.updateSelection = function () {
       if (!v.ok) { if (v.fallback) drawFallback(); return; }
       disposeGroup(gSel);
-      const g = v.geom || [];
-      for (const [mid, kind] of [[hoverId, "hover"], [S.sel, "sel"]]) {
-        const m = mid && g.find((q) => q.id === mid);
-        if (!m) continue;
-        const thin = look() === "lines";
-        const grow = kind === "sel" ? Math.max(0.03, ctl.size * 0.0015) : Math.max(0.015, ctl.size * 0.001);
-        const mat = memberMatrix(m, grow, thin && kind === "sel" ? "sel" : thin);
-        if (kind === "sel") {
-          const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: colors.mark, transparent: true, opacity: 0.82 }));
-          mesh.applyMatrix4(mat); mesh.renderOrder = 5;
-          gSel.add(mesh);
+      v.colorMembers();
+      const g = v.geom || [], byId = new Map(g.map((m) => [m.id, m])), thin = look() === "lines";
+      const selected = [...S.selM].map((id) => byId.get(id)).filter(Boolean);
+      if (selected.length && S.show === "util" && S.result && !thin) {
+        const ep = [];
+        for (const m of selected) {
+          const mat = memberMatrix(m, Math.max(0.03, ctl.size * 0.0015), false);
+          const cs = [[-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]].map((c) => new THREE.Vector3(...c).applyMatrix4(mat));
+          for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) ep.push(cs[a].x, cs[a].y, cs[a].z, cs[b].x, cs[b].y, cs[b].z);
         }
-        if (thin && kind === "sel") continue;
+        const ol = lineSeg(ep, colors.ink, 1); ol.renderOrder = 6; gSel.add(ol);
+      } else if (selected.length) {
+        const hm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: colors.mark, transparent: true, opacity: 0.82 }), selected.length);
+        selected.forEach((m, k) => hm.setMatrixAt(k, memberMatrix(m, Math.max(0.03, ctl.size * 0.0015), thin ? "sel" : false)));
+        hm.instanceMatrix.needsUpdate = true; hm.renderOrder = 5;
+        gSel.add(hm);
+      }
+      for (const [mid, kind] of [[hoverId, "hover"], [S.sel, "sel"]]) {
+        const m = mid && byId.get(mid);
+        if (!m || (thin && kind === "sel")) continue;
+        const grow = kind === "sel" ? Math.max(0.03, ctl.size * 0.0015) : Math.max(0.015, ctl.size * 0.001);
         const eg = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
         const lines = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: kind === "sel" ? colors.ink : colors.ink3, transparent: true, opacity: 0.95, depthTest: kind !== "sel" }));
-        lines.applyMatrix4(mat); lines.renderOrder = 6;
+        lines.applyMatrix4(memberMatrix(m, grow, thin)); lines.renderOrder = 6;
         gSel.add(lines);
       }
       request();
     };
     v.flash = function () { request(); };
-    v.screenOf = function (mid) {          // client coordinates of a member's mid point (used by the browser tests)
+    v.screenOf = function (mid) {
       const m = (v.geom || []).find((q) => q.id === mid);
       if (!v.ok || !m) return null;
-      const p = new THREE.Vector3((m.a[0] + m.b[0]) / 2, (m.a[1] + m.b[1]) / 2, (m.a[2] + m.b[2]) / 2).project(cam());
-      const rect = renderer.domElement.getBoundingClientRect();
-      return { x: rect.left + (p.x + 1) / 2 * rect.width, y: rect.top + (1 - p.y) / 2 * rect.height };
+      const p = project([(m.a[0] + m.b[0]) / 2, (m.a[1] + m.b[1]) / 2, (m.a[2] + m.b[2]) / 2]);
+      return { x: p.x, y: p.y };
     };
+    v.screenOfPoint = function (p) { return v.ok ? project(p) : null; };
 
-    // ---------------------------------------------------------- overlays: diagrams and deformed shape
+    // ---------------------------------------------------------- working plane, snap marker, rubber band
+    function drawTool() {
+      if (!v.ok) return;
+      disposeGroup(gTool);
+      if (S.tool !== "node" && S.tool !== "member") { request(); return; }
+      const pl = S.plane, st = pl.step, box = bounds();
+      const ext = Math.max(st * 2, ctl.size * 0.15);
+      let lo, hi;
+      const uv = pl.kind === "XY" ? [0, 1] : pl.kind === "XZ" ? [0, 2] : [1, 2];
+      lo = [box.min.x, box.min.y, box.min.z]; hi = [box.max.x, box.max.y, box.max.z];
+      const u0 = Math.floor((Math.min(lo[uv[0]], 0) - ext) / st) * st, u1 = Math.ceil((Math.max(hi[uv[0]], 0) + ext) / st) * st;
+      const w0 = Math.floor((Math.min(lo[uv[1]], 0) - ext) / st) * st, w1 = Math.ceil((Math.max(hi[uv[1]], 0) + ext) / st) * st;
+      const nU = Math.round((u1 - u0) / st), nW = Math.round((w1 - w0) / st);
+      const P = (a, b) => { const p = [0, 0, 0]; p[uv[0]] = a; p[uv[1]] = b; p[[0, 1, 2].find((k) => !uv.includes(k))] = pl.at; return p; };
+      const pts = [];
+      if (nU < 400 && nW < 400) {
+        for (let i = 0; i <= nU; i++) pts.push(...P(u0 + i * st, w0), ...P(u0 + i * st, w1));
+        for (let j = 0; j <= nW; j++) pts.push(...P(u0, w0 + j * st), ...P(u1, w0 + j * st));
+      }
+      gTool.add(lineSeg(pts, colors.grid, 0.9));
+      gTool.add(lineSeg([...P(u0, w0), ...P(u1, w0), ...P(u1, w0), ...P(u1, w1), ...P(u1, w1), ...P(u0, w1), ...P(u0, w1), ...P(u0, w0)], colors.ink3, 0.7));
+      const r = Math.max(ctl.size * 0.006, 0.07);
+      if (snapNow) {
+        const mk1 = new THREE.Mesh(new THREE.SphereGeometry(r * (snapNow.node ? 1.5 : 1), 16, 12), new THREE.MeshBasicMaterial({ color: snapNow.node ? colors.mark : colors.ink, depthTest: false }));
+        mk1.position.set(...snapNow.p); mk1.renderOrder = 9; gTool.add(mk1);
+      }
+      if (S.tool === "member" && S.draw) {
+        const a = new THREE.Mesh(new THREE.SphereGeometry(r * 1.4, 16, 12), new THREE.MeshBasicMaterial({ color: colors.mark, depthTest: false }));
+        a.position.set(...S.draw.p); a.renderOrder = 9; gTool.add(a);
+        if (snapNow) { const l = lineSeg([...S.draw.p, ...snapNow.p], colors.ink, 1); l.material.depthTest = false; l.renderOrder = 9; gTool.add(l); }
+      }
+      request();
+    }
+    v.toolChanged = function () { container().dataset.tool = S.tool; v.rebuild(); v.refreshOverlay(); };
+    v.drawTool = drawTool;
+
+    // ---------------------------------------------------------- overlays: diagrams, deformed shape, loads, modes
     v.refreshOverlay = function () {
       v.diagMax = v.defMax = v.defScale = v.defAt = null;
+      stopAnim();
       if (!v.ok) { renderLegend(); if (v.fallback) drawFallback(); return; }
       disposeGroup(gOverlay);
       v.colorMembers();
-      const r = S.result;
-      if (r && S.show !== "model" && S.show !== "util") {
-        const cut = zCut(), g = (v.geom || []).filter((m) => m.zmax <= cut + 1e-6 && r.model.members[m.id]);
-        if (S.show === "def") drawDeformed(r, g); else drawDiagram(r, g, S.show);
+      const r = S.result, cut = zCut();
+      const g = (v.geom || []).filter((m) => m.zmax <= cut + 1e-6);
+      if (S.show === "loads") drawLoads(g);
+      else if (r && S.show === "modes" && r.modal) drawModes(r, g.filter((m) => r.model.members[m.id]));
+      else if (r && S.show !== "model" && S.show !== "util") {
+        const gg = g.filter((m) => r.model.members[m.id]);
+        if (S.show === "def") drawDeformed(r, gg); else drawDiagram(r, gg, S.show);
       }
       renderLegend();
       request();
@@ -1230,7 +2074,6 @@
         const sp = textSprite(`${T.fmt(peak.v)} ${QUNIT[q]}`, { size: Math.max(0.6, Math.min(ctl.size * 0.034, 1.6)), color: peak.v >= 0 ? colors.pos : colors.neg, box: colors.bg });
         sp.position.set(m.a[0] + m.ex[0] * peak.x + off[0] * s, m.a[1] + m.ex[1] * peak.x + off[1] * s, m.a[2] + m.ex[2] * peak.x + off[2] * s);
         gOverlay.add(sp);
-        v.peak = { member: m.id, value: peak.v };
       }
     }
     function drawDeformed(r, g) {
@@ -1238,14 +2081,10 @@
       let dmax = 0, at = null;
       r.analysis.nodeIds.forEach((nid, k) => {
         let ux = 0, uy = 0, uz = 0;
-        fac.forEach((f, q) => { const d = r.cases[ids[q]].displacements[k]; ux += f * d[0]; uy += f * d[1]; uz += f * d[2]; });
+        fac.forEach((f, q) => { if (!f) return; const d = r.cases[ids[q]].displacements[k]; ux += f * d[0]; uy += f * d[1]; uz += f * d[2]; });
         const u = Math.hypot(ux, uy, uz); if (u > dmax) { dmax = u; at = nid; }
       });
-      const data = g.map((m) => {
-        const md = r.analysis.members[m.id], x = r.analysis.stations[m.id].x;
-        const u = series(m.id, "u", fac), vv = series(m.id, "v", fac), w = series(m.id, "w", fac);
-        return { m, md, x, u, vv, w };
-      });
+      const data = g.map((m) => ({ m, md: r.analysis.members[m.id], x: r.analysis.stations[m.id].x, u: series(m.id, "u", fac), vv: series(m.id, "v", fac), w: series(m.id, "w", fac) }));
       for (const dd of data) for (let k = 0; k < dd.x.length; k++) dmax = Math.max(dmax, Math.hypot(dd.u[k], dd.vv[k], dd.w[k]));
       v.defMax = dmax; v.defAt = at;
       if (dmax < 1e-12) return;
@@ -1260,45 +2099,140 @@
         };
         for (let k = 0; k + 1 < x.length; k++) if (x[k + 1] - x[k] > 1e-9) pts.push(...P(k), ...P(k + 1));
       }
-      const nseg = pts.length / 6, t = Math.max(ctl.size * 0.0032, 0.045);
-      const tubes = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: colors.def }), nseg);
-      const mt = new THREE.Matrix4(), a = new THREE.Vector3(), b = new THREE.Vector3(), dv = new THREE.Vector3(), up = new THREE.Vector3(), side = new THREE.Vector3();
-      for (let k = 0; k < nseg; k++) {
-        a.fromArray(pts, 6 * k); b.fromArray(pts, 6 * k + 3); dv.subVectors(b, a);
-        const len = dv.length() || 1e-6;
-        up.set(0, 0, 1); if (Math.abs(dv.z) > 0.9 * len) up.set(1, 0, 0);
-        side.crossVectors(up, dv).normalize().multiplyScalar(t); up.crossVectors(dv, side).normalize().multiplyScalar(t);
-        mt.makeBasis(dv.clone().multiplyScalar(1 + t / len), side, up); mt.setPosition(a.clone().add(b).multiplyScalar(0.5));
-        tubes.setMatrixAt(k, mt);
-      }
-      tubes.instanceMatrix.needsUpdate = true; tubes.renderOrder = 4;
-      gOverlay.add(tubes);
+      const tb = tubes(pts, Math.max(ctl.size * 0.0032, 0.045), colors.def);
+      tb.renderOrder = 4; gOverlay.add(tb);
     }
+    function loadVector(dir, m) {
+      if (dir.startsWith("global_")) { const v3 = [0, 0, 0]; v3["xyz".indexOf(dir.slice(-1))] = 1; return v3; }
+      return dir === "local_x" ? m.ex : dir === "local_y" ? m.ey : m.ez;
+    }
+    function drawLoads(g) {
+      const cid = S.source && S.source.startsWith("case:") ? S.source.slice(5) : null;
+      const lc = S.data && S.data.load_cases.find((c) => c.id === cid);
+      v.loadInfo = { lc, nU: 0, nP: 0, nN: 0, wmax: 0, pmax: 0 };
+      if (!lc) return;
+      const byId = new Map(g.map((m) => [m.id, m])), nodes = new Map(S.data.nodes.map((n) => [n.id, n]));
+      let wmax = 0, pmax = 0;
+      for (const l of lc.loads || []) {
+        if (l.type === "udl") wmax = Math.max(wmax, Math.abs(l.w ?? 0), Math.abs(l.w1 ?? 0), Math.abs(l.w2 ?? 0));
+        else if (l.type === "point") pmax = Math.max(pmax, Math.abs(l.p));
+        else pmax = Math.max(pmax, Math.hypot(l.fx || 0, l.fy || 0, l.fz || 0));
+      }
+      Object.assign(v.loadInfo, { wmax, pmax });
+      const lw = wmax > 0 ? ctl.size * 0.05 / wmax : 0, lpScale = pmax > 0 ? ctl.size * 0.08 / pmax : 0, head = ctl.size * 0.008;
+      const pts = [];
+      const arrow = (tip, vec) => {        // vec: arrow vector (from tail to tip)
+        const len = Math.hypot(...vec);
+        if (len < 1e-9) return;
+        const tail = tip.map((c, k) => c - vec[k]), u = vec.map((c) => c / len);
+        const perp = Math.abs(u[2]) > 0.9 ? [1, 0, 0] : [0, 0, 1];
+        const s = [u[1] * perp[2] - u[2] * perp[1], u[2] * perp[0] - u[0] * perp[2], u[0] * perp[1] - u[1] * perp[0]];
+        pts.push(...tail, ...tip);
+        const h = Math.min(head, len * 0.4);
+        for (const sg of [1, -1]) pts.push(...tip, ...tip.map((c, k) => c - u[k] * h + sg * s[k] * h * 0.6));
+      };
+      for (const l of lc.loads || []) {
+        if (l.type === "nodal") {
+          const n = nodes.get(l.node);
+          if (!n || (n.z ?? 0) > zCut() + 1e-6) continue;
+          v.loadInfo.nN++;
+          arrow([n.x, n.y, n.z ?? 0], [l.fx || 0, l.fy || 0, l.fz || 0].map((c) => c * lpScale));
+          continue;
+        }
+        const m = byId.get(l.member);
+        if (!m) continue;
+        const dv = loadVector(l.direction || "global_z", m);
+        const at = (x) => [m.a[0] + m.ex[0] * x, m.a[1] + m.ex[1] * x, m.a[2] + m.ex[2] * x];
+        if (l.type === "point") { v.loadInfo.nP++; arrow(at(l.a), dv.map((c) => c * l.p * lpScale)); continue; }
+        v.loadInfo.nU++;
+        const a = l.a ?? 0, b = l.b ?? m.L, w1 = l.w ?? l.w1, w2 = l.w ?? l.w2, n = Math.max(2, Math.round((b - a) / (ctl.size * 0.04)));
+        let prev = null;
+        for (let k = 0; k <= n; k++) {
+          const x = a + (b - a) * k / n, w = w1 + (w2 - w1) * k / n, tip = at(x), vec = dv.map((c) => c * w * lw);
+          arrow(tip, vec);
+          const tail = tip.map((c, q) => c - vec[q]);
+          if (prev) pts.push(...prev, ...tail);
+          prev = tail;
+        }
+      }
+      if (pts.length) { const l = lineSeg(pts, colors.load, 1); l.renderOrder = 4; gOverlay.add(l); }
+    }
+    function drawModes(r, g) {
+      const mr = r.modal, k = Math.min(+(S.source || "mode:0").slice(5) || 0, mr.omega.length - 1);
+      const P = [], D = [];
+      let dmax = 0;
+      for (const m of g) {
+        const sh = T.memberShape(mr, m.id, mr.phi[k], 6);
+        for (let i = 0; i + 1 < sh.P.length; i++) { P.push(...sh.P[i], ...sh.P[i + 1]); D.push(...sh.D[i], ...sh.D[i + 1]); }
+        for (const d of sh.D) dmax = Math.max(dmax, Math.hypot(...d));
+      }
+      if (!P.length || dmax < 1e-15) return;
+      const sc = ctl.size * 0.09 / dmax;
+      const Ds = D.map((c) => c * sc);
+      const mesh = tubes(P, Math.max(ctl.size * 0.0032, 0.045), colors.def);
+      setTubes(mesh, P, Math.max(ctl.size * 0.0032, 0.045), 1, Ds);
+      mesh.renderOrder = 4; gOverlay.add(mesh);
+      v.modeInfo = { k, T: mr.period[k], f: mr.freq[k], rx: mr.ratio("X")[k], ry: mr.ratio("Y")[k], rz: mr.ratio("Z")[k] };
+      anim = { mesh, P, Ds, t: Math.max(ctl.size * 0.0032, 0.045), t0: performance.now() };
+      if (S.animate) requestAnimationFrame(frame);
+    }
+    function frame(now) {
+      if (!anim) return;
+      const amp = Math.sin(2 * Math.PI * (now - anim.t0) / 1700);
+      setTubes(anim.mesh, anim.P, anim.t, amp, anim.Ds);
+      renderer.setClearColor(colors.bg, 1); renderer.render(scene, cam());
+      if (S.animate && S.show === "modes" && !document.hidden) requestAnimationFrame(frame);
+      else { setTubes(anim.mesh, anim.P, anim.t, 1, anim.Ds); renderer.render(scene, cam()); }
+    }
+    function stopAnim() { anim = null; }
+    v.setAnimate = function () { if (anim && S.animate) { anim.t0 = performance.now(); requestAnimationFrame(frame); } else if (anim) { setTubes(anim.mesh, anim.P, anim.t, 1, anim.Ds); renderer.render(scene, cam()); } };
+    // keep orbiting smooth while animating: the loop renders every frame
+    const _upd = updateCamera;
+    void _upd;
 
     // ---------------------------------------------------------- legend and title block
+    function toolHint() {
+      const pl = S.plane, where = `${pl.kind} plane at ${pl.kind === "XY" ? "z" : pl.kind === "XZ" ? "y" : "x"} = ${n3(pl.at)} m, grid ${n3(pl.step)} m`;
+      return {
+        node: `<span class="toolhint"><b>Add node</b>: click on the ${where}. Change the plane in the Model tab.</span>`,
+        member: `<span class="toolhint"><b>Draw members</b>: click start and end (nodes or grid points) on the ${where}; it chains on. Esc ends the chain.</span>`,
+        box: `<span class="toolhint"><b>Box select</b>: drag a rectangle; Shift adds to the selection. Right-drag pans.</span>`,
+        support: `<span class="toolhint"><b>Support</b>: click nodes to make them ${S.supportKind === "none" ? "free" : S.supportKind}. Choose the type in the Model tab.</span>`,
+        load: `<span class="toolhint"><b>Load</b>: click members (${S.formLoad.kind === "udl" ? `${f3(S.formLoad.w)} kN/m` : `${f3(S.formLoad.p)} kN`}) or nodes, case ${esc(S.formLoad.caseId || "–")}. Set it in the Model tab.</span>`,
+        delete: `<span class="toolhint"><b>Delete</b>: click a node or member. Ctrl+Z undoes.</span>`,
+      }[S.tool] || "";
+    }
     function renderLegend() {
       const el = $("#b-legend"), r = S.result;
-      const banner = $("#b-banner");
-      if (S.error) { banner.hidden = false; banner.textContent = S.error; } else banner.hidden = true;
+      const err = S.error && S.data && S.data.members.length ? `<span class="toolhint" style="color:var(--bad)">${esc(S.error)}</span>` : "";
       if (!v.ok && v.reason) { el.innerHTML = `<b>${esc(v.reason)}.</b> Showing a plain drawing; results and checks are complete.`; return; }
-      if (S.show === "model" || !r) {
-        el.innerHTML = `Drag to orbit · right-drag or shift-drag to pan · scroll or pinch to zoom · click a member to inspect it.${hangs() && look() === "solid" ? "<br>Beams are drawn hanging below the floor level; the analysis uses centre lines." : ""}`;
+      let html;
+      if (S.show === "loads") {
+        const li = v.loadInfo || {};
+        html = li.lc ? `<b>Loads, ${esc(li.lc.id)}</b> ${esc(li.lc.name || "")} · ${li.nU} line, ${li.nP} point, ${li.nN} nodal${li.wmax ? ` · largest ${f3(li.wmax)} kN/m` : ""}${li.pmax ? `, ${f3(li.pmax)} kN` : ""}${li.lc.self_weight ? "<br>plus member self weight, added by the analysis" : ""}` : "<b>Loads</b>: no load case";
+      } else if (S.show === "modes" && r && r.modal && v.modeInfo) {
+        const m = v.modeInfo;
+        html = `<b>Mode ${m.k + 1}</b>: T = ${m.T.toFixed(3)} s, f = ${m.f.toFixed(2)} Hz · effective mass X ${(100 * m.rx).toFixed(1)} %, Y ${(100 * m.ry).toFixed(1)} %, Z ${(100 * m.rz).toFixed(1)} %`;
+      } else if (S.show === "model" || !r) {
+        html = `Drag to orbit · right-drag to pan · scroll or pinch to zoom · click a member or node to inspect it.${hangs() && look() === "solid" ? "<br>Beams are drawn hanging below the floor level; the analysis uses centre lines." : ""}`;
       } else if (S.show === "util") {
-        el.innerHTML = `<b>Utilisation η</b>, largest over all checks of each member<br><span class="ramp" style="background:${v.rampCss()}"></span><span class="num">> 1 fails</span><div class="ramp-ticks"><span style="left:0">0</span><span style="left:50%">0.5</span><span style="left:80%">0.8</span><span style="left:100%">1.0</span></div>`;
+        html = `<b>Utilisation η</b>, largest over all checks of each member<br><span class="ramp" style="background:${v.rampCss()}"></span><span class="num">> 1 fails</span><div class="ramp-ticks"><span style="left:0">0</span><span style="left:50%">0.5</span><span style="left:80%">0.8</span><span style="left:100%">1.0</span></div>`;
       } else if (S.show === "def") {
-        el.innerHTML = `<b>Deformed shape</b>, ${esc(S.defInfo || "")}<br>max <b class="num">${v.defMax != null ? (v.defMax * 1000).toFixed(1) : "–"} mm</b>${v.defAt ? ` at node ${esc(v.defAt)}` : ""}, drawn ×${v.defScale ? Math.round(v.defScale) : "–"}`;
+        html = `<b>Deformed shape</b>, ${esc(S.defInfo || "")}<br>max <b class="num">${v.defMax != null ? (v.defMax * 1000).toFixed(1) : "–"} mm</b>${v.defAt ? ` at node ${esc(v.defAt)}` : ""}, drawn ×${v.defScale ? Math.round(v.defScale) : "–"}`;
       } else {
         const q = S.show, plane = q === "Mz" ? "x-y plane, on the tension side" : q === "My" ? "x-z plane, on the tension side" : "+ tension";
-        el.innerHTML = `<b>${QLABEL[q]}</b> ${plane}, ${esc(sourceLabel(S.source))}<br><i class="sw" style="background:var(--plot-pos)"></i>positive<i class="sw" style="background:var(--plot-neg)"></i>negative · largest <b class="num">${v.diagMax != null ? T.fmt(v.diagMax) : "–"} ${QUNIT[q]}</b>`;
+        html = `<b>${QLABEL[q]}</b> ${plane}, ${esc(sourceLabel(S.source))}<br><i class="sw" style="background:var(--plot-pos)"></i>positive<i class="sw" style="background:var(--plot-neg)"></i>negative · largest <b class="num">${v.diagMax != null ? T.fmt(v.diagMax) : "–"} ${QUNIT[q]}</b>`;
       }
+      el.innerHTML = html + err + toolHint();
     }
+    v.renderLegend = renderLegend;
     function renderTitle() {
       const d = S.data, el = $("#b-title");
       if (!d) { el.innerHTML = ""; return; }
       const xs = d.nodes.map((n) => n.x), ys = d.nodes.map((n) => n.y), zs = d.nodes.map((n) => n.z ?? 0);
       const span = (a) => (a.length ? Math.max(...a) - Math.min(...a) : 0);
       el.innerHTML = `<div class="tb-name">${esc(d.name || "Untitled")}</div><div>Size</div><div class="num">${r1(span(xs))} × ${r1(span(ys))} × ${r1(span(zs))} m</div>
-        <div>Model</div><div class="num">${d.nodes.length} nodes · ${d.members.length} members</div><div>Code</div><div>EN 1990, EN 1992-1-1</div>`;
+        <div>Model</div><div class="num">${d.nodes.length} nodes · ${d.members.length} members</div><div>Code</div><div>EN 1990, 1992-1-1${d.seismic ? ", 1998-1" : ""}</div>`;
     }
 
     // ---------------------------------------------------------- fallback (no WebGL): axonometric SVG
@@ -1319,7 +2253,7 @@
       svg.innerHTML = g.map((m) => {
         const a = P(m.a), b = P(m.b), { u, st } = memberUtil(m.id);
         const col = S.show === "util" && u != null ? (st === "fail" || u > 1 ? "var(--bad)" : u > 0.8 ? "var(--nc)" : "var(--ok)") : "var(--ink-2)";
-        const sel = m.id === S.sel;
+        const sel = S.selM.has(m.id);
         return `<line x1="${X(a)}" y1="${Y(a)}" x2="${X(b)}" y2="${Y(b)}" stroke="${sel ? "var(--mark)" : col}" stroke-width="${sel ? 6 : 2}" data-fb="${esc(m.id)}" style="cursor:pointer"/>`;
       }).join("");
       svg.querySelectorAll("[data-fb]").forEach((l) => l.addEventListener("click", () => select(l.dataset.fb, true)));
@@ -1329,6 +2263,7 @@
     v.setCamera = function (k, reset) { if (v.ok) setCamera(k, reset); };
     v.fitTo = fitTo;
     v.theme = function () { readColors(); v.rebuild(); v.refreshOverlay(); };
+    v.cancelDraw = function () { S.draw = null; snapNow = null; drawTool(); };
     return v;
   })();
 
@@ -1340,43 +2275,88 @@
     el.textContent = msg; el.hidden = false;
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2800);
   }
-  function setShow(s) {
+  function setShow(s, keepSource) {
     S.show = s; saveView();
+    if (!keepSource) {
+      if (s === "modes") S.source = "mode:0";
+      else if (s === "loads") S.source = "";
+      else if (S.source && (S.source.startsWith("mode:") || (S.source.startsWith("case:") && s === "def" && (S.source.slice(5) === T.CASE_E || S.source.slice(5) === T.CASE_E2)))) S.source = "env";
+    }
     $$("[data-show]").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.show === S.show)));
     syncLookControls(); renderSource(); V.rebuild(); V.refreshOverlay();
+    if (S.rtab === "modes") renderResults();
   }
   function syncLookControls() {
-    const diagView = ["My", "Mz", "N", "def"].includes(S.show);
+    const diagView = LINE_VIEWS.includes(S.show);
     $$("[data-look]").forEach((b) => { b.disabled = diagView; b.setAttribute("aria-pressed", String(!diagView && b.dataset.look === S.look)); });
     $("#b-slabs").disabled = diagView || S.look !== "solid";
+    const hasModes = !!(S.result && S.result.modal);
+    const mc = $("[data-show=modes]");
+    mc.disabled = !hasModes; mc.title = hasModes ? "" : "Switch on modal analysis in the Dynamics tab";
   }
   function setLook(l) {
     S.look = l; saveView();
     syncLookControls();
     V.rebuild(); V.refreshOverlay();
   }
+  function setTool(t) {
+    S.tool = t; S.draw = null;
+    $$("[data-tool]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tool === t)));
+    if ((t === "node" || t === "member") && S.btab !== "model") { /* keep the user's tab */ }
+    V.toolChanged();
+  }
+  function startBlank() {
+    load({ base: MD.blankModel(), dyn: { on: false } });
+    S.plane = { kind: "XY", at: 0, step: 1.0 };
+    S.btab = "model"; renderEditor();
+    setShow("model");
+    setTool("member");
+    toast("Blank model: draw members on the grid, then add supports and loads.");
+  }
   function init() {
     const ex3 = window.TRAGWERK_EXAMPLES3D || {};
-    $("#b-preset").innerHTML = `<optgroup label="Generate a building">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${esc(p.label)}</option>`).join("")}</optgroup>
+    $("#b-preset").innerHTML = `<optgroup label="Generate a building">${Object.entries(PRESETS).filter(([, p]) => !p.gen).map(([k, p]) => `<option value="${k}">${esc(p.label)}</option>`).join("")}</optgroup>
+      <optgroup label="Generate a bridge">${Object.entries(PRESETS).filter(([, p]) => p.gen === "bridge").map(([k, p]) => `<option value="${k}">${esc(p.label)}</option>`).join("")}</optgroup>
+      <optgroup label="Model by hand"><option value="blank">Blank model (draw it yourself)</option></optgroup>
       ${Object.keys(ex3).length ? `<optgroup label="Open a model file">${Object.keys(ex3).map((k) => `<option value="ex:${esc(k)}">${esc(ex3[k].name || k)} (JSON)</option>`).join("")}</optgroup>` : ""}`;
     $("#b-preset").onchange = (e) => {
       const k = e.target.value;
-      if (k.startsWith("ex:")) loadData(clone(ex3[k.slice(3)])); else load({ spec: PRESETS[k].spec });
+      if (k === "blank") startBlank();
+      else if (k.startsWith("ex:")) loadData(clone(ex3[k.slice(3)]));
+      else load({ spec: PRESETS[k].spec, gen: PRESETS[k].gen });
     };
-    $$("[data-btab]").forEach((t) => t.onclick = () => { S.btab = t.dataset.btab; renderEditor(); });
+    $$("[data-btab]").forEach((t) => t.onclick = () => { S.btab = t.dataset.btab; renderEditor(); V.rebuild(); V.refreshOverlay(); });
     $$("[data-rtab]").forEach((t) => t.onclick = () => { S.rtab = t.dataset.rtab; renderResults(); });
     $$("[data-show]").forEach((c) => c.onclick = () => setShow(c.dataset.show));
     $$("[data-look]").forEach((b) => b.onclick = () => setLook(b.dataset.look));
     $$("[data-cam]").forEach((b) => b.onclick = () => V.setCamera(b.dataset.cam));
+    $$("#b-tools [data-tool]").forEach((b) => b.onclick = () => setTool(b.dataset.tool));
+    $$("#b-tools [data-act=undo]").forEach((b) => b.onclick = undo);
+    $$("#b-tools [data-act=redo]").forEach((b) => b.onclick = redo);
     $("#b-slabs").checked = S.slabs;
     $("#b-slabs").onchange = (e) => { S.slabs = e.target.checked; saveView(); V.rebuild(); };
-    $("#b-source").onchange = (e) => { S.source = e.target.value; V.refreshOverlay(); };
+    $("#b-animate").onchange = (e) => { S.animate = e.target.checked; V.setAnimate(); };
+    $("#b-source").onchange = (e) => { S.source = e.target.value; V.refreshOverlay(); if (S.rtab === "modes") renderResults(); };
     $("#b-level").onchange = (e) => { S.level = e.target.value; V.rebuild(); V.refreshOverlay(); };
     $("#b-name").addEventListener("input", (e) => { if (S.spec) S.spec.name = e.target.value; else S.base.name = e.target.value; if (S.data) S.data.name = e.target.value; V.rebuild(); });
     $("#b-json").onclick = () => { $("#b-json-text").value = JSON.stringify(S.data, null, 2); $("#b-json-msg").textContent = ""; $("#b-drawer").hidden = false; $("#b-json-text").focus(); };
     $("#b-drawer-close").onclick = () => { $("#b-drawer").hidden = true; };
     $("#b-drawer").addEventListener("click", (e) => { if (e.target.id === "b-drawer") $("#b-drawer").hidden = true; });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("#b-drawer").hidden = true; } });
+    document.addEventListener("keydown", (e) => {
+      if (ROOT.hidden) return;
+      if (e.key === "Escape") {
+        if (!$("#b-drawer").hidden) { $("#b-drawer").hidden = true; return; }
+        if (S.draw) { V.cancelDraw(); return; }
+        if (S.tool !== "select") { setTool("select"); return; }
+        select(null, false, true);
+        return;
+      }
+      const t = e.target, typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      if (typing) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
+      if ((e.key === "Delete" || e.key === "Backspace") && (S.selM.size || S.selN.size)) { e.preventDefault(); deleteSelection(); }
+    });
     $("#b-json-copy").onclick = () => {
       const t = $("#b-json-text");
       navigator.clipboard.writeText(t.value).then(() => { $("#b-json-msg").textContent = "Copied."; }, () => { t.select(); $("#b-json-msg").textContent = "Select all and copy with your keyboard."; });
@@ -1393,23 +2373,28 @@
     if (mq && mq.addEventListener) mq.addEventListener("change", () => V.theme());
     new MutationObserver(() => V.theme()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     $$("[data-show]").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.show === S.show)));
+    $$("[data-tool]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tool === S.tool)));
     syncLookControls();
     $("#b-ver").textContent = `v${T.VERSION}`;
     V.init();
     $("#b-preset").value = "office";
     S.spec = Object.assign(T.BUILDING_DEFAULTS(), clone(PRESETS.office.spec));
     renderEditor();
+    afterEdit();
     $("#b-busy").hidden = false;
-    setTimeout(() => { runNow(); V.setCamera("iso", true); }, 30);
-    window.TragwerkStudio3D = { S, V, runNow, select };
+    setTimeout(() => { runNow(); syncLookControls(); V.setCamera("iso", true); }, 30);
+    window.TragwerkStudio3D = { S, V, runNow, select, selectNode, setTool, setShow, addEdit, undo, redo, load, startBlank };
   }
   init();
 })();
 </script>
 <script>
+/*__APPFE__*/
+</script>
+<script>
 (function () {
   "use strict";
-  const modes = { "3d": document.getElementById("mode-3d"), "2d": document.getElementById("mode-2d") };
+  const modes = { "3d": document.getElementById("mode-3d"), "2d": document.getElementById("mode-2d"), fe: document.getElementById("mode-fe") };
   function setMode(m) {
     if (!modes[m]) m = "3d";
     for (const [k, el] of Object.entries(modes)) el.hidden = k !== m;

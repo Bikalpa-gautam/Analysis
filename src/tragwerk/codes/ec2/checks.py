@@ -170,7 +170,11 @@ def check_shear(member: Member, rc: RCSection, sec: RCRectSection, f: MemberForc
     V = np.abs(f.uls_V)
     with np.errstate(divide="ignore"):
         u = np.where(r["VRd"] > 0, V / r["VRd"], np.where(V > 0, np.inf, 0.0))
-    ci, si = (int(v) for v in np.unravel_index(int(np.argmax(u)), u.shape))
+    um = float(np.max(u))
+    # the first location within round-off of the largest (ties along a member with constant V would otherwise
+    # be broken by noise in the last digit)
+    k = int(np.argmax(u.ravel() >= um - 1e-9 * abs(um))) if np.isfinite(um) else int(np.argmax(u))
+    ci, si = (int(v) for v in np.unravel_index(k, u.shape))
     g = {k: (v[ci, si] if isinstance(v, np.ndarray) and v.ndim == 2 else v) for k, v in r.items()}
     c = rc.c
     VEd = float(V[ci, si])

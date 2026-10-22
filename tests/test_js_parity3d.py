@@ -71,8 +71,24 @@ def _random(seed):
     return m
 
 
+BRIDGES = [{}, {"girders": 3, "width": 12.0, "carriageway": 10.0, "pier_columns": "single"},
+           {"girders": 1, "spans": [18.0], "width": 8.0, "carriageway": 6.5},
+           {"spans": [15.0, 22.5, 22.5, 15.0], "pier_heights": [5.0, 8.5, 5.0], "girders": 4, "width": 13.0, "carriageway": 11.5,
+            "ts_stations": [0.1, 0.5, 0.9, 0.333]}]
+
+
 def _models():
-    return [generate_building(s) for s in SPECS] + [_torsion_model()] + [_random(s) for s in range(6)]
+    from tragwerk.bridge import generate_bridge
+    return ([generate_building(s) for s in SPECS] + [_torsion_model()] + [_random(s) for s in range(6)]
+            + [generate_bridge(b) for b in BRIDGES[:2]])
+
+
+def test_bridge_generator_identical(tmp_path):
+    from tragwerk.bridge import generate_bridge
+    js = _node([{"bridge_spec": s} for s in BRIDGES], tmp_path)
+    for spec, j in zip(BRIDGES, js):
+        assert j["ok"], j.get("error")
+        assert j["model"] == json.loads(json.dumps(generate_bridge(spec)))
 
 
 def _node(items, tmp_path):

@@ -1,0 +1,11 @@
+{
+ "schema": "tragwerk-fe/0.1",
+ "name": "Shear wall with a door opening",
+ "analysis": "plane_stress",
+ "element": "Q8",
+ "material": {"E_MPa": 33000, "nu": 0.2, "thickness_m": 0.25, "density_kNm3": 25},
+ "geometry": {"type": "rectangle", "Lx": 6.0, "Ly": 3.0, "h": 0.25, "openings": [{"x0": 2.4, "y0": 0.0, "x1": 3.4, "y1": 2.2}]},
+ "supports": [{"edge": "bottom", "ux": true, "uy": true}],
+ "loads": [{"edge": "top", "qx": 0, "qy": -120}, {"edge": "left", "qx": 25, "qy": 0}],
+ "self_weight": true
+}

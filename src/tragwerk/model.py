@@ -24,7 +24,7 @@ SCHEMA = "tragwerk/0.1"
 LOAD_DIRECTIONS = ("global_x", "global_y", "local_x", "local_y")
 VARIABLE_CATEGORIES = (
     "A", "B", "C", "D", "E", "F", "G", "H",
-    "snow", "snow_high", "wind", "temperature",
+    "snow", "snow_high", "wind", "temperature", "traffic_TS", "traffic_UDL",
 )
 DESIGN_TYPES = ("beam", "column", "none")
 DEFLECTION_SYSTEMS = ("simply_supported", "end_span", "interior_span", "cantilever")

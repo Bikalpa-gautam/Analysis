@@ -1,9 +1,10 @@
 """HTTP API (FastAPI). Start with ``tragwerk serve`` or ``uvicorn tragwerk.api:app``.
 
-POST /v1/analyze      model JSON -> full results JSON
+POST /v1/analyze      model JSON -> full results JSON (frame models, or tragwerk-fe/0.1 continuum models)
 POST /v1/report       model JSON -> HTML calculation report
 POST /v1/report.pdf   model JSON -> PDF calculation report (needs playwright)
 POST /v1/building     building spec -> 3D model JSON (2D and 3D models are accepted everywhere)
+POST /v1/bridge       bridge spec -> 3D model JSON of a continuous girder bridge
 GET  /v1/verification -> benchmark results JSON
 GET  /v1/examples/{name}
 GET  /v1/health
@@ -31,6 +32,12 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "P
 
 
 def _project(model: dict):
+    from .fe2d import SCHEMA_FE, FEError, run_fe
+    if isinstance(model, dict) and model.get("schema") == SCHEMA_FE:
+        try:
+            return run_fe(model)
+        except FEError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
     from .model3d import load_any
     from .project3d import run3d
     try:
@@ -41,11 +48,17 @@ def _project(model: dict):
 
 
 def _dict(res):
+    from .fe2d import FEResult, to_dict_fe
+    if isinstance(res, FEResult):
+        return to_dict_fe(res)
     from .project3d import to_dict3d
     return to_dict3d(res) if getattr(res.model, "is3d", False) else to_dict(res)
 
 
 def _render(res, verify, info):
+    from .fe2d import FEResult
+    if isinstance(res, FEResult):
+        raise HTTPException(status_code=422, detail="calculation reports are produced for frame models; use /v1/analyze for FE results")
     from .report.html import render
     from .report.html3d import render3d
     from .verification.benchmarks import run_all
@@ -68,6 +81,15 @@ def building(spec: dict = Body(default={})):
     from .building import generate_building
     try:
         return generate_building(spec or None)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+
+@app.post("/v1/bridge")
+def bridge(spec: dict = Body(default={})):
+    from .bridge import generate_bridge
+    try:
+        return generate_bridge(spec or None)
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
 

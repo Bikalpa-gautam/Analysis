@@ -220,13 +220,89 @@
     if (code !== "EC2" && code !== "SIA262") throw new ModelError("design.design_code: expected 'EC2' or 'SIA262'");
     const settings = { design_code: code, combination_rule: rule, params: Object.assign({}, sd.params || {}),
       stations_per_member: Math.trunc(num(sd.stations_per_member ?? 20, "design.stations_per_member", { positive: true })) };
-    const model = { is3d: true, name: String(data.name ?? "Untitled model"), nodes, members, sections, supports, load_cases, settings, raw: data };
+    const [dynamics, seismic] = parseDynamics(data, nodes, load_cases);
+    const model = { is3d: true, name: String(data.name ?? "Untitled model"), nodes, members, sections, supports, load_cases, settings, raw: data, dynamics, seismic };
     model.axes = (mid) => {
       const m = members[mid], a = nodes[m.i], b = nodes[m.j];
       const d = [b.x - a.x, b.y - a.y, b.z - a.z], L = norm(d);
       return [L, localAxes(scale(d, 1 / L), m.roll_deg)];
     };
     return model;
+  }
+
+  const GROUND = ["A", "B", "C", "D", "E"];
+  function parseDynamics(data, nodes, loadCases) {
+    let dd = data.dynamics, sd = data.seismic, dyn = null, sei = null;
+    if (dd != null || sd != null) {
+      dd = dd || {};
+      if (typeof dd !== "object") throw new ModelError("dynamics: expected an object");
+      const modes = Math.trunc(num(dd.modes ?? 12, "dynamics.modes", { positive: true }));
+      if (modes > 60) throw new ModelError("dynamics.modes: at most 60 modes");
+      const mass = dd.mass ?? "consistent";
+      if (mass !== "consistent" && mass !== "lumped") throw new ModelError("dynamics.mass: expected 'consistent' or 'lumped'");
+      const seg = Math.trunc(num(dd.segments ?? 2, "dynamics.segments", { positive: true }));
+      if (seg > 8) throw new ModelError("dynamics.segments: at most 8 elements per member");
+      let mc = dd.mass_cases ?? null;
+      if (mc != null) {
+        if (typeof mc !== "object") throw new ModelError("dynamics.mass_cases: expected an object {load case: factor}");
+        for (const [cid, f] of Object.entries(mc)) {
+          if (!(cid in loadCases)) throw new ModelError(`dynamics.mass_cases: unknown load case '${cid}'`);
+          num(f, `dynamics.mass_cases.${cid}`, { nonneg: true });
+        }
+        mc = Object.fromEntries(Object.entries(mc).map(([k, v]) => [String(k), Number(v)]));
+      }
+      const masses = (dd.masses || []).map((m, k) => {
+        const nid = String(req(m, "node", `dynamics.masses[${k}]`));
+        if (!(nid in nodes)) throw new ModelError(`dynamics.masses[${k}].node: unknown node '${nid}'`);
+        return [nid, num(req(m, "m", `dynamics.masses[${k}]`), `dynamics.masses[${k}].m`, { nonneg: true })];
+      });
+      dyn = { modes, mass, segments: seg, mass_cases: mc, masses };
+    }
+    if (sd != null) {
+      if (typeof sd !== "object") throw new ModelError("seismic: expected an object");
+      const agR = num(req(sd, "agR", "seismic"), "seismic.agR", { positive: true });
+      if (agR > 15) throw new ModelError("seismic.agR: expected m/s², got more than 15");
+      const ground = sd.ground ?? "B";
+      if (!GROUND.includes(ground)) throw new ModelError(`seismic.ground: expected one of ${GROUND.join(", ")}`);
+      const st = Math.trunc(num(sd.spectrum_type ?? 1, "seismic.spectrum_type", { positive: true }));
+      if (st !== 1 && st !== 2) throw new ModelError("seismic.spectrum_type: expected 1 or 2");
+      const q = num(sd.q ?? 1.5, "seismic.q", { positive: true });
+      if (q < 1) throw new ModelError("seismic.q: the behaviour factor must be at least 1.0");
+      const dirs = sd.directions ?? ["X", "Y"];
+      if (!Array.isArray(dirs) || !dirs.length || dirs.some((d) => d !== "X" && d !== "Y")) throw new ModelError("seismic.directions: a non-empty subset of ['X', 'Y']");
+      sei = { agR, importance: num(sd.importance ?? 1.0, "seismic.importance", { positive: true }), ground, spectrum_type: st, q,
+        beta: num(sd.beta ?? 0.2, "seismic.beta", { nonneg: true }), damping: num(sd.damping ?? 0.05, "seismic.damping", { positive: true }),
+        directions: dirs.slice(), drift_limit: num(sd.drift_limit ?? 0.005, "seismic.drift_limit", { positive: true }), nu: num(sd.nu ?? 0.5, "seismic.nu", { positive: true }) };
+    }
+    return [dyn, sei];
+  }
+
+  // reverse Cuthill-McKee node order: keeps the skyline of the stiffness matrix narrow for any numbering
+  function rcmRank(n, edges) {
+    const adj = Array.from({ length: n }, () => new Set());
+    for (const [a, b] of edges) if (a !== b) { adj[a].add(b); adj[b].add(a); }
+    const deg = adj.map((s) => s.size), seen = new Uint8Array(n), order = [];
+    const bfs = (start) => {
+      const lev = [start], mark = new Uint8Array(n); mark[start] = 1;
+      let far = start;
+      for (let h = 0; h < lev.length; h++) for (const v of adj[lev[h]]) if (!mark[v]) { mark[v] = 1; lev.push(v); far = v; }
+      return far;
+    };
+    const byDeg = [...Array(n).keys()].sort((a, b) => deg[a] - deg[b] || a - b);
+    for (const s0 of byDeg) {
+      if (seen[s0]) continue;
+      const start = bfs(bfs(s0));                     // pseudo-peripheral node of this component
+      const q = [start]; seen[start] = 1;
+      for (let h = 0; h < q.length; h++) {
+        const nb = [...adj[q[h]]].filter((v) => !seen[v]).sort((a, b) => deg[a] - deg[b] || a - b);
+        for (const v of nb) { seen[v] = 1; q.push(v); }
+      }
+      order.push(...q);
+    }
+    order.reverse();
+    const rank = new Int32Array(n);
+    order.forEach((v, k) => { rank[v] = k; });
+    return rank;
   }
 
   // ---------------------------------------------------------------- solver
@@ -361,6 +437,8 @@
       }
       this.K = K; this.fixed = fixed;
       this.free = []; for (let d = 0; d < this.ndof; d++) if (!fixed[d]) this.free.push(d);
+      const rank = rcmRank(n, Object.values(this.members).map((md) => [md.ni, md.nj]));
+      this.free.sort((a, b) => rank[Math.floor(a / 6)] - rank[Math.floor(b / 6)] || a - b);
       this.factorise();
       this.stations = this.buildStations();
     }
@@ -814,12 +892,20 @@
     const cases = {};
     for (const [cid, lc] of Object.entries(model.load_cases)) cases[cid] = fa.solveCase(lc);
     const t1 = now();
-    const cs = I.generateCombinations(model);
+    let cs = I.generateCombinations(model);
     const nUls = cs.combos.filter((c) => c.kind === "ULS").length;
     if (opts.maxCombinations && nUls > opts.maxCombinations)
       throw new ModelError(`${nUls} ULS combinations is more than this browser session handles (${opts.maxCombinations}); reduce the number of variable load cases, or run the model with the Python package`);
     const params = I.makeParams(model.settings.params);
     const warnings = [];
+    let modalRes = null, seismicRes = null;
+    if ((model.dynamics || model.seismic) && !opts.skipDynamics) {
+      if (!T.runDynamics) throw new ModelError("dynamic analysis needs the dynamics module (dynamics.js)");
+      const dr = T.runDynamics(model, fa, cases, cs);
+      modalRes = dr.modal; seismicRes = dr.seismic; cs = dr.combos;
+      warnings.push(...dr.warnings);
+    }
+    const t1d = now();
     const axn = ["X", "Y", "Z"];
     for (const d of fa.autoFixed) warnings.push(`Node '${fa.nodeIds[Math.floor(d / 6)]}': rotation about ${axn[d % 6 - 3]} has no stiffness (released on every member) and was restrained automatically.`);
     for (const [cid, cr] of Object.entries(cases)) {
@@ -877,6 +963,7 @@
           qp_My: I.combine(Fq, cs.caseIds.map((c) => cases[c].members[mid].My)), qp_Mz: I.combine(Fq, cs.caseIds.map((c) => cases[c].members[mid].Mz)),
           qp_ids: qp.map((c) => c.id), qp_labels: qp.map((c) => c.label), tip_at_i: tipAtI };
         checks[mid] = model.settings.design_code === "EC2" ? checkMember3d(m, cache[m.section], f, params) : I.checkMemberSIA(m);
+        if (seismicRes && model.settings.design_code === "EC2" && seismicRes.drift[mid]) checks[mid].push(T.driftCheck(mid, seismicRes));
       }
     }
     const all = Object.values(checks).flat();
@@ -888,9 +975,9 @@
     const sts = new Set(all.map((c) => c.status));
     const status = sts.has(FAIL) ? FAIL : (sts.has(NOT_COVERED) || sts.has("warn") ? NOT_COVERED : PASS);
     const t2 = now();
-    return { is3d: true, version: T.VERSION, model, analysis: fa, cases, combos: cs, params, envelopes, reactions, checks, warnings,
+    return { is3d: true, version: T.VERSION, model, analysis: fa, cases, combos: cs, params, envelopes, reactions, checks, warnings, modal: modalRes, seismic: seismicRes,
       summary: { status, max_utilisation: gov && gov.utilisation != null && isFinite(gov.utilisation) ? gov.utilisation : null,
-        governing: gov ? { member: gov.member, check: gov.title, clause: gov.clause } : null, runtime_ms: t2 - t0, analysis_ms: t1 - t0 } };
+        governing: gov ? { member: gov.member, check: gov.title, clause: gov.clause } : null, runtime_ms: t2 - t0, analysis_ms: t1 - t0, dynamics_ms: t1d - t1 } };
   }
 
   // ---------------------------------------------------------------- building generator
@@ -905,7 +992,7 @@
     name: "Office building, 3 × 2 bays, 4 storeys", spans_x: [6.0, 6.0, 6.0], spans_y: [5.5, 5.5], storeys: [3.6, 3.2, 3.2, 3.2], base: "fixed", fck: 30.0,
     column: sec0(400, 400, [3, 20], [3, 20], [1, 20], [8, 2, 240], 35), beam_x: sec0(300, 550, [4, 20], [3, 20], null, [8, 2, 200], 30),
     beam_y: sec0(300, 500, [4, 20], [3, 16], null, [8, 2, 200], 30), slab_mm: 220.0, finishes: 1.5, imposed: 3.0, imposed_category: "B", snow: 1.0,
-    facade: 6.0, wind: 0.9, distribution: "two_way", pattern_by_storey: false, column_l0_factor: 1.0, combination_rule: "6.10" });
+    facade: 6.0, wind: 0.9, distribution: "two_way", pattern_by_storey: false, column_l0_factor: 1.0, combination_rule: "6.10", modes: 0, seismic: null });
   const r6 = (v) => Math.round(v * 1e6) / 1e6;
   function gridNames(n) { const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; return [...Array(n).keys()].map((k) => (k < 26 ? L[k] : L[Math.floor(k / 26) - 1] + L[k % 26])); }
   function tributary(L, S, q, mode) {
@@ -976,15 +1063,19 @@
       }
     }
     const cname = CONCRETE_NAMES[Math.trunc(spec.fck)] || `C${spec.fck}`;
+    const extra = {};
+    if (spec.modes || spec.seismic) extra.dynamics = { modes: Math.trunc(spec.modes || 12) };
+    if (spec.seismic) extra.seismic = JSON.parse(JSON.stringify(spec.seismic));
     const sections = { Column: JSON.parse(JSON.stringify(spec.column)), "Beam X": JSON.parse(JSON.stringify(spec.beam_x)), "Beam Y": JSON.parse(JSON.stringify(spec.beam_y)) };
     for (const s of Object.values(sections)) s.concrete = cname;
     const slabs = [];
     for (const k of floors) for (let j = 0; j < ys.length - 1; j++) for (let i = 0; i < xs.length - 1; i++) slabs.push({ level: k, x0: xs[i], x1: xs[i + 1], y0: ys[j], y1: ys[j + 1], z: zs[k], t_mm: spec.slab_mm });
     return { schema: SCHEMA3D, name: spec.name, design: { design_code: "EC2", combination_rule: spec.combination_rule },
-      materials: { [cname]: { type: "concrete", fck: spec.fck }, B500B: { type: "rebar", fyk: 500 } }, sections, nodes, supports, members, load_cases: cases,
+      materials: { [cname]: { type: "concrete", fck: spec.fck }, B500B: { type: "rebar", fyk: 500 } }, sections, nodes, supports, members, load_cases: cases, ...extra,
       meta: { generator: "tragwerk.building", spec, grid: { x: Object.fromEntries(gx.map((g, k) => [g, xs[k]])), y: Object.fromEntries(gy.map((g, k) => [g, ys[k]])), levels: zs }, slabs } };
   }
 
   Object.assign(T, { SCHEMA3D, parseModel3d, runProject3d, FrameAnalysis3D, generateBuilding, BUILDING_DEFAULTS, localAxes, sectionBars, biaxialExponent });
+  Object.assign(I, { V_IDX, W_IDX, W_SIGN, loc, modulus, sectionModels });
   if (typeof module !== "undefined" && module.exports) module.exports = T;
 })(typeof window !== "undefined" ? window : globalThis);

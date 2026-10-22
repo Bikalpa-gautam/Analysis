@@ -6,11 +6,11 @@
  */
 (function (root) {
   "use strict";
-  const VERSION = "0.2.0";
+  const VERSION = "0.3.0";
 
   // ---------------------------------------------------------------- model
   const LOAD_DIRECTIONS = ["global_x", "global_y", "local_x", "local_y"];
-  const VARIABLE_CATEGORIES = ["A", "B", "C", "D", "E", "F", "G", "H", "snow", "snow_high", "wind", "temperature"];
+  const VARIABLE_CATEGORIES = ["A", "B", "C", "D", "E", "F", "G", "H", "snow", "snow_high", "wind", "temperature", "traffic_TS", "traffic_UDL"];
   const DESIGN_TYPES = ["beam", "column", "none"];
   const DEFLECTION_SYSTEMS = ["simply_supported", "end_span", "interior_span", "cantilever"];
 
@@ -565,10 +565,11 @@
 
   // ---------------------------------------------------------------- combinations
   const PSI = { A: [0.7, 0.5, 0.3], B: [0.7, 0.5, 0.3], C: [0.7, 0.7, 0.6], D: [0.7, 0.7, 0.6], E: [1.0, 0.9, 0.8],
-    F: [0.7, 0.7, 0.6], G: [0.7, 0.5, 0.3], H: [0, 0, 0], snow: [0.5, 0.2, 0], snow_high: [0.7, 0.5, 0.2], wind: [0.6, 0.2, 0], temperature: [0.6, 0.5, 0] };
+    F: [0.7, 0.7, 0.6], G: [0.7, 0.5, 0.3], H: [0, 0, 0], snow: [0.5, 0.2, 0], snow_high: [0.7, 0.5, 0.2], wind: [0.6, 0.2, 0], temperature: [0.6, 0.5, 0],
+    traffic_TS: [0.75, 0.75, 0], traffic_UDL: [0.4, 0.4, 0] };   // EN 1990 A2 Table A2.1, gr1a
   const CATEGORY_LABEL = { A: "Cat. A, residential", B: "Cat. B, office", C: "Cat. C, congregation", D: "Cat. D, shopping",
     E: "Cat. E, storage", F: "Cat. F, light traffic", G: "Cat. G, medium traffic", H: "Cat. H, roofs", snow: "Snow, H ≤ 1000 m",
-    snow_high: "Snow, H > 1000 m", wind: "Wind", temperature: "Temperature" };
+    snow_high: "Snow, H > 1000 m", wind: "Wind", temperature: "Temperature", traffic_TS: "Road traffic LM1, tandem system", traffic_UDL: "Road traffic LM1, UDL" };
 
   function product(lists) {
     let out = [[]];
@@ -577,7 +578,7 @@
   }
   function generateCombinations(model) {
     const params = model.settings.params;
-    const f = { sup: Number(params.gamma_G_sup ?? 1.35), inf: Number(params.gamma_G_inf ?? 1.0), Q: Number(params.gamma_Q ?? 1.5), xi: Number(params.xi ?? 0.85) };
+    const f = { sup: Number(params.gamma_G_sup ?? 1.35), inf: Number(params.gamma_G_inf ?? 1.0), Q: Number(params.gamma_Q ?? 1.5), QT: Number(params.gamma_Q_traffic ?? 1.35), xi: Number(params.xi ?? 0.85) };
     const psi = Object.assign({}, PSI);
     for (const [cat, vals] of Object.entries(params.psi || {})) psi[cat] = vals.map(Number);
     const vary = !!params.vary_permanent_individually;
@@ -586,8 +587,10 @@
     const idx = Object.fromEntries(caseIds.map((c, k) => [c, k]));
     const perm = caseIds.filter((c) => model.load_cases[c].type === "permanent");
     const vars = caseIds.filter((c) => model.load_cases[c].type === "variable");
-    if (vars.length > 12) throw new ModelError(`at most 12 variable load cases are supported, got ${vars.length}`);
+    const nIndep = new Set(vars.map((c) => model.load_cases[c].group).filter(Boolean)).size + vars.filter((c) => !model.load_cases[c].group).length;
+    if (nIndep > 12 || vars.length > 64) throw new ModelError(`at most 12 independent variable actions (exclusive groups count once) and 64 variable load cases are supported, got ${nIndep} and ${vars.length}`);
     const ps = Object.fromEntries(vars.map((c) => [c, psi[model.load_cases[c].category]]));
+    const gq = Object.fromEntries(vars.map((c) => [c, model.load_cases[c].category.startsWith("traffic_") ? f.QT : f.Q]));
     const gSets = vary ? product(perm.map(() => [f.sup, f.inf])) : [perm.map(() => f.sup), perm.map(() => f.inf)];
     const grouped = new Map(), free = [];
     for (const c of vars) {
@@ -606,24 +609,29 @@
       counts[kind] = (counts[kind] || 0) + 1;
       combos.push({ id: `${prefix[kind]}${String(counts[kind]).padStart(3, "0")}`, kind, factors: fs, leading, label: label(fs) });
     };
-    for (const g of gSets) for (const S of subsets) for (const lead of (S.length ? S : [null])) {
+    // road traffic (LM1 tandem and UDL) is one multi-component action, group gr1a (EN 1990 A2.2.2):
+    // when it leads, all its components take characteristic values
+    const act = (c) => (model.load_cases[c].category.startsWith("traffic_") ? "__traffic__" : c);
+    const leadsOf = (S) => { const seen2 = new Set(), out = []; for (const c of S) if (!seen2.has(act(c))) { seen2.add(act(c)); out.push(c); } return out.length ? out : [null]; };
+    const isLead = (c, lead) => lead !== null && act(c) === act(lead);
+    for (const g of gSets) for (const S of subsets) for (const lead of leadsOf(S)) {
       if (rule === "6.10") {
         const v = zeros(caseIds.length);
         perm.forEach((c, k) => { v[idx[c]] = g[k]; });
-        for (const c of S) v[idx[c]] = f.Q * (c === lead ? 1.0 : ps[c][0]);
+        for (const c of S) v[idx[c]] = gq[c] * (isLead(c, lead) ? 1.0 : ps[c][0]);
         add("ULS", v, lead);
       } else {
         const a = zeros(caseIds.length), b = zeros(caseIds.length);
         perm.forEach((c, k) => { a[idx[c]] = g[k]; b[idx[c]] = g[k] > 1.0 ? f.xi * g[k] : g[k]; });
-        for (const c of S) { a[idx[c]] = f.Q * ps[c][0]; b[idx[c]] = f.Q * (c === lead ? 1.0 : ps[c][0]); }
+        for (const c of S) { a[idx[c]] = gq[c] * ps[c][0]; b[idx[c]] = gq[c] * (isLead(c, lead) ? 1.0 : ps[c][0]); }
         add("ULS", a, null); add("ULS", b, lead);
       }
     }
     for (const S of subsets) {
-      for (const lead of (S.length ? S : [null])) {
+      for (const lead of leadsOf(S)) {
         const ch = zeros(caseIds.length), fr = zeros(caseIds.length);
         for (const c of perm) ch[idx[c]] = fr[idx[c]] = 1.0;
-        for (const c of S) { ch[idx[c]] = c === lead ? 1.0 : ps[c][0]; fr[idx[c]] = c === lead ? ps[c][1] : ps[c][2]; }
+        for (const c of S) { ch[idx[c]] = isLead(c, lead) ? 1.0 : ps[c][0]; fr[idx[c]] = isLead(c, lead) ? ps[c][1] : ps[c][2]; }
         add("SLS_char", ch, lead); add("SLS_freq", fr, lead);
       }
       const qp = zeros(caseIds.length);
@@ -640,7 +648,7 @@
     deflection_limit_divisor: 250.0, beta_sustained: 0.5, k1_spacing: 1.0, k2_spacing_mm: 5.0, As_min_fctm_factor: 0.26,
     As_min_absolute: 0.0013, As_max_ratio: 0.04, rho_w_min_factor: 0.08, sl_max_factor: 0.75, column_As_min_N_factor: 0.10,
     column_As_min_Ac_ratio: 0.002, column_phi_min_mm: 8.0, column_link_spacing_phi_factor: 20.0, column_link_spacing_max_mm: 400.0 };
-  const COMBO_PARAMS = ["gamma_G_sup", "gamma_G_inf", "gamma_Q", "xi", "psi", "vary_permanent_individually"];
+  const COMBO_PARAMS = ["gamma_G_sup", "gamma_G_inf", "gamma_Q", "gamma_Q_traffic", "xi", "psi", "vary_permanent_individually"];
   function makeParams(over) {
     const p = Object.assign({}, EC2_DEFAULTS);
     for (const [k, v] of Object.entries(over || {})) {
@@ -820,6 +828,13 @@
   }
   const step = (symbol, expression, substituted, value, unit = "", clause = "", note = "") => ({ symbol, expression, substituted, value, unit, clause, note });
   const check = (o) => Object.assign({ utilisation: null, demand: null, capacity: null, unit: "", x: null, combination: null, combination_label: null, steps: [], notes: [] }, o);
+  function argmax2Tol(rows, fn) {          // first location within round-off of the largest value
+    let best = -Infinity;
+    const vals = rows.map((row, i) => row.map((_, j) => { const u = fn(i, j); if (u > best) best = u; return u; }));
+    const lim = isFinite(best) ? best - 1e-9 * Math.abs(best) : best;
+    for (let i = 0; i < vals.length; i++) for (let j = 0; j < vals[i].length; j++) if (vals[i][j] >= lim) return [i, j, vals[i][j]];
+    return [0, 0, best];
+  }
   function argmax2(rows, fn) {
     let best = -Infinity, bi = 0, bj = 0;
     rows.forEach((row, i) => row.forEach((_, j) => { const u = fn(i, j); if (u > best) { best = u; bi = i; bj = j; } }));
@@ -917,7 +932,7 @@
   function checkShear(member, rc, sec, f, p) {
     const R = f.uls_V.map((row, i) => row.map((_, j) => shearResistance(rc, sec, p, -f.uls_N[i][j], f.uls_M[i][j])));
     const U = (i, j) => { const V = Math.abs(f.uls_V[i][j]), VRd = R[i][j].VRd; return VRd > 0 ? V / VRd : (V > 0 ? Infinity : 0); };
-    const [ci, si, util] = argmax2(f.uls_V, U);
+    const [ci, si, util] = argmax2Tol(f.uls_V, U);
     const g = R[ci][si], c = rc.c, VEd = Math.abs(f.uls_V[ci][si]);
     const face = f.uls_M[ci][si] >= -1e-9 ? "bottom" : "top";
     const Nc = -f.uls_N[ci][si];

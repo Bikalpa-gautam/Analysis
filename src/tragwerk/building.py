@@ -52,6 +52,8 @@ class BuildingSpec:
     pattern_by_storey: bool = False          # one imposed load case per storey
     column_l0_factor: float = 1.0            # braced frame; use about 2.0 for an unbraced sway frame
     combination_rule: str = "6.10"
+    modes: int = 0                           # > 0: modal analysis with this many modes
+    seismic: dict | None = None              # EN 1998-1 response spectrum settings (see model3d.SeismicSettings)
 
 
 def grid_names(n: int) -> list[str]:
@@ -195,6 +197,11 @@ def generate_building(spec: BuildingSpec | dict | None = None) -> dict:
             cases.append({"id": cid, "name": label, "type": "variable", "category": "wind", "group": "wind", "loads": loads})
 
     cname = CONCRETE_NAMES.get(int(spec.fck), f"C{spec.fck:g}")
+    extra = {}
+    if spec.modes or spec.seismic:
+        extra["dynamics"] = {"modes": int(spec.modes or 12)}
+    if spec.seismic:
+        extra["seismic"] = copy.deepcopy(spec.seismic)
     sections = {"Column": copy.deepcopy(spec.column), "Beam X": copy.deepcopy(spec.beam_x), "Beam Y": copy.deepcopy(spec.beam_y)}
     for sec in sections.values():
         sec["concrete"] = cname
@@ -205,6 +212,7 @@ def generate_building(spec: BuildingSpec | dict | None = None) -> dict:
         "materials": {cname: {"type": "concrete", "fck": spec.fck}, "B500B": {"type": "rebar", "fyk": 500}},
         "sections": sections,
         "nodes": nodes, "supports": supports, "members": members, "load_cases": cases,
+        **extra,
         "meta": {
             "generator": "tragwerk.building",
             "spec": asdict(spec),

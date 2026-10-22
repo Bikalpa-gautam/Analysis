@@ -6,7 +6,7 @@
     print(result.overall_status(), result.governing().utilisation)
     html = tw.report(result)
 """
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from .model import Model, ModelError, load_model, parse_model  # noqa: E402,F401
 

@@ -1,0 +1,969 @@
+<style>
+/* FE lab: plane stress / plane strain continuum. Shares the drafting-room tokens. */
+#mode-fe .canvasfe { flex: 1; min-height: 340px; position: relative; overflow: hidden; background: var(--sheet); border-radius: 0 0 6px 6px; }
+#mode-fe canvas.fe { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+#mode-fe .legendfe { position: absolute; left: 10px; top: 8px; max-width: min(520px, calc(100% - 20px)); font-size: 12px; color: var(--ink-2); pointer-events: none;
+  background: color-mix(in srgb, var(--sheet) 86%, transparent); border-radius: 4px; padding: 4px 6px; }
+#mode-fe .legendfe b { color: var(--ink); font-weight: 600; }
+#mode-fe .bands { display: flex; height: 10px; width: 260px; max-width: 100%; margin-top: 4px; border-radius: 2px; overflow: hidden; }
+#mode-fe .bands i { flex: 1; }
+#mode-fe .bandticks { position: relative; width: 260px; max-width: 100%; height: 14px; font: 500 10.5px var(--font-num); color: var(--ink-3); }
+#mode-fe .bandticks span { position: absolute; top: 1px; transform: translateX(-50%); white-space: nowrap; }
+#mode-fe .bandticks span:first-child { transform: none; }
+#mode-fe .bandticks span:last-child { transform: translateX(-100%); }
+#mode-fe .toolsfe { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; width: 100%; font-size: 13px; color: var(--ink-2); }
+#mode-fe .toolsfe label { display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+#mode-fe .toolsfe input[type="number"] { width: 64px; height: 26px; border: 1px solid var(--rule); border-radius: 3px; background: var(--sheet); padding: 0 4px; font: 12.5px var(--font-num); }
+#mode-fe .etypes { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+#mode-fe .etypes button { border: 0; border-right: 1px solid var(--rule); background: var(--sheet); height: 30px; cursor: pointer; font: 600 13px var(--font-num); color: var(--ink-2); }
+#mode-fe .etypes button:last-child { border-right: 0; }
+#mode-fe .etypes button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
+#mode-fe .rows { display: flex; flex-direction: column; }
+#mode-fe .frow { display: grid; gap: 6px; align-items: end; padding: 7px 0; border-top: 1px solid var(--rule-2); }
+#mode-fe .frow.sup { grid-template-columns: 1.2fr .8fr .8fr auto auto 26px; }
+#mode-fe .frow.ld { grid-template-columns: 1.25fr 1fr 1fr 1fr 26px; }
+#mode-fe .frow.op { grid-template-columns: repeat(4, minmax(0, 1fr)) 26px; }
+#mode-fe .frow .chk { display: flex; gap: 4px; align-items: center; height: 28px; font-size: 12.5px; color: var(--ink); }
+#mode-fe .frow .chk input { width: 15px; height: 15px; margin: 0; }
+#mode-fe .frow .icon-btn { align-self: center; }
+#mode-fe .eq { font: 13px/1.6 var(--font-body); background: var(--paper); border-radius: 4px; padding: 8px 10px; overflow-x: auto; }
+#mode-fe .eq div { white-space: nowrap; }
+#mode-fe .eq .c { color: var(--ink-3); font-size: 11.5px; margin-left: 8px; }
+#mode-fe .mat { overflow: auto; max-height: 300px; border: 1px solid var(--rule-2); border-radius: 4px; }
+#mode-fe .mat table { border-collapse: collapse; font: 10.5px var(--font-num); }
+#mode-fe .mat td, #mode-fe .mat th { padding: 2px 5px; text-align: right; white-space: nowrap; }
+#mode-fe .mat th { color: var(--ink-3); font-weight: 500; position: sticky; top: 0; background: var(--sheet); }
+#mode-fe .mat th.rh { position: sticky; left: 0; }
+#mode-fe .sec { padding: 10px 12px; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: 8px; }
+#mode-fe .sec h3 { margin: 0; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+#mode-fe .sec h3 span { font: 400 11.5px var(--font-body); color: var(--ink-3); }
+#mode-fe .sec h3 b { font: inherit; }
+#mode-fe .gsel { display: flex; gap: 3px; flex-wrap: wrap; }
+#mode-fe .gsel button { border: 1px solid var(--rule); background: var(--sheet); border-radius: 3px; padding: 1px 7px; cursor: pointer; font: 12px var(--font-num); }
+#mode-fe .gsel button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+#mode-fe .cmp { display: grid; grid-template-columns: 1fr auto auto; gap: 3px 12px; font-size: 12.5px; }
+#mode-fe .cmp .v { font-family: var(--font-num); text-align: right; }
+#mode-fe .cmp .h { color: var(--ink-3); font-size: 11.5px; }
+#mode-fe .conv svg { width: 100%; height: auto; display: block; }
+#mode-fe .conv text { font: 10.5px var(--font-num); fill: var(--ink-3); }
+#mode-fe .tipfe { position: absolute; pointer-events: none; background: var(--ink); color: var(--sheet); font-size: 12px; padding: 4px 8px; border-radius: 4px; white-space: nowrap; z-index: 4; }
+#mode-fe .busyfe { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: var(--ink); color: var(--sheet); padding: 4px 12px; border-radius: 12px; font-size: 12px; z-index: 5; }
+#mode-fe .bannerfe { position: absolute; left: 10px; right: 10px; bottom: 44px; padding: 8px 12px; border-radius: 5px; background: var(--bad-bg); color: var(--bad); font-weight: 500; border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); z-index: 3; }
+#mode-fe .viewsfe { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 2px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: 2px; z-index: 2; }
+#mode-fe .viewsfe button { border: 0; background: transparent; padding: 3px 8px; font-size: 12px; cursor: pointer; border-radius: 3px; color: var(--ink-2); }
+#mode-fe .viewsfe button:hover { color: var(--ink); }
+@media (max-width: 760px) { #mode-fe .canvasfe { flex: none; height: 56vh; min-height: 340px; } }
+</style>
+
+<header class="bar">
+  <div class="brand"><b>Tragwerk</b><span id="f-ver">v0.3</span></div>
+  <div class="modes" role="tablist" aria-label="Workspace"><button role="tab" data-mode="3d" aria-selected="false">3D</button><button role="tab" data-mode="2d" aria-selected="false">2D frame</button><button role="tab" data-mode="fe" aria-selected="true">FE plate</button></div>
+  <input id="f-name" class="model-name" aria-label="Model name" value="">
+  <select id="f-preset" aria-label="Start from"></select>
+  <button id="f-json" class="btn">Model JSON</button>
+  <div class="verdict" id="f-verdict" aria-live="polite"></div>
+</header>
+
+<main class="bench bench3">
+  <section class="pane editor" aria-label="Build the FE model">
+    <div class="pane-hd"><div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-ftab="geom" aria-selected="true">Geometry</button>
+      <button class="tab" role="tab" data-ftab="bc" aria-selected="false">Supports &amp; loads</button>
+      <button class="tab" role="tab" data-ftab="mat" aria-selected="false">Material</button>
+    </div></div>
+    <div class="pane-bd" id="f-editor"></div>
+  </section>
+
+  <section class="pane draw" aria-label="Contour plot">
+    <div class="pane-hd">
+      <div class="chips" role="group" aria-label="Field" id="f-fields">
+        <button class="chip" data-field="mesh">Mesh</button>
+        <button class="chip" data-field="umag">|u|</button>
+        <button class="chip" data-field="ux">u<sub>x</sub></button>
+        <button class="chip" data-field="uy">u<sub>y</sub></button>
+        <button class="chip" data-field="sxx">σ<sub>xx</sub></button>
+        <button class="chip" data-field="syy">σ<sub>yy</sub></button>
+        <button class="chip" data-field="txy">τ<sub>xy</sub></button>
+        <button class="chip" data-field="s1">σ<sub>1</sub></button>
+        <button class="chip" data-field="s2">σ<sub>2</sub></button>
+        <button class="chip" data-field="mises">von Mises</button>
+      </div>
+      <div class="toolsfe">
+        <label><input type="checkbox" id="f-def"> Deformed ×<input type="number" id="f-scale" min="0" step="any" aria-label="Deformation scale"></label>
+        <label><input type="checkbox" id="f-mesh" checked> Mesh</label>
+        <label><input type="checkbox" id="f-avg" checked> Averaged at nodes</label>
+        <label><input type="checkbox" id="f-princ"> Principal directions</label>
+      </div>
+    </div>
+    <div class="canvasfe" id="f-canvas">
+      <canvas class="fe" aria-label="Finite element mesh and contour plot. Drag to pan, scroll or pinch to zoom, click an element to inspect it." role="img"></canvas>
+      <div class="legendfe" id="f-legend"></div>
+      <div class="viewsfe"><button id="f-fit" title="Fit the model in view">Fit</button></div>
+      <div class="titleblock" id="f-title"></div>
+      <div class="bannerfe" id="f-banner" hidden></div>
+      <div class="tipfe" id="f-tip" hidden></div>
+      <div class="busyfe" id="f-busy" hidden>Solving…</div>
+    </div>
+  </section>
+
+  <section class="pane results" aria-label="FE results">
+    <div class="rtabs" role="tablist">
+      <button class="tab" role="tab" data-frtab="res" aria-selected="true">Results</button>
+      <button class="tab" role="tab" data-frtab="elem" aria-selected="false">Element</button>
+      <button class="tab" role="tab" data-frtab="conv" aria-selected="false">Convergence</button>
+    </div>
+    <div class="pane-bd" id="f-results"></div>
+  </section>
+</main>
+
+<div class="drawer" id="f-drawer" hidden>
+  <div class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="f-drawer-title">
+    <div class="row" style="justify-content:space-between"><h2 id="f-drawer-title">FE model JSON</h2><button class="btn" id="f-drawer-close">Close</button></div>
+    <p class="hint">The open <span class="num">tragwerk-fe/0.1</span> format. Run it with <span class="num">tragwerk run model.json --json results.json</span> or POST it to <span class="num">/v1/analyze</span>; paste a model here to load it.</p>
+    <textarea id="f-json-text" spellcheck="false" aria-label="FE model JSON"></textarea>
+    <div class="row"><button class="btn primary" id="f-json-copy">Copy</button><button class="btn" id="f-json-load">Load pasted model</button><span class="hint" id="f-json-msg"></span></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const T = window.Tragwerk, FE = T.FE;
+  const ROOT = document.getElementById("mode-fe");
+  const $ = (s, el = ROOT) => el.querySelector(s);
+  const $$ = (s, el = ROOT) => Array.from(el.querySelectorAll(s));
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const fmt = (v, d = 3) => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e5 || (Math.abs(v) < 1e-3 && v !== 0) ? v.toExponential(2) : (+v.toPrecision(d + 1)).toString());
+  const fx = (v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
+  const opt = (v, l, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? " selected" : ""}>${esc(l)}</option>`;
+
+  const PRESETS = {
+    wall: { label: "Shear wall with a door opening", model: { schema: FE.SCHEMA_FE, name: "Shear wall with a door opening", analysis: "plane_stress", element: "Q8",
+      material: { E_MPa: 33000, nu: 0.2, thickness_m: 0.25, density_kNm3: 25 },
+      geometry: { type: "rectangle", Lx: 6, Ly: 3, h: 0.25, openings: [{ x0: 2.4, y0: 0, x1: 3.4, y1: 2.2 }] },
+      supports: [{ edge: "bottom", ux: true, uy: true }], loads: [{ edge: "top", qx: 0, qy: -120 }, { edge: "left", qx: 25, qy: 0 }], self_weight: true }, field: "mises" },
+    deep: { label: "Transfer deep beam on two columns", model: { schema: FE.SCHEMA_FE, name: "Transfer deep beam, column load at midspan", analysis: "plane_stress", element: "Q8",
+      material: { E_MPa: 33000, nu: 0.2, thickness_m: 0.4, density_kNm3: 25 },
+      geometry: { type: "rectangle", Lx: 6, Ly: 3, h: 0.2, openings: [] },
+      supports: [{ edge: "bottom", from: 0, to: 0.4, ux: true, uy: true }, { edge: "bottom", from: 5.6, to: 6, uy: true }],
+      loads: [{ edge: "top", from: 2.8, to: 3.2, qx: 0, qy: -5000 }, { edge: "top", qx: 0, qy: -40 }], self_weight: true }, field: "s2", princ: true },
+    cantilever: { label: "Cantilever with end shear (Timoshenko)", model: { schema: FE.SCHEMA_FE, name: "Cantilever with a parabolic end shear", analysis: "plane_stress", element: "Q8",
+      material: { E_MPa: 30000, nu: 0.25, thickness_m: 0.3, density_kNm3: 0 },
+      geometry: { type: "rectangle", Lx: 8, Ly: 1, h: 0.25, openings: [] },
+      supports: [{ edge: "left", ux: true, uy: true }], loads: [{ edge: "right", profile: "parabolic", P: -100, dir: "y" }], self_weight: false }, field: "sxx" },
+    kirsch: { label: "Plate with a circular hole (Kirsch)", model: { schema: FE.SCHEMA_FE, name: "Steel plate with a hole, quarter model", analysis: "plane_stress", element: "Q8",
+      material: { E_MPa: 210000, nu: 0.3, thickness_m: 0.02, density_kNm3: 0 },
+      geometry: { type: "plate_hole", W: 10, a: 1, n_theta: 8, n_r: 10, grading: 1.6 },
+      supports: [{ edge: "left", ux: true, uy: false }, { edge: "bottom", ux: false, uy: true }], loads: [{ edge: "right", qx: 2000, qy: 0 }], self_weight: false }, field: "sxx" },
+  };
+  const FIELDS = {
+    mesh: { label: "Mesh" }, umag: { label: "|u|", unit: "mm", seq: true, k: 1000 }, ux: { label: "u<sub>x</sub>", unit: "mm", k: 1000 }, uy: { label: "u<sub>y</sub>", unit: "mm", k: 1000 },
+    sxx: { label: "σ<sub>xx</sub>", unit: "MPa" }, syy: { label: "σ<sub>yy</sub>", unit: "MPa" }, txy: { label: "τ<sub>xy</sub>", unit: "MPa" },
+    s1: { label: "σ<sub>1</sub>, major principal", unit: "MPa" }, s2: { label: "σ<sub>2</sub>, minor principal", unit: "MPa" }, mises: { label: "von Mises", unit: "MPa", seq: true },
+  };
+  const DESCR = {
+    T3: "3-node constant strain triangle (CST): linear N, 1 Gauss point; stiff in bending.",
+    T6: "6-node linear strain triangle (LST): quadratic N, 3 Gauss points.",
+    Q4: "4-node bilinear quadrilateral: 2 × 2 Gauss points; shear locking in bending.",
+    Q8: "8-node serendipity quadrilateral: quadratic N, 3 × 3 Gauss points; curved edges.",
+  };
+  const S = { model: null, preset: "wall", ftab: "geom", frtab: "res", field: "mises", def: false, scale: null, meshOn: true, avg: true, princ: false,
+    res: null, err: null, sel: null, gsel: 0, conv: null, view: null };
+
+  // ------------------------------------------------------------ solve
+  let timer = null;
+  function schedule(delay = 250) { clearTimeout(timer); $("#f-busy").hidden = false; timer = setTimeout(solve, delay); }
+  function solve() {
+    clearTimeout(timer);
+    try {
+      const m = FE.parseFE(S.model);
+      if (m.nodes.length > 20000) throw new FE.FEError(`${m.nodes.length} nodes: the browser lab handles up to 20 000; coarsen the mesh or use the Python package.`);
+      S.res = FE.solveFE(m); S.err = null;
+      if (S.sel != null && S.sel >= m.elements.length) S.sel = null;
+    } catch (e) { S.res = null; S.err = e.message; }
+    $("#f-busy").hidden = true;
+    S.scale = null;
+    renderHeader(); renderEditorHints(); renderResults(); P.rebuild();
+  }
+  function load(key, model) {
+    S.preset = key;
+    const p = PRESETS[key];
+    S.model = clone(model || p.model);
+    if (p && !model) { S.field = p.field; S.princ = !!p.princ; }
+    S.sel = null; S.conv = null; S.view = null;
+    $("#f-princ").checked = S.princ;
+    $$("[data-field]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.field === S.field)));
+    renderEditor(); solve(); P.fit();
+  }
+
+  // ------------------------------------------------------------ header
+  function renderHeader() {
+    const name = $("#f-name");
+    if (document.activeElement !== name) name.value = S.model.name || "";
+    const v = $("#f-verdict"), r = S.res;
+    if (!r) { v.innerHTML = `<span class="lbl">Cannot solve</span>`; return; }
+    const vm = r.field("mises"), um = r.field("umag");
+    v.innerHTML = `<span class="eta">${fx(Math.max(...vm), 2)}</span><span class="lbl">max σ<sub>vM</sub> MPa<br>|u| ${fx(1000 * Math.max(...um), 3)} mm</span>`;
+  }
+
+  // ------------------------------------------------------------ editor
+  const numIn = (attr, v, step = "any", extra = "") => `<input type="number" step="${step}" ${attr} value="${esc(v ?? "")}" ${extra}>`;
+  function edgesFor() { return S.model.geometry.type === "plate_hole" ? ["left", "right", "bottom", "top", "hole"] : ["left", "right", "bottom", "top"]; }
+  function renderEditor() {
+    $$("[data-ftab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.ftab === S.ftab)));
+    const ed = $("#f-editor"), m = S.model, g = m.geometry;
+    if (S.ftab === "geom") {
+      ed.innerHTML = `<div class="tabpanel">
+        <div class="group"><h3>Shape</h3>
+          <label class="field">Geometry<select id="f-gtype">${opt("rectangle", "Rectangle with openings (wall, deep beam, beam)", g.type)}${opt("plate_hole", "Square plate with a central hole (quarter model)", g.type)}</select></label>
+          ${g.type === "rectangle" ? `<div class="grid3"><label class="field"><span>L<sub>x</sub> (m)</span>${numIn('data-g="Lx"', g.Lx, 0.1, 'min="0.1"')}</label><label class="field"><span>L<sub>y</sub> (m)</span>${numIn('data-g="Ly"', g.Ly, 0.1, 'min="0.1"')}</label><span></span></div>
+            <div class="subhd">Openings (m)</div>
+            <div class="rows">${(g.openings || []).map((o, k) => `<div class="frow op">${["x0", "y0", "x1", "y1"].map((q) => `<label class="field">${q}${numIn(`data-op="${k}" data-k="${q}"`, o[q], 0.1)}</label>`).join("")}<button class="icon-btn" data-delop="${k}" aria-label="Remove opening ${k + 1}">×</button></div>`).join("")}</div>
+            <div><button class="btn sm" id="f-addop">Add opening</button></div>`
+          : `<div class="grid3"><label class="field">Half width W (m)${numIn('data-g="W"', g.W, 0.5, 'min="0.1"')}</label><label class="field">Hole radius a (m)${numIn('data-g="a"', g.a, 0.1, 'min="0.01"')}</label><span></span></div>
+             <p class="hint">A quarter of a 2W × 2W plate: give the left and bottom edges symmetry supports (u<sub>x</sub> = 0 and u<sub>y</sub> = 0). The hole edge is curved: with T6 and Q8 the midside nodes sit on the arc, an isoparametric curved boundary.</p>`}
+        </div>
+        <div class="group"><h3>Elements</h3>
+          <div class="etypes" role="group" aria-label="Element type">${FE.TYPES.map((t) => `<button data-et="${t}" aria-pressed="${m.element === t}">${t}</button>`).join("")}</div>
+          <p class="hint">${DESCR[m.element]}</p>
+          ${g.type === "rectangle" ? `<div class="fieldrow"><label class="field">Element size h (m)${numIn('data-g="h"', g.h, 0.05, 'min="0.01"')}</label><span class="stepper"><button data-hstep="2" aria-label="Coarser mesh">−</button><button data-hstep="0.5" aria-label="Finer mesh">+</button></span></div>`
+          : `<div class="grid3"><label class="field"><span>n<sub>θ</sub> per 45°</span>${numIn('data-g="n_theta"', g.n_theta, 1, 'min="1" max="60"')}</label><label class="field"><span>n<sub>r</sub> radial</span>${numIn('data-g="n_r"', g.n_r, 1, 'min="1" max="60"')}</label><label class="field">Grading${numIn('data-g="grading"', g.grading ?? 1.6, 0.1, 'min="1" max="4"')}</label></div>
+             <div><span class="stepper"><button data-nstep="0.5" aria-label="Coarser mesh">−</button><button data-nstep="2" aria-label="Finer mesh">+</button></span> <span class="hint">halve or double the divisions</span></div>`}
+          <p class="hint" id="f-meshsum"></p>
+        </div>
+      </div>`;
+    } else if (S.ftab === "bc") {
+      const E = edgesFor(), edgeSel = (attr, cur) => `<select ${attr}>${E.map((e) => opt(e, e, cur)).join("")}</select>`;
+      const sup = (m.supports || []).map((s, k) => `<div class="frow sup">
+          <label class="field">Edge${"at" in s ? `<input value="point ${esc(s.at.join(", "))}" disabled>` : edgeSel(`data-sup="${k}" data-k="edge"`, s.edge)}</label>
+          <label class="field">from${numIn(`data-sup="${k}" data-k="from"`, s.from, 0.1, 'placeholder="start"')}</label><label class="field">to${numIn(`data-sup="${k}" data-k="to"`, s.to, 0.1, 'placeholder="end"')}</label>
+          <label class="chk"><input type="checkbox" data-sup="${k}" data-k="ux" ${s.ux === true ? "checked" : ""}>u<sub>x</sub></label><label class="chk"><input type="checkbox" data-sup="${k}" data-k="uy" ${s.uy === true ? "checked" : ""}>u<sub>y</sub></label>
+          <button class="icon-btn" data-delsup="${k}" aria-label="Remove support ${k + 1}">×</button></div>`).join("");
+      const lds = (m.loads || []).map((l, k) => {
+        const kind = "at" in l ? "point" : l.profile === "parabolic" ? "parabolic" : "edge";
+        const where = kind === "point" ? `<label class="field">x (m)${numIn(`data-ld="${k}" data-k="ax"`, l.at[0], 0.1)}</label><label class="field">y (m)${numIn(`data-ld="${k}" data-k="ay"`, l.at[1], 0.1)}</label>`
+          : `<label class="field">Edge${edgeSel(`data-ld="${k}" data-k="edge"`, l.edge)}</label>${kind === "edge" ? `<label class="field">from / to${`<span style="display:flex;gap:3px">${numIn(`data-ld="${k}" data-k="from"`, l.from, 0.1, 'placeholder="start" aria-label="from"')}${numIn(`data-ld="${k}" data-k="to"`, l.to, 0.1, 'placeholder="end" aria-label="to"')}</span>`}</label>` : "<span></span>"}`;
+        const vals = kind === "point" ? `<label class="field"><span>F<sub>x</sub> kN</span>${numIn(`data-ld="${k}" data-k="fx"`, l.fx ?? 0, 1)}</label><label class="field"><span>F<sub>y</sub> kN</span>${numIn(`data-ld="${k}" data-k="fy"`, l.fy ?? 0, 1)}</label>`
+          : kind === "parabolic" ? `<label class="field">P kN, ${l.dir === "x" ? "x" : "y"}${numIn(`data-ld="${k}" data-k="P"`, l.P, 1)}</label><span></span>`
+          : `<label class="field"><span>q<sub>x</sub> kN/m</span>${numIn(`data-ld="${k}" data-k="qx"`, l.qx ?? 0, 1)}</label><label class="field"><span>q<sub>y</sub> kN/m</span>${numIn(`data-ld="${k}" data-k="qy"`, l.qy ?? 0, 1)}</label>`;
+        return `<div class="frow ld"><label class="field">Kind<select data-ld="${k}" data-k="kind">${opt("edge", "Edge, uniform", kind)}${opt("parabolic", "Edge, parabolic shear", kind)}${opt("point", "Point", kind)}</select></label>${where}${kind === "point" ? "" : ""}<button class="icon-btn" data-delld="${k}" aria-label="Remove load ${k + 1}">×</button></div>
+          <div class="frow ld" style="border-top:0;padding-top:0"><span></span>${vals}<span></span><span></span></div>`;
+      }).join("");
+      ed.innerHTML = `<div class="tabpanel">
+        <div class="group"><div class="group-hd"><h3>Supports</h3><span class="hint">edges named by side; from/to in m along the edge</span></div>
+          <div class="rows">${sup || `<p class="hint">No supports yet.</p>`}</div>
+          <div><button class="btn sm" id="f-addsup">Add support</button></div>
+          <p class="hint">Fixing every node of an edge is a clamped boundary. A support on a short length (a column or bearing) concentrates the reaction: the stresses there depend on the mesh, as they would at a point load.</p></div>
+        <div class="group"><div class="group-hd"><h3>Loads</h3><span class="hint">kN/m along an edge (through the thickness), kN at a point</span></div>
+          <div class="rows">${lds || `<p class="hint">No loads yet.</p>`}</div>
+          <div class="actions"><button class="btn sm" id="f-addld">Add edge load</button><button class="btn sm" id="f-addpt">Add point load</button></div>
+          <label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink-2)"><input type="checkbox" id="f-sw" ${m.self_weight ? "checked" : ""}> Self weight (γ in the Material tab)</label></div>
+      </div>`;
+    } else {
+      const mt = m.material;
+      ed.innerHTML = `<div class="tabpanel">
+        <div class="group"><h3>Analysis</h3>
+          <label class="field">Idealisation<select id="f-an">${opt("plane_stress", "Plane stress (thin: walls, deep beams, plates)", m.analysis)}${opt("plane_strain", "Plane strain (long: dams, tunnels, retaining walls)", m.analysis)}</select></label>
+          <div class="eq" id="f-ceq"></div></div>
+        <div class="group"><h3>Material and thickness</h3>
+          <div class="grid2"><label class="field">E (MPa)${numIn('data-mt="E_MPa"', mt.E_MPa, 1000, 'min="1"')}</label><label class="field">ν${numIn('data-mt="nu"', mt.nu, 0.05, 'min="0" max="0.49"')}</label>
+          <label class="field">Thickness t (m)${numIn('data-mt="thickness_m"', mt.thickness_m, 0.01, 'min="0.001"')}</label><label class="field">γ (kN/m³)${numIn('data-mt="density_kNm3"', mt.density_kNm3, 1, 'min="0"')}</label></div>
+          <div class="actions"><button class="btn sm" data-matp="concrete">Concrete C30/37</button><button class="btn sm" data-matp="steel">Steel S355</button><button class="btn sm" data-matp="masonry">Masonry</button></div>
+          <p class="hint">Linear elastic, isotropic. Plane strain: σ<sub>zz</sub> = ν(σ<sub>xx</sub> + σ<sub>yy</sub>) is included in the von Mises stress.</p></div>
+      </div>`;
+    }
+    bindEditor();
+    renderEditorHints();
+  }
+  function renderEditorHints() {
+    const ms = $("#f-meshsum");
+    if (ms) ms.textContent = S.res ? `${S.res.model.elements.length} elements, ${S.res.model.nodes.length} nodes, ${S.res.dofs} degrees of freedom (${S.res.free} free), solved in ${(S.res.total_ms / 1000).toFixed(2)} s.` : (S.err || "");
+    const ce = $("#f-ceq");
+    if (ce) {
+      const ps = S.model.analysis === "plane_stress";
+      ce.innerHTML = ps ? `<div>σ = C ε,  C = E/(1 − ν²) · [1  ν  0;  ν  1  0;  0  0  (1 − ν)/2]</div><div class="c">σ<sub>zz</sub> = 0, ε<sub>zz</sub> = −ν(σ<sub>xx</sub> + σ<sub>yy</sub>)/E</div>`
+        : `<div>σ = C ε,  C = E/((1 + ν)(1 − 2ν)) · [1−ν  ν  0;  ν  1−ν  0;  0  0  (1 − 2ν)/2]</div><div class="c">ε<sub>zz</sub> = 0, σ<sub>zz</sub> = ν(σ<sub>xx</sub> + σ<sub>yy</sub>)</div>`;
+    }
+  }
+  function bindEditor() {
+    const ed = $("#f-editor"), m = S.model, g = m.geometry;
+    const on = (sel, ev, fn) => { const el = $(sel, ed); if (el) el.addEventListener(ev, fn); };
+    const numv = (el) => (el.value === "" ? null : Number(el.value));
+    on("#f-gtype", "change", (e) => {
+      m.geometry = e.target.value === "rectangle" ? clone(PRESETS.wall.model.geometry) : clone(PRESETS.kirsch.model.geometry);
+      m.supports = e.target.value === "rectangle" ? clone(PRESETS.wall.model.supports) : clone(PRESETS.kirsch.model.supports);
+      m.loads = e.target.value === "rectangle" ? clone(PRESETS.wall.model.loads) : clone(PRESETS.kirsch.model.loads);
+      renderEditor(); schedule(30); P.fitSoon();
+    });
+    $$("[data-g]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; g[inp.dataset.g] = inp.dataset.g === "n_theta" || inp.dataset.g === "n_r" ? Math.round(v) : v; schedule(); P.fitSoon(); }));
+    $$("[data-hstep]", ed).forEach((b) => b.onclick = () => { g.h = +(g.h * Number(b.dataset.hstep)).toPrecision(4); $('[data-g="h"]', ed).value = g.h; schedule(60); });
+    $$("[data-nstep]", ed).forEach((b) => b.onclick = () => {
+      const f = Number(b.dataset.nstep);
+      g.n_theta = Math.max(1, Math.min(60, Math.round(g.n_theta * f))); g.n_r = Math.max(1, Math.min(60, Math.round(g.n_r * f)));
+      $('[data-g="n_theta"]', ed).value = g.n_theta; $('[data-g="n_r"]', ed).value = g.n_r; schedule(60);
+    });
+    $$("[data-op]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; g.openings[+inp.dataset.op][inp.dataset.k] = v; schedule(); }));
+    $$("[data-delop]", ed).forEach((b) => b.onclick = () => { g.openings.splice(+b.dataset.delop, 1); renderEditor(); schedule(30); });
+    on("#f-addop", "click", () => { (g.openings = g.openings || []).push({ x0: +(g.Lx * 0.4).toFixed(2), y0: +(g.Ly * 0.35).toFixed(2), x1: +(g.Lx * 0.6).toFixed(2), y1: +(g.Ly * 0.65).toFixed(2) }); renderEditor(); schedule(30); });
+    $$("[data-et]", ed).forEach((b) => b.onclick = () => { m.element = b.dataset.et; S.sel = null; S.gsel = 0; renderEditor(); schedule(30); });
+    // supports
+    $$("[data-sup]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
+      const s = m.supports[+el.dataset.sup], k = el.dataset.k;
+      if (el.type === "checkbox") s[k] = el.checked;
+      else if (k === "edge") { s.edge = el.value; delete s.from; delete s.to; renderEditor(); }
+      else { const v = numv(el); if (v == null) delete s[k]; else if (isFinite(v)) s[k] = v; }
+      schedule();
+    }));
+    $$("[data-delsup]", ed).forEach((b) => b.onclick = () => { m.supports.splice(+b.dataset.delsup, 1); renderEditor(); schedule(30); });
+    on("#f-addsup", "click", () => { m.supports.push({ edge: "bottom", ux: true, uy: true }); renderEditor(); schedule(30); });
+    // loads
+    $$("[data-ld]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+      const i = +el.dataset.ld, l = m.loads[i], k = el.dataset.k;
+      if (k === "kind") {
+        m.loads[i] = el.value === "point" ? { at: [g.Lx ?? g.W, g.Ly ?? g.W], fx: 0, fy: -100 } : el.value === "parabolic" ? { edge: l.edge || "right", profile: "parabolic", P: -100, dir: "y" } : { edge: l.edge || "top", qx: 0, qy: -50 };
+        renderEditor(); schedule(30); return;
+      }
+      if (k === "edge") { l.edge = el.value; delete l.from; delete l.to; if (l.profile === "parabolic") l.dir = el.value === "left" || el.value === "right" ? "y" : "x"; renderEditor(); schedule(30); return; }
+      const v = numv(el);
+      if (k === "ax" || k === "ay") { if (v != null && isFinite(v)) l.at[k === "ax" ? 0 : 1] = v; }
+      else if (v == null) { if (k === "from" || k === "to") delete l[k]; }
+      else if (isFinite(v)) l[k] = v;
+      schedule();
+    }));
+    $$("[data-delld]", ed).forEach((b) => b.onclick = () => { m.loads.splice(+b.dataset.delld, 1); renderEditor(); schedule(30); });
+    on("#f-addld", "click", () => { m.loads.push({ edge: "top", qx: 0, qy: -50 }); renderEditor(); schedule(30); });
+    on("#f-addpt", "click", () => { m.loads.push({ at: [g.type === "rectangle" ? g.Lx / 2 : g.W, g.type === "rectangle" ? g.Ly : g.W], fx: 0, fy: -100 }); renderEditor(); schedule(30); });
+    on("#f-sw", "change", (e) => { m.self_weight = e.target.checked; schedule(30); });
+    // material
+    on("#f-an", "change", (e) => { m.analysis = e.target.value; renderEditorHints(); schedule(30); });
+    $$("[data-mt]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; m.material[inp.dataset.mt] = v; schedule(); }));
+    $$("[data-matp]", ed).forEach((b) => b.onclick = () => {
+      Object.assign(m.material, { concrete: { E_MPa: 33000, nu: 0.2, density_kNm3: 25 }, steel: { E_MPa: 210000, nu: 0.3, density_kNm3: 78.5 }, masonry: { E_MPa: 5000, nu: 0.2, density_kNm3: 18 } }[b.dataset.matp]);
+      renderEditor(); schedule(30);
+    });
+  }
+
+  // ------------------------------------------------------------ results pane
+  function sumEdge(r, ids) { let x = 0, y = 0; for (const i of ids) { x += r.reactions[i][0]; y += r.reactions[i][1]; } return [x, y]; }
+  function referencePanel(r) {
+    const m = r.model, g = m.geometry, mat = S.model.material;
+    if (S.preset === "cantilever" && g.type === "rectangle" && !(g.openings || []).length) {
+      const L = g.Lx, D = g.Ly, t = m.t, E = m.E, nu = m.nu, ld = (S.model.loads || []).find((l) => l.profile === "parabolic" && l.edge === "right");
+      if (!ld || (S.model.loads || []).length !== 1 || S.model.self_weight) return "";
+      const P = ld.P, I = t * D ** 3 / 12, Ep = m.analysis === "plane_strain" ? E / (1 - nu * nu) : E, nup = m.analysis === "plane_strain" ? nu / (1 - nu) : nu;
+      const eb = P * L ** 3 / (3 * Ep * I), ex = FE.timoshenkoCantilever(L, 0, P, L, D, Ep, nup, t)[1];
+      let k = 0, bd = Infinity; m.nodes.forEach(([x, y], i) => { const d = Math.hypot(x - L, y - D / 2); if (d < bd) { bd = d; k = i; } });
+      const fe = r.u[k][1];
+      let kr = 0; bd = Infinity; m.nodes.forEach(([x, y], i) => { const d = Math.hypot(x - L / 2, y - D); if (d < bd) { bd = d; kr = i; } });
+      const sb = -P * (L / 2) * (D / 2) / I / 1000;
+      return `<div class="sec"><h3>Check against theory <span>tip at mid-depth, x = L</span></h3>
+        <div class="cmp"><span class="h">Tip deflection</span><span class="h">mm</span><span class="h">FE / ref.</span>
+          <span>Finite elements, ${m.etype}</span><span class="v">${fx(fe * 1000, 4)}</span><span class="v">–</span>
+          <span>Euler–Bernoulli, PL³/3EI</span><span class="v">${fx(eb * 1000, 4)}</span><span class="v">${fx(fe / eb, 4)}</span>
+          <span>Elasticity, Timoshenko &amp; Goodier</span><span class="v">${fx(ex * 1000, 4)}</span><span class="v">${fx(fe / ex, 4)}</span>
+          <span class="h" style="margin-top:4px">σ<sub>xx</sub> top fibre at L/2</span><span class="h" style="margin-top:4px">MPa</span><span></span>
+          <span>FE, nodal average</span><span class="v">${fx(r.nodal[kr][0], 3)}</span><span class="v">${fx(r.nodal[kr][0] / sb, 4)}</span>
+          <span>Beam theory, M·(D/2)/I</span><span class="v">${fx(sb, 3)}</span><span></span></div>
+        <p class="hint">The elasticity solution includes shear deformation, (4 + 5ν)PLD²/(24EI); it assumes a particular restraint at the root, which a fully clamped edge stiffens slightly. Q4 and T3 lock in bending: refine, or switch to Q8, and watch the ratio approach 1. The Convergence tab runs the benchmark with the exact boundary values.</p></div>`;
+    }
+    if (g.type === "plate_hole") {
+      const ld = (S.model.loads || []).find((l) => l.edge === "right" && !l.profile);
+      if (!ld || (S.model.loads || []).length !== 1) return "";
+      const s0 = ld.qx / m.t / 1000;
+      let k = 0, bd = Infinity; m.nodes.forEach(([x, y], i) => { const d = Math.hypot(x, y - g.a); if (d < bd) { bd = d; k = i; } });
+      let k2 = 0; bd = Infinity; m.nodes.forEach(([x, y], i) => { const d = Math.hypot(x - g.a, y); if (d < bd) { bd = d; k2 = i; } });
+      return `<div class="sec"><h3>Check against theory <span>σ₀ = ${fx(s0, 1)} MPa remote</span></h3>
+        <div class="cmp"><span class="h">At the hole</span><span class="h">MPa</span><span class="h">÷ σ₀</span>
+          <span>FE σ<sub>xx</sub> at (0, a)</span><span class="v">${fx(r.nodal[k][0], 2)}</span><span class="v">${fx(r.nodal[k][0] / s0, 3)}</span>
+          <span>Kirsch, infinite plate</span><span class="v">${fx(3 * s0, 2)}</span><span class="v">3.000</span>
+          <span>Heywood, strip of width 2W</span><span class="v">${fx(FE.heywoodKt(g.a / g.W) * s0, 2)}</span><span class="v">${fx(FE.heywoodKt(g.a / g.W), 3)}</span>
+          <span>FE σ<sub>yy</sub> at (a, 0)</span><span class="v">${fx(r.nodal[k2][1], 2)}</span><span class="v">${fx(r.nodal[k2][1] / s0, 3)}</span>
+          <span>Kirsch</span><span class="v">${fx(-s0, 2)}</span><span class="v">−1.000</span></div>
+        <p class="hint">A finite square plate concentrates a little more than an infinite one. With a fine Q8 mesh and W = 40a the stress concentration converges to 3.00 (benchmark F05).</p></div>`;
+    }
+    return "";
+  }
+  function renderResults() {
+    $$("[data-frtab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.frtab === S.frtab)));
+    const out = $("#f-results"), r = S.res;
+    if (!r) { out.innerHTML = `<div class="empty"><b>The model cannot be solved.</b><br>${esc(S.err || "")}</div>`; return; }
+    if (S.frtab === "res") out.innerHTML = resultsPanel(r);
+    else if (S.frtab === "elem") out.innerHTML = elementPanel(r);
+    else out.innerHTML = convPanel();
+    bindResults();
+  }
+  function resultsPanel(r) {
+    const m = r.model, um = r.field("umag"), vm = r.field("mises"), s1 = r.field("s1"), s2 = r.field("s2");
+    const arg = (a, f) => a.reduce((b, v, i) => (f(v, a[b]) ? i : b), 0);
+    const kU = arg(um, (a, b) => a > b), kV = arg(vm, (a, b) => a > b), k1 = arg(s1, (a, b) => a > b), k2 = arg(s2, (a, b) => a < b);
+    const at = (k) => `(${fx(m.nodes[k][0], 2)}, ${fx(m.nodes[k][1], 2)})`;
+    let fxs = 0, fys = 0; for (let i = 0; i < r.f.length; i += 2) { fxs += r.f[i]; fys += r.f[i + 1]; }
+    const supRows = (S.model.supports || []).map((s, k) => {
+      let ids;
+      if ("at" in s) ids = [m.nodes.reduce((b, p, i) => (Math.hypot(p[0] - s.at[0], p[1] - s.at[1]) < Math.hypot(m.nodes[b][0] - s.at[0], m.nodes[b][1] - s.at[1]) ? i : b), 0)];
+      else {
+        const c = s.edge === "bottom" || s.edge === "top" ? 0 : 1, lo = s.from ?? -Infinity, hi = s.to ?? Infinity;
+        ids = [...new Set((m.edges[s.edge] || []).filter((ed) => ed.every((i) => m.nodes[i][c] >= lo - 1e-9 && m.nodes[i][c] <= hi + 1e-9)).flat())];
+      }
+      const [Rx, Ry] = sumEdge(r, ids);
+      return `<tr><td style="text-align:left">${"at" in s ? `point` : esc(s.edge)}${s.from != null || s.to != null ? ` ${fx(s.from ?? 0, 2)}–${s.to != null ? fx(s.to, 2) : "end"}` : ""}</td><td>${fx(Rx, 2)}</td><td>${fx(Ry, 2)}</td></tr>`;
+    }).join("");
+    let Rx = 0, Ry = 0; r.reactions.forEach(([a, b]) => { Rx += a; Ry += b; });
+    return `<div class="sec"><h3>Extremes <span>${m.etype}, ${m.analysis.replace("_", " ")}</span></h3>
+        <dl class="kv"><dt>max |u|</dt><dd>${fx(um[kU] * 1000, 4)} mm at ${at(kU)}</dd><dt>max σ<sub>vM</sub></dt><dd>${fx(vm[kV], 3)} MPa at ${at(kV)}</dd>
+          <dt>max σ<sub>1</sub></dt><dd>${fx(s1[k1], 3)} MPa at ${at(k1)}</dd><dt>min σ<sub>2</sub></dt><dd>${fx(s2[k2], 3)} MPa at ${at(k2)}</dd>
+          <dt>Strain energy</dt><dd>${fmt(r.energy * 1000, 4)} J (½uᵀKu)</dd><dt>Model</dt><dd>${m.elements.length} elements, ${m.nodes.length} nodes, ${r.dofs} DOFs</dd>
+          <dt>Solved in</dt><dd>${(r.solve_ms).toFixed(0)} ms (profile Cholesky), ${(r.total_ms).toFixed(0)} ms in all</dd></dl>
+        <p class="hint">Re-entrant corners (opening corners) and the ends of short supports or loads are stress singularities in linear elasticity: the peak there grows as the mesh is refined, so read the stresses a little away from them, or design the region with a strut-and-tie model.</p></div>
+      ${referencePanel(r)}
+      <div class="sec"><h3>Equilibrium <span>kN</span></h3>
+        <table class="data"><thead><tr><th style="text-align:left">Support</th><th>R<sub>x</sub></th><th>R<sub>y</sub></th></tr></thead><tbody>${supRows}
+          <tr><td style="text-align:left"><b>Σ reactions</b></td><td>${fx(Rx, 2)}</td><td>${fx(Ry, 2)}</td></tr>
+          <tr><td style="text-align:left">Σ applied loads${S.model.self_weight ? ", incl. self weight" : ""}</td><td>${fx(fxs, 2)}</td><td>${fx(fys, 2)}</td></tr>
+          <tr><td style="text-align:left">Residual</td><td>${(Rx + fxs).toExponential(1)}</td><td>${(Ry + fys).toExponential(1)}</td></tr></tbody></table></div>`;
+  }
+  const SHAPES = {
+    T3: ["N₁ = L₁ = 1 − ξ − η,  N₂ = L₂ = ξ,  N₃ = L₃ = η"],
+    T6: ["corners: N<sub>i</sub> = L<sub>i</sub>(2L<sub>i</sub> − 1)", "midsides: N₄ = 4L₁L₂,  N₅ = 4L₂L₃,  N₆ = 4L₃L₁"],
+    Q4: ["N<sub>i</sub> = ¼ (1 + ξξ<sub>i</sub>)(1 + ηη<sub>i</sub>),  (ξ<sub>i</sub>, η<sub>i</sub>) = (±1, ±1)"],
+    Q8: ["corners: N<sub>i</sub> = ¼ (1 + ξξ<sub>i</sub>)(1 + ηη<sub>i</sub>)(ξξ<sub>i</sub> + ηη<sub>i</sub> − 1)", "midsides ξ<sub>i</sub> = 0: N<sub>i</sub> = ½ (1 − ξ²)(1 + ηη<sub>i</sub>);  η<sub>i</sub> = 0: N<sub>i</sub> = ½ (1 + ξξ<sub>i</sub>)(1 − η²)"],
+  };
+  const RULE = { T3: "1 point (⅓, ⅓), w = ½", T6: "3 points (⅙, ⅙), (⅔, ⅙), (⅙, ⅔), w = ⅙", Q4: "2 × 2 points ±1/√3, w = 1", Q8: "3 × 3 points 0, ±√0.6, w = 8/9, 5/9" };
+  function matTable(A, opts = {}) {
+    const rows = A.length, cols = A[0].length;
+    let mx = 0; A.forEach((r) => r.forEach((v) => { mx = Math.max(mx, Math.abs(v)); }));
+    const rl = opts.rows || Array.from({ length: rows }, (_, i) => i + 1), cl = opts.cols || Array.from({ length: cols }, (_, j) => j + 1);
+    const cell = (v) => { const a = mx ? Math.abs(v) / mx : 0; const bg = a > 1e-12 ? `background:color-mix(in srgb, ${v >= 0 ? "var(--plot-pos)" : "var(--plot-neg)"} ${Math.round(6 + 34 * Math.sqrt(a))}%, transparent)` : ""; return `<td style="${bg}">${Math.abs(v) < 1e-12 * mx ? "0" : fmt(v, 3)}</td>`; };
+    return `<div class="mat"><table><thead><tr><th class="rh"></th>${cl.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${A.map((r, i) => `<tr><th class="rh">${rl[i]}</th>${r.map(cell).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
+  function elementPanel(r) {
+    const m = r.model;
+    if (S.sel == null) return `<div class="empty"><b>Click an element in the plot</b> to see its isoparametric mapping, Jacobian, strain-displacement matrix B, stiffness matrix k<sub>e</sub> and stresses at the Gauss points.</div>`;
+    const e = m.elements[S.sel], d = FE.elementDetails(m, S.sel, r.u), n = e.length, g = d.gauss[Math.min(S.gsel, d.gauss.length - 1)];
+    const dofl = e.flatMap((_, i) => [`u${i + 1}`, `v${i + 1}`]);
+    const lam = FE.symEig(d.k), lmax = lam[lam.length - 1], zero = lam.filter((v) => Math.abs(v) < 1e-9 * lmax).length;
+    let area = 0; for (const [xi, eta, w] of FE.gauss(m.etype, "mass")) area += w * FE.gaussPoint(m.etype, d.xy, xi, eta).detJ;
+    let msum = 0; d.m.forEach((row, i) => { if (i % 2 === 0) row.forEach((v, j) => { if (j % 2 === 0) msum += v; }); });
+    return `<div class="sec"><h3>Element ${S.sel + 1} <span>${m.etype}, ${n} nodes, ${2 * n} DOFs</span></h3>
+        <div class="eq"><div>x(ξ, η) = Σ N<sub>i</sub>(ξ, η) x<sub>i</sub>,  u(ξ, η) = Σ N<sub>i</sub> u<sub>i</sub> <span class="c">isoparametric</span></div>
+          ${SHAPES[m.etype].map((s) => `<div>${s}</div>`).join("")}
+          <div>J = ∂(x, y)/∂(ξ, η),  [∂N/∂x; ∂N/∂y] = J⁻¹ [∂N/∂ξ; ∂N/∂η]</div>
+          <div>ε = [ε<sub>xx</sub>, ε<sub>yy</sub>, γ<sub>xy</sub>]ᵀ = B u<sub>e</sub>,  σ = C ε</div>
+          <div>k<sub>e</sub> = ∫∫ Bᵀ C B t det J dξ dη ≈ Σ<sub>g</sub> w<sub>g</sub> B<sub>g</sub>ᵀ C B<sub>g</sub> t det J<sub>g</sub> <span class="c">${RULE[m.etype]}</span></div></div>
+        <table class="data"><thead><tr><th>i</th><th>node</th><th>x m</th><th>y m</th><th>u<sub>x</sub> mm</th><th>u<sub>y</sub> mm</th></tr></thead><tbody>${e.map((nid, i) => `<tr><td>${i + 1}</td><td>${nid + 1}</td><td>${fx(d.xy[i][0], 3)}</td><td>${fx(d.xy[i][1], 3)}</td><td>${fx(1000 * d.u_e[2 * i], 4)}</td><td>${fx(1000 * d.u_e[2 * i + 1], 4)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="sec"><h3>Gauss points <span>stresses in MPa</span></h3>
+        <div class="scroll-x"><table class="data"><thead><tr><th>g</th><th>ξ</th><th>η</th><th>w</th><th>det J</th><th>σ<sub>xx</sub></th><th>σ<sub>yy</sub></th><th>τ<sub>xy</sub></th></tr></thead><tbody>${d.gauss.map((q, k) => `<tr class="pick${k === S.gsel ? " on" : ""}" data-g="${k}" tabindex="0"><td>${k + 1}</td><td>${fx(q.xi, 3)}</td><td>${fx(q.eta, 3)}</td><td>${fx(q.w, 3)}</td><td>${fmt(q.detJ, 4)}</td><td>${fx(q.stress_MPa[0], 3)}</td><td>${fx(q.stress_MPa[1], 3)}</td><td>${fx(q.stress_MPa[2], 3)}</td></tr>`).join("")}</tbody></table></div>
+        <p class="hint">Click a row to show J and B at that point. Nodal stresses are extrapolated from ${m.etype === "T3" ? "the single Gauss point (constant)" : m.etype === "T6" ? "the 3 Gauss points (linear)" : "the 2 × 2 Gauss points (bilinear)"}${m.etype === "Q8" || m.etype === "T6" ? ", midside nodes take the mean of their corners" : ""}, then averaged over the elements at each node.</p></div>
+      <div class="sec"><h3>Jacobian at g = ${S.gsel + 1} <span>det J = ${fmt(g.detJ, 5)} m² per unit parent area</span></h3>${matTable(g.J, { rows: ["∂/∂ξ", "∂/∂η"], cols: ["x", "y"] })}</div>
+      <div class="sec"><h3>B at g = ${S.gsel + 1} <span>1/m, 3 × ${2 * n}</span></h3>${matTable(g.B, { rows: ["ε<sub>xx</sub>", "ε<sub>yy</sub>", "γ<sub>xy</sub>"], cols: dofl })}</div>
+      <div class="sec"><h3>C <span>kN/m², ${m.analysis.replace("_", " ")}</span></h3>${matTable(m.C, { rows: ["σ<sub>xx</sub>", "σ<sub>yy</sub>", "τ<sub>xy</sub>"], cols: ["ε<sub>xx</sub>", "ε<sub>yy</sub>", "γ<sub>xy</sub>"] })}</div>
+      <div class="sec"><h3><b>Stiffness k<sub>e</sub></b> <span>kN/m, ${2 * n} × ${2 * n} <button class="link-btn" id="f-copyk">Copy</button></span></h3>${matTable(d.k, { rows: dofl, cols: dofl })}
+        <p class="hint">Eigenvalues of k<sub>e</sub>: ${zero} zero (two translations and one rotation: the rigid-body modes), ${2 * n - zero} positive, largest ${fmt(lmax, 3)} kN/m. Symmetric to ${fmt(Math.max(...d.k.flatMap((row, i) => row.map((v, j) => Math.abs(v - d.k[j][i])))) / lmax, 2)} relative.</p></div>
+      <div class="sec"><h3><b>Element forces f<sub>e</sub> = k<sub>e</sub> u<sub>e</sub></b> <span>kN</span></h3>${matTable([d.f_e], { rows: ["f"], cols: dofl })}</div>
+      <div class="sec"><h3><b>Consistent mass m<sub>e</sub></b> <span>t, ρ = γ/g</span></h3>${matTable(d.m, { rows: dofl, cols: dofl })}
+        <p class="hint">m<sub>e</sub> = ∫∫ ρ t Nᵀ N dA; its entries in one direction add up to ρ t A = ${fmt(msum, 4)} t (A = ${fmt(area, 4)} m²).</p></div>`;
+  }
+  // ------------------------------------------------------------ convergence study
+  const CONV_COL = { T3: "#c4541c", T6: "#6b46c1", Q4: "#1f8a70", Q8: "#1f5fa8" };
+  function convPanel() {
+    const c = S.conv, exact = S.preset === "cantilever";
+    const head = `<div class="sec"><h3>Mesh convergence <span>${exact ? "tip deflection error vs exact elasticity" : "peak values vs mesh density"}</span></h3>
+      <p class="hint">${exact ? "Runs the cantilever with the exact Timoshenko &amp; Goodier displacements on the clamped edge, for all four element types on three meshes, and plots the error of the tip deflection against the number of degrees of freedom. Slopes on the log–log plot are the convergence rates: displacement errors fall like h² for T3 and Q4 and like h³ or faster for T6 and Q8."
+        : "Solves this model with all four element types on three meshes (2h, h and h/2, or halved and doubled divisions) and plots max |u| and max von Mises against the degrees of freedom. Displacements converge; a stress at a singular point (re-entrant corner, point support) keeps growing."}</p>
+      <div><button class="btn sm" id="f-conv-run"${c && c.running ? " disabled" : ""}>${c && c.running ? `Running ${c.done}/${c.total}…` : "Run study"}</button></div></div>`;
+    if (!c || !c.rows.length) return head;
+    const plot = (key, label, logy) => {
+      const rows = c.rows.filter((r) => isFinite(r[key]) && r[key] > 0);
+      if (!rows.length) return "";
+      const W = 340, H = 200, l = 44, rgt = 10, t = 10, b = 30;
+      const xs = rows.map((r) => Math.log10(r.dofs)), ys = rows.map((r) => (logy ? Math.log10(r[key]) : r[key]));
+      const x0 = Math.floor(Math.min(...xs) * 2) / 2, x1 = Math.ceil(Math.max(...xs) * 2) / 2;
+      let y0 = Math.min(...ys), y1 = Math.max(...ys);
+      if (logy) { y0 = Math.floor(y0); y1 = Math.ceil(y1); } else { const pad = (y1 - y0) * 0.08 || Math.abs(y1) * 0.05 || 1; y0 -= pad; y1 += pad; }
+      const X = (v) => l + (v - x0) / (x1 - x0 || 1) * (W - l - rgt), Y = (v) => t + (1 - (v - y0) / (y1 - y0 || 1)) * (H - t - b);
+      const xt = []; for (let v = Math.ceil(x0); v <= x1 + 1e-9; v++) xt.push(v);
+      const yt = []; if (logy) for (let v = y0; v <= y1 + 1e-9; v++) yt.push(v); else for (let k = 0; k <= 4; k++) yt.push(y0 + (y1 - y0) * k / 4);
+      const series = FE.TYPES.map((et) => {
+        const pts = c.rows.filter((r) => r.et === et && isFinite(r[key]) && r[key] > 0).map((r) => [X(Math.log10(r.dofs)), Y(logy ? Math.log10(r[key]) : r[key])]);
+        if (!pts.length) return "";
+        return `<polyline points="${pts.map((p) => p.map((q) => q.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="${CONV_COL[et]}" stroke-width="1.8"/>${pts.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${CONV_COL[et]}"/>`).join("")}
+          <text x="${(pts[pts.length - 1][0] + 5).toFixed(1)}" y="${(pts[pts.length - 1][1] + 3).toFixed(1)}" style="fill:${CONV_COL[et]};font-weight:600">${et}</text>`;
+      }).join("");
+      return `<div class="sec conv"><h3>${label}</h3><svg viewBox="0 0 ${W + 18} ${H}" role="img" aria-label="${esc(label)} against degrees of freedom">
+        ${yt.map((v) => `<line x1="${l}" x2="${W - rgt}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--rule-2)"/><text x="${l - 4}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${logy ? `1e${v}` : fmt(v, 2)}</text>`).join("")}
+        ${xt.map((v) => `<text x="${X(v).toFixed(1)}" y="${H - b + 14}" text-anchor="middle">${10 ** v >= 1000 ? `${10 ** (v - 3)}k` : 10 ** v}</text>`).join("")}
+        <line x1="${l}" x2="${W - rgt}" y1="${H - b}" y2="${H - b}" stroke="var(--ink-3)"/><text x="${(l + W - rgt) / 2}" y="${H - 3}" text-anchor="middle">degrees of freedom (log)</text>
+        ${series}</svg></div>`;
+    };
+    const table = `<div class="sec"><div class="scroll-x"><table class="data"><thead><tr><th>Type</th><th>DOFs</th>${exact ? "<th>tip mm</th><th>error</th>" : "<th>max |u| mm</th><th>max σ<sub>vM</sub></th>"}<th>ms</th></tr></thead><tbody>
+      ${c.rows.map((r) => `<tr><td>${r.et}</td><td>${r.dofs}</td>${exact ? `<td>${fx(r.tip * 1000, 5)}</td><td>${r.err.toExponential(2)}</td>` : `<td>${fx(r.umax * 1000, 4)}</td><td>${fx(r.vmax, 3)}</td>`}<td>${r.ms.toFixed(0)}</td></tr>`).join("")}</tbody></table></div>
+      ${exact ? `<p class="hint">Exact tip deflection ${fx(c.exact * 1000, 5)} mm. Observed rates between the last two meshes: ${FE.TYPES.map((et) => { const q = c.rows.filter((r) => r.et === et); return q.length > 1 ? `${et} ${(Math.log(q[q.length - 2].err / q[q.length - 1].err) / Math.log(2)).toFixed(2)}` : ""; }).filter(Boolean).join(", ")} (per halving of h).</p>` : ""}</div>`;
+    return head + (exact ? plot("err", "Relative error of the tip deflection", true) : plot("umax", "max |u| (m)", false) + plot("vmax", "max von Mises (MPa)", false)) + table;
+  }
+  function runConvergence() {
+    const exact = S.preset === "cantilever", base = clone(S.model), jobs = [];
+    for (const et of FE.TYPES) for (const f of [2, 1, 0.5]) {        // coarser, as modelled, finer
+      const d = clone(base); d.element = et;
+      if (d.geometry.type === "rectangle") d.geometry.h = base.geometry.h * f;
+      else { d.geometry.n_theta = Math.max(1, Math.round(base.geometry.n_theta / f)); d.geometry.n_r = Math.max(1, Math.round(base.geometry.n_r / f)); }
+      jobs.push(d);
+    }
+    S.conv = { running: true, done: 0, total: jobs.length, rows: [], exact: null };
+    renderResults();
+    const step = () => {
+      const d = jobs[S.conv.done];
+      if (!d) return;
+      try {
+        const t0 = performance.now(), m = FE.parseFE(d);
+        if (m.nodes.length > 16000) throw new Error("skip");
+        let r;
+        if (exact) {
+          const g = d.geometry, P = d.loads[0].P, mat = m, Ep = m.analysis === "plane_strain" ? m.E / (1 - m.nu * m.nu) : m.E, nup = m.analysis === "plane_strain" ? m.nu / (1 - m.nu) : m.nu;
+          const pres = new Map();
+          m.fixed = new Map();
+          m.nodes.forEach(([x, y], i) => { if (Math.abs(x) < 1e-12) { const v = FE.timoshenkoCantilever(x, y - g.Ly / 2, P, g.Lx, g.Ly, Ep, nup, mat.t); pres.set(2 * i, v[0]); pres.set(2 * i + 1, v[1]); } });
+          r = FE.solveFE(m, pres);
+          let k = 0, bd = Infinity; m.nodes.forEach(([x, y], i) => { const dd = Math.hypot(x - g.Lx, y - g.Ly / 2); if (dd < bd) { bd = dd; k = i; } });
+          const ex = FE.timoshenkoCantilever(g.Lx, 0, P, g.Lx, g.Ly, Ep, nup, mat.t)[1];
+          S.conv.exact = ex;
+          S.conv.rows.push({ et: d.element, dofs: r.dofs, tip: r.u[k][1], err: Math.abs(r.u[k][1] / ex - 1), ms: performance.now() - t0 });
+        } else {
+          r = FE.solveFE(m);
+          S.conv.rows.push({ et: d.element, dofs: r.dofs, umax: Math.max(...r.field("umag")), vmax: Math.max(...r.field("mises")), ms: performance.now() - t0 });
+        }
+      } catch (e) { /* too large or failed: skip this level */ }
+      S.conv.done += 1;
+      if (S.conv.done >= S.conv.total) S.conv.running = false;
+      if (S.frtab === "conv") renderResults();
+      if (S.conv.running) setTimeout(step, 15);
+    };
+    setTimeout(step, 30);
+  }
+  function bindResults() {
+    const out = $("#f-results");
+    out.querySelectorAll("[data-g]").forEach((row) => { const go = () => { S.gsel = +row.dataset.g; renderResults(); P.draw(); }; row.onclick = go; row.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }; });
+    const cr = $("#f-conv-run", out); if (cr) cr.onclick = runConvergence;
+    const ck = $("#f-copyk", out);
+    if (ck) ck.onclick = () => {
+      const d = FE.elementDetails(S.res.model, S.sel, S.res.u), txt = d.k.map((r) => r.map((v) => v.toPrecision(10)).join("\t")).join("\n");
+      navigator.clipboard.writeText(txt).then(() => { ck.textContent = "Copied"; }, () => { ck.textContent = "Copy failed"; });
+    };
+  }
+
+  // ------------------------------------------------------------ plot
+  const P = (function () {
+    const canvas = () => $("canvas.fe"), box = () => $("#f-canvas");
+    let tris = null, view = null, dpr = 1, colors = {};
+    const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888";
+    function readColors() { colors = { bg: css("--sheet"), ink: css("--ink"), ink2: css("--ink-2"), ink3: css("--ink-3"), rule: css("--rule"), pos: css("--plot-pos"), neg: css("--plot-neg"), mark: css("--mark"), def: css("--plot-def"), dark: css("--sheet").toLowerCase() !== "#ffffff" }; }
+    function turbo(t) {
+      t = Math.max(0, Math.min(1, t));
+      const r = 0.13572138 + t * (4.6153926 + t * (-42.66032258 + t * (132.13108234 + t * (-152.94239396 + t * 59.28637943))));
+      const g = 0.09140261 + t * (2.19418839 + t * (4.84296658 + t * (-14.18503333 + t * (4.27729857 + t * 2.82956604))));
+      const b = 0.1066733 + t * (12.64194608 + t * (-60.58204836 + t * (110.36276771 + t * (-89.90310912 + t * 27.34824973))));
+      return `rgb(${Math.round(255 * Math.max(0, Math.min(1, r)))},${Math.round(255 * Math.max(0, Math.min(1, g)))},${Math.round(255 * Math.max(0, Math.min(1, b)))})`;
+    }
+    function diverging(t) {          // t in [−1, 1]
+      const stops = [[-1, [33, 102, 172]], [-0.5, [103, 169, 207]], [0, [247, 247, 247]], [0.5, [239, 138, 98]], [1, [178, 24, 43]]];
+      for (let k = 1; k < stops.length; k++) if (t <= stops[k][0]) { const [a, ca] = stops[k - 1], [b, cb] = stops[k], s = (t - a) / (b - a); return `rgb(${ca.map((c, i) => Math.round(c + s * (cb[i] - c))).join(",")})`; }
+      return "rgb(178,24,43)";
+    }
+    function bandSetup(vals, fieldKey) {
+      let lo = Infinity, hi = -Infinity;
+      for (const v of vals) { if (v < lo) lo = v; if (v > hi) hi = v; }
+      const f = FIELDS[fieldKey];
+      if (!(hi > lo)) { hi = lo + Math.max(Math.abs(lo) * 1e-6, 1e-12); }
+      let levels, color;
+      const NB = 12;
+      if (!f.seq && lo < 0 && hi > 0) {
+        const a = Math.max(-lo, hi);
+        levels = Array.from({ length: NB + 1 }, (_, k) => -a + 2 * a * k / NB);
+        color = (k) => diverging((levels[k] + levels[k + 1]) / 2 / a);
+      } else {
+        levels = Array.from({ length: NB + 1 }, (_, k) => lo + (hi - lo) * k / NB);
+        if (f.seq) color = (k) => turbo(0.04 + 0.92 * (k + 0.5) / NB);
+        else if (hi <= 0) color = (k) => diverging(-1 + (k + 0.5) / NB);
+        else color = (k) => diverging((k + 0.5) / NB);
+      }
+      return { levels, color, lo, hi, NB };
+    }
+    // sub-triangles of every element in world coordinates, with the field value at each vertex
+    function subdivide(r, vals, avg, scale) {
+      const m = r.model, et = m.etype, ne = m.elements.length, tri = et[0] === "T";
+      const nsub = et === "T3" ? 1 : et === "Q4" ? (ne > 4000 ? 1 : 2) : (ne > 4000 ? 2 : 4);
+      const out = [];
+      m.elements.forEach((e, q) => {
+        const xy = e.map((i) => m.nodes[i]), ue = e.map((i) => r.u[i]);
+        const ve = avg ? e.map((i) => vals[i]) : vals[q];
+        const P = (xi, eta) => {
+          const { N } = FE.shape(et, xi, eta);
+          let x = 0, y = 0, v = 0;
+          for (let i = 0; i < N.length; i++) { x += N[i] * (xy[i][0] + scale * ue[i][0]); y += N[i] * (xy[i][1] + scale * ue[i][1]); v += N[i] * ve[i]; }
+          return [x, y, v];
+        };
+        if (tri) {
+          const pts = [];
+          for (let j = 0; j <= nsub; j++) for (let i = 0; i <= nsub - j; i++) pts.push(P(i / nsub, j / nsub));
+          const id = (i, j) => { let k = 0; for (let jj = 0; jj < j; jj++) k += nsub - jj + 1; return k + i; };
+          for (let j = 0; j < nsub; j++) for (let i = 0; i < nsub - j; i++) {
+            out.push([pts[id(i, j)], pts[id(i + 1, j)], pts[id(i, j + 1)], q]);
+            if (i + j < nsub - 1) out.push([pts[id(i + 1, j)], pts[id(i + 1, j + 1)], pts[id(i, j + 1)], q]);
+          }
+        } else {
+          const g = [];
+          for (let j = 0; j <= nsub; j++) { g.push([]); for (let i = 0; i <= nsub; i++) g[j].push(P(-1 + 2 * i / nsub, -1 + 2 * j / nsub)); }
+          for (let j = 0; j < nsub; j++) for (let i = 0; i < nsub; i++) { out.push([g[j][i], g[j][i + 1], g[j + 1][i + 1], q]); out.push([g[j][i], g[j + 1][i + 1], g[j + 1][i], q]); }
+        }
+      });
+      return out;
+    }
+    function edgeCurves(r, scale) {              // element boundary curves, sampled
+      const m = r.model, et = m.etype, quad = et === "T6" || et === "Q8", ns = quad ? 6 : 1, out = [];
+      const corners = { T3: [[0, 0], [1, 0], [0, 1]], T6: [[0, 0], [1, 0], [0, 1]], Q4: [[-1, -1], [1, -1], [1, 1], [-1, 1]], Q8: [[-1, -1], [1, -1], [1, 1], [-1, 1]] }[et];
+      const seen = new Set();
+      m.elements.forEach((e) => {
+        const xy = e.map((i) => m.nodes[i]), ue = e.map((i) => r.u[i]);
+        FE.EDGES[et].forEach((ed, k) => {
+          const a = e[ed[0]], b = e[ed[ed.length - 1]], key = a < b ? `${a},${b}` : `${b},${a}`;
+          if (seen.has(key)) return; seen.add(key);
+          const p0 = corners[k], p1 = corners[(k + 1) % corners.length], pts = [];
+          for (let s = 0; s <= ns; s++) {
+            const xi = p0[0] + (p1[0] - p0[0]) * s / ns, eta = p0[1] + (p1[1] - p0[1]) * s / ns, { N } = FE.shape(et, xi, eta);
+            let x = 0, y = 0; for (let i = 0; i < N.length; i++) { x += N[i] * (xy[i][0] + scale * ue[i][0]); y += N[i] * (xy[i][1] + scale * ue[i][1]); }
+            pts.push([x, y]);
+          }
+          out.push(pts);
+        });
+      });
+      return out;
+    }
+    function boundaryCurves(r, scale) {        // element edges used by one element only: outline, openings, hole
+      const m = r.model, et = m.etype, cnt = new Map();
+      m.elements.forEach((e) => FE.EDGES[et].forEach((ed) => {
+        const ids = ed.map((k) => e[k]), key = ids[0] < ids[ids.length - 1] ? `${ids[0]},${ids[ids.length - 1]}` : `${ids[ids.length - 1]},${ids[0]}`;
+        const c = cnt.get(key);
+        if (c) c.n += 1; else cnt.set(key, { n: 1, ids });
+      }));
+      const out = [];
+      for (const { n, ids } of cnt.values()) if (n === 1) out.push(ids.map((i) => [m.nodes[i][0] + scale * r.u[i][0], m.nodes[i][1] + scale * r.u[i][1]]));
+      return out;
+    }
+    function autoScale(r) {
+      const m = r.model; let umax = 0;
+      for (const [a, b] of r.u) umax = Math.max(umax, Math.hypot(a, b));
+      let lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
+      for (const [x, y] of m.nodes) { lo = [Math.min(lo[0], x), Math.min(lo[1], y)]; hi = [Math.max(hi[0], x), Math.max(hi[1], y)]; }
+      const L = Math.max(hi[0] - lo[0], hi[1] - lo[1]);
+      if (!(umax > 0)) return 1;
+      const raw = 0.06 * L / umax, p = 10 ** Math.floor(Math.log10(raw)), c = [1, 2, 5, 10].find((q) => q * p >= raw * 0.999) * p;
+      return c;
+    }
+    function resize() {
+      const c = canvas(), b = box();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      c.width = Math.max(10, Math.round(b.clientWidth * dpr)); c.height = Math.max(10, Math.round(b.clientHeight * dpr));
+      if (!view) fit(); else requestDraw();
+    }
+    function bounds() {
+      const r = S.res;
+      if (!r) return null;
+      let lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
+      for (const [x, y] of r.model.nodes) { lo = [Math.min(lo[0], x), Math.min(lo[1], y)]; hi = [Math.max(hi[0], x), Math.max(hi[1], y)]; }
+      return { lo, hi };
+    }
+    function fit() {
+      const bb = bounds(), b = box();
+      if (!bb) return;
+      const W = b.clientWidth, H = b.clientHeight, padT = 92, padL = 34;
+      if (W < 40 || H < 40) { view = null; return; }
+      // keep clear of the title block: either above it or to its left, whichever leaves the larger drawing
+      const tb = $("#f-title"), tbW = (tb.offsetWidth || 0) + 20, tbH = (tb.offsetHeight || 0) + 20;
+      const dx = Math.max(bb.hi[0] - bb.lo[0], 1e-9), dy = Math.max(bb.hi[1] - bb.lo[1], 1e-9);
+      const sA = Math.min((W - padL - 34) / dx, (H - padT - Math.max(tbH, 56)) / dy), sB = Math.min((W - padL - tbW) / dx, (H - padT - 56) / dy);
+      const useB = sB > sA, s = Math.max(useB ? sB : sA, 1e-9), padR = useB ? tbW : 34, padB = useB ? 56 : Math.max(tbH, 56);
+      view = { s, ox: padL + (W - padL - padR - s * (bb.hi[0] - bb.lo[0])) / 2 - s * bb.lo[0], oy: H - padB - (H - padT - padB - s * (bb.hi[1] - bb.lo[1])) / 2 + s * bb.lo[1] };
+      S.view = view;
+      draw();
+    }
+    let fitPending = false;
+    function fitSoon() { fitPending = true; }
+    const toS = (p) => [view.ox + view.s * p[0], view.oy - view.s * p[1]];
+    const toW = (x, y) => [(x - view.ox) / view.s, (view.oy - y) / view.s];
+    function rebuild() {
+      readColors();
+      const r = S.res;
+      tris = null;
+      if (r) {
+        if (S.scale == null) { S.scale = autoScale(r); $("#f-scale").value = S.scale; }
+        const fkey = S.field === "mesh" ? null : S.field;
+        let vals = null;
+        if (fkey) {
+          const k = FIELDS[fkey].k || 1, raw = r.field(fkey, S.avg || fkey[0] === "u");
+          vals = Array.isArray(raw[0]) ? raw.map((a) => a.map((v) => v * k)) : raw.map((v) => v * k);
+        }
+        const sc = S.def ? S.scale : 0;
+        tris = { list: subdivide(r, vals || r.model.nodes.map(() => 0), !vals || !Array.isArray(vals[0]), sc), vals, edges: edgeCurves(r, sc), bnd: boundaryCurves(r, sc), und: S.def ? boundaryCurves(r, 0) : null };
+        if (vals) tris.band = bandSetup(vals.flat(), fkey);
+        index(tris);
+      }
+      if (fitPending || !view) { fitPending = false; fit(); } else draw();
+      renderLegend(); renderTitle();
+    }
+    function fillBand(ctx, a, b, c, lo, hi) {
+      // polygon of the triangle where lo <= v <= hi (v linear), Sutherland–Hodgman against two half-planes
+      let poly = [a, b, c];
+      for (const [lim, keepAbove] of [[lo, true], [hi, false]]) {
+        const out = [];
+        for (let i = 0; i < poly.length; i++) {
+          const p = poly[i], q = poly[(i + 1) % poly.length];
+          const pin = keepAbove ? p[2] >= lim : p[2] <= lim, qin = keepAbove ? q[2] >= lim : q[2] <= lim;
+          if (pin) out.push(p);
+          if (pin !== qin) { const t = (lim - p[2]) / (q[2] - p[2]); out.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1]), lim]); }
+        }
+        poly = out;
+        if (poly.length < 3) return null;
+      }
+      return poly;
+    }
+    function draw() {
+      const c = canvas(), ctx = c.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = colors.bg; ctx.fillRect(0, 0, c.width / dpr, c.height / dpr);
+      if (!tris || !view) return;
+      const r = S.res;
+      // contour bands
+      if (tris.vals && tris.band) {
+        const { levels, color, NB } = tris.band;
+        for (const [a, b, cc] of tris.list) {
+          const A = toS(a), B = toS(b), C = toS(cc), vmin = Math.min(a[2], b[2], cc[2]), vmax = Math.max(a[2], b[2], cc[2]);
+          let k0 = 0; while (k0 < NB - 1 && levels[k0 + 1] <= vmin) k0++;
+          for (let k = k0; k < NB; k++) {
+            if (levels[k] > vmax) break;
+            const lo = k === 0 ? -Infinity : levels[k], hi = k === NB - 1 ? Infinity : levels[k + 1];
+            const poly = fillBand(ctx, [A[0], A[1], a[2]], [B[0], B[1], b[2]], [C[0], C[1], cc[2]], lo, hi);
+            if (!poly) continue;
+            ctx.beginPath(); ctx.moveTo(poly[0][0], poly[0][1]); for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]); ctx.closePath();
+            ctx.fillStyle = color(k); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 0.6; ctx.fill(); ctx.stroke();
+          }
+        }
+      } else {
+        ctx.fillStyle = colors.dark ? "#26313d" : "#e8edf2";
+        for (const [a, b, cc] of tris.list) { const A = toS(a), B = toS(b), C = toS(cc); ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineTo(C[0], C[1]); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 0.6; ctx.stroke(); }
+      }
+      const poly = (pts, color, w, dash) => { ctx.beginPath(); pts.forEach((p, i) => { const q = toS(p); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]); };
+      if (tris.und) for (const e of tris.und) poly(e, colors.ink3, 1, [4, 3]);
+      if (S.meshOn || S.field === "mesh") { ctx.globalAlpha = S.field === "mesh" ? 0.7 : 0.3; for (const e of tris.edges) poly(e, tris.band ? "#000" : colors.ink, 0.7); ctx.globalAlpha = 1; }
+      for (const e of tris.bnd) poly(e, colors.ink, 1.4);
+      if (S.field === "mesh" && view.s > 30) {        // nodes
+        ctx.fillStyle = colors.ink;
+        const sc = S.def ? S.scale : 0;
+        r.model.nodes.forEach(([x, y], i) => { const q = toS([x + sc * r.u[i][0], y + sc * r.u[i][1]]); ctx.fillRect(q[0] - 1.5, q[1] - 1.5, 3, 3); });
+      }
+      if (S.princ) drawPrincipal(ctx);
+      drawBC(ctx);
+      if (S.sel != null && S.sel < r.model.elements.length) {
+        const sc = S.def ? S.scale : 0, mine = tris.list.filter((t) => t[3] === S.sel);
+        ctx.fillStyle = colors.mark; ctx.globalAlpha = 0.45;
+        for (const [a, b, cc] of mine) { const A = toS(a), B = toS(b), C = toS(cc); ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineTo(C[0], C[1]); ctx.closePath(); ctx.fill(); }
+        ctx.globalAlpha = 1;
+        const e = r.model.elements[S.sel], et = r.model.etype, xy = e.map((i) => r.model.nodes[i]);
+        const ed = edgeCurves({ model: { etype: et, elements: [e.map((_, k) => k)], nodes: xy }, u: e.map((i) => r.u[i]) }, sc);
+        for (const c2 of ed) poly(c2, colors.ink, 2.2);
+        // gauss points of the selected element
+        const d = FE.gauss(et);
+        d.forEach(([xi, eta], k) => {
+          const g = FE.gaussPoint(et, xy, xi, eta), { N } = FE.shape(et, xi, eta);
+          let ux = 0, uy = 0; N.forEach((Ni, i) => { ux += Ni * r.u[e[i]][0]; uy += Ni * r.u[e[i]][1]; });
+          const q = toS([g.x + sc * ux, g.y + sc * uy]);
+          ctx.beginPath(); ctx.arc(q[0], q[1], k === S.gsel ? 4.5 : 3, 0, 2 * Math.PI); ctx.fillStyle = k === S.gsel ? colors.ink : colors.bg; ctx.fill(); ctx.strokeStyle = colors.ink; ctx.lineWidth = 1.2; ctx.stroke();
+        });
+      }
+    }
+    function drawPrincipal(ctx) {
+      const r = S.res, m = r.model, et = m.etype;
+      let smax = 0;
+      const pts = m.elements.map((e, q) => {
+        const xy = e.map((i) => m.nodes[i]), c = et[0] === "T" ? [1 / 3, 1 / 3] : [0, 0], g = FE.gaussPoint(et, xy, c[0], c[1]);
+        const ue = []; e.forEach((i) => ue.push(r.u[i][0], r.u[i][1]));
+        const eps = [0, 1, 2].map((k) => g.B[k].reduce((s, b, j) => s + b * ue[j], 0)), C = m.C, s = [0, 1, 2].map((k) => (C[k][0] * eps[0] + C[k][1] * eps[1] + C[k][2] * eps[2]) / 1000);
+        const cen = (s[0] + s[1]) / 2, rad = Math.hypot((s[0] - s[1]) / 2, s[2]), th = 0.5 * Math.atan2(2 * s[2], s[0] - s[1]);
+        const s1 = cen + rad, s2 = cen - rad;
+        smax = Math.max(smax, Math.abs(s1), Math.abs(s2));
+        let size = 0; for (const [x, y] of xy) size = Math.max(size, Math.hypot(x - g.x, y - g.y));
+        return { x: g.x, y: g.y, s1, s2, th, size };
+      });
+      if (!(smax > 0)) return;
+      const sc = S.def ? S.scale : 0;
+      for (const p of pts) {
+        const q = toS([p.x, p.y]), Lpx = Math.max(p.size * view.s * 0.9, 4);
+        for (const [sv, ang] of [[p.s1, p.th], [p.s2, p.th + Math.PI / 2]]) {
+          const len = Lpx * Math.sqrt(Math.abs(sv) / smax);
+          if (len < 0.8) continue;
+          const dx = Math.cos(ang) * len / 2, dy = -Math.sin(ang) * len / 2;
+          ctx.beginPath(); ctx.moveTo(q[0] - dx, q[1] - dy); ctx.lineTo(q[0] + dx, q[1] + dy);
+          ctx.strokeStyle = sv >= 0 ? "#c62f22" : "#1f5fa8"; ctx.lineWidth = 1.4; ctx.stroke();
+        }
+      }
+      void sc;
+    }
+    function drawBC(ctx) {
+      const r = S.res, m = r.model, sc = S.def ? S.scale : 0;
+      const sz = 7;
+      for (const [d] of m.fixed) {
+        const i = d >> 1, comp = d & 1, q = toS([m.nodes[i][0] + sc * r.u[i][0], m.nodes[i][1] + sc * r.u[i][1]]);
+        ctx.beginPath();
+        if (comp === 1) { ctx.moveTo(q[0], q[1]); ctx.lineTo(q[0] - sz * 0.6, q[1] + sz); ctx.lineTo(q[0] + sz * 0.6, q[1] + sz); }
+        else { ctx.moveTo(q[0], q[1]); ctx.lineTo(q[0] - sz, q[1] - sz * 0.6); ctx.lineTo(q[0] - sz, q[1] + sz * 0.6); }
+        ctx.closePath(); ctx.fillStyle = colors.ink2; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
+      }
+      // load arrows from the nodal load vector (excluding self weight)
+      const f = m.forces; let fmax = 0;
+      for (let i = 0; i < f.length; i += 2) fmax = Math.max(fmax, Math.hypot(f[i], f[i + 1]));
+      if (!(fmax > 0)) return;
+      ctx.strokeStyle = colors.dark ? "#f0a35c" : "#b4520f"; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 1.4;
+      for (let i = 0; i < f.length; i += 2) {
+        const mag = Math.hypot(f[i], f[i + 1]);
+        if (mag < 1e-9 * fmax) continue;
+        const n = i >> 1, q = toS([m.nodes[n][0] + sc * r.u[n][0], m.nodes[n][1] + sc * r.u[n][1]]), L = 10 + 26 * mag / fmax;
+        const ux = f[i] / mag, uy = -f[i + 1] / mag, tail = [q[0] - ux * L, q[1] - uy * L];
+        ctx.beginPath(); ctx.moveTo(tail[0], tail[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(q[0] - ux * 6 - uy * 3, q[1] - uy * 6 + ux * 3); ctx.lineTo(q[0] - ux * 6 + uy * 3, q[1] - uy * 6 - ux * 3); ctx.closePath(); ctx.fill();
+      }
+    }
+    function renderLegend() {
+      const el = $("#f-legend"), r = S.res;
+      const ban = $("#f-banner");
+      ban.hidden = !S.err; ban.textContent = S.err || "";
+      if (!r) { el.innerHTML = ""; return; }
+      if (!tris || !tris.band) {
+        el.innerHTML = `<b>Mesh</b>: ${r.model.elements.length} ${r.model.etype} elements, ${r.model.nodes.length} nodes · triangles at supports, arrows are the consistent nodal loads${S.def ? ` · deformed ×${fmt(S.scale)}` : ""}<br>Drag to pan · scroll or pinch to zoom · click an element to inspect it`;
+        return;
+      }
+      const { levels, color, NB, lo, hi } = tris.band, f = FIELDS[S.field];
+      const tick = (v) => fmt(Math.abs(v) < 1e-9 * (Math.abs(lo) + Math.abs(hi)) ? 0 : v, 3);
+      const ticks = [0, NB / 4, NB / 2, 3 * NB / 4, NB].map((k) => `<span style="left:${100 * k / NB}%">${tick(levels[k])}</span>`).join("");
+      el.innerHTML = `<b>${f.label}</b> ${f.unit}${S.field[0] !== "u" ? (S.avg ? ", averaged at nodes" : ", element by element (not averaged)") : ""} · min <b class="num">${fmt(lo, 4)}</b>, max <b class="num">${fmt(hi, 4)}</b>${S.def ? ` · deformed ×${fmt(S.scale)}` : ""}
+        <div class="bands">${Array.from({ length: NB }, (_, k) => `<i style="background:${color(k)}"></i>`).join("")}</div><div class="bandticks">${ticks}</div>
+        ${S.princ ? `<span><i style="display:inline-block;width:14px;height:2px;background:#c62f22;vertical-align:middle"></i> tension <i style="display:inline-block;width:14px;height:2px;background:#1f5fa8;vertical-align:middle;margin-left:8px"></i> compression, principal directions</span>` : ""}`;
+    }
+    function renderTitle() {
+      const r = S.res, el = $("#f-title");
+      if (!r) { el.innerHTML = ""; return; }
+      const m = r.model, bb = bounds();
+      el.innerHTML = `<div class="tb-name">${esc(S.model.name || "FE model")}</div><div>Size</div><div class="num">${fx(bb.hi[0] - bb.lo[0], 2)} × ${fx(bb.hi[1] - bb.lo[1], 2)} m, t ${fx(m.t, 3)}</div>
+        <div>Mesh</div><div class="num">${m.elements.length} ${m.etype} · ${r.dofs} DOFs</div><div>Theory</div><div>${m.analysis === "plane_stress" ? "Plane stress" : "Plane strain"}, linear elastic</div>`;
+    }
+    function index(t) {
+      let lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
+      for (const [a, b, c] of t.list) for (const p of [a, b, c]) { lo = [Math.min(lo[0], p[0]), Math.min(lo[1], p[1])]; hi = [Math.max(hi[0], p[0]), Math.max(hi[1], p[1])]; }
+      const n = Math.max(1, Math.round(Math.sqrt(t.list.length / 4))), cw = Math.max((hi[0] - lo[0]) / n, 1e-12), ch = Math.max((hi[1] - lo[1]) / n, 1e-12);
+      const cells = Array.from({ length: n * n }, () => []);
+      const cl = (v) => Math.max(0, Math.min(n - 1, v));
+      t.list.forEach((tr, k) => {
+        const xs = [tr[0][0], tr[1][0], tr[2][0]], ys = [tr[0][1], tr[1][1], tr[2][1]];
+        const i0 = cl(Math.floor((Math.min(...xs) - lo[0]) / cw)), i1 = cl(Math.floor((Math.max(...xs) - lo[0]) / cw));
+        const j0 = cl(Math.floor((Math.min(...ys) - lo[1]) / ch)), j1 = cl(Math.floor((Math.max(...ys) - lo[1]) / ch));
+        for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) cells[j * n + i].push(k);
+      });
+      t.grid = { lo, cw, ch, n, cells };
+    }
+    function hit(x, y) {
+      if (!tris || !view || !tris.grid) return null;
+      const [wx, wy] = toW(x, y), G = tris.grid;
+      const i = Math.floor((wx - G.lo[0]) / G.cw), j = Math.floor((wy - G.lo[1]) / G.ch);
+      if (i < 0 || j < 0 || i >= G.n || j >= G.n) return null;
+      for (const k of G.cells[j * G.n + i]) {
+        const [a, b, c, q] = tris.list[k];
+        const d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+        if (Math.abs(d) < 1e-30) continue;
+        const l1 = ((b[1] - c[1]) * (wx - c[0]) + (c[0] - b[0]) * (wy - c[1])) / d, l2 = ((c[1] - a[1]) * (wx - c[0]) + (a[0] - c[0]) * (wy - c[1])) / d, l3 = 1 - l1 - l2;
+        if (l1 >= -1e-9 && l2 >= -1e-9 && l3 >= -1e-9) return { q, v: l1 * a[2] + l2 * b[2] + l3 * c[2], wx, wy };
+      }
+      return null;
+    }
+    function bind() {
+      const c = canvas(), pts = new Map();
+      let last = null, down = null, pinch = null;
+      c.addEventListener("pointerdown", (e) => { c.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); down = { x: e.clientX, y: e.clientY }; last = { x: e.clientX, y: e.clientY };
+        if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); } $("#f-tip").hidden = true; });
+      c.addEventListener("pointermove", (e) => {
+        const rect = c.getBoundingClientRect();
+        if (!pts.has(e.pointerId)) {
+          if (e.pointerType !== "mouse") return;
+          const h = hit(e.clientX - rect.left, e.clientY - rect.top), tip = $("#f-tip");
+          if (!h) { tip.hidden = true; return; }
+          const f = FIELDS[S.field];
+          tip.innerHTML = `x ${fx(h.wx, 3)} · y ${fx(h.wy, 3)} m · element ${h.q + 1}${tris.band ? ` · ${f.label} <b>${fmt(h.v, 4)}</b> ${f.unit}` : ""}`;
+          tip.hidden = false;
+          tip.style.left = `${Math.max(4, Math.min(e.clientX - rect.left + 14, rect.width - tip.offsetWidth - 6))}px`; tip.style.top = `${Math.max(4, e.clientY - rect.top - 30)}px`;
+          return;
+        }
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pts.size === 2 && pinch) {
+          const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2 - rect.left, cy = (a.y + b.y) / 2 - rect.top;
+          zoomAt(cx, cy, d / pinch); pinch = d; return;
+        }
+        if (!view) return;
+        view.ox += e.clientX - last.x; view.oy += e.clientY - last.y; last = { x: e.clientX, y: e.clientY }; requestDraw();
+      });
+      const up = (e) => {
+        if (!pts.has(e.pointerId)) return;
+        pts.delete(e.pointerId);
+        if (down && pts.size === 0 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 5) {
+          const rect = c.getBoundingClientRect(), h = hit(e.clientX - rect.left, e.clientY - rect.top);
+          S.sel = h ? h.q : null; S.gsel = 0;
+          if (h) S.frtab = "elem";
+          renderResults(); draw();
+        }
+        if (pts.size < 2) pinch = null;
+      };
+      c.addEventListener("pointerup", up);
+      c.addEventListener("pointercancel", (e) => pts.delete(e.pointerId));
+      c.addEventListener("pointerleave", () => { $("#f-tip").hidden = true; });
+      c.addEventListener("wheel", (e) => { e.preventDefault(); const rect = c.getBoundingClientRect(); zoomAt(e.clientX - rect.left, e.clientY - rect.top, Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015))); }, { passive: false });
+      c.addEventListener("dblclick", fit);
+      new ResizeObserver(resize).observe(box());
+    }
+    function zoomAt(x, y, f) { if (!view) return; view.ox = x - (x - view.ox) * f; view.oy = y - (y - view.oy) * f; view.s *= f; requestDraw(); }
+    let drawPending = false;
+    function requestDraw() { if (drawPending) return; drawPending = true; requestAnimationFrame(() => { drawPending = false; draw(); }); }
+    return { rebuild, draw, fit, fitSoon, bind, theme: () => { readColors(); rebuild(); }, hit, toS: (p) => (view ? toS(p) : null) };
+  })();
+
+  // ------------------------------------------------------------ wiring
+  function init() {
+    const exFE = window.TRAGWERK_EXAMPLES_FE || {};
+    $("#f-preset").innerHTML = `<optgroup label="Examples">${Object.entries(PRESETS).map(([k, p]) => opt(k, p.label, "wall")).join("")}</optgroup>
+      ${Object.keys(exFE).length ? `<optgroup label="Open a model file">${Object.keys(exFE).map((k) => `<option value="ex:${esc(k)}">${esc(exFE[k].name || k)} (JSON)</option>`).join("")}</optgroup>` : ""}`;
+    $("#f-preset").onchange = (e) => { const k = e.target.value; if (k.startsWith("ex:")) load("custom", exFE[k.slice(3)]); else load(k); };
+    $$("[data-ftab]").forEach((t) => t.onclick = () => { S.ftab = t.dataset.ftab; renderEditor(); });
+    $$("[data-frtab]").forEach((t) => t.onclick = () => { S.frtab = t.dataset.frtab; renderResults(); });
+    $$("[data-field]").forEach((b) => b.onclick = () => { S.field = b.dataset.field; $$("[data-field]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); P.rebuild(); });
+    $("#f-def").onchange = (e) => { S.def = e.target.checked; P.rebuild(); };
+    $("#f-scale").oninput = (e) => { const v = Number(e.target.value); if (v >= 0 && isFinite(v)) { S.scale = v; if (S.def) P.rebuild(); } };
+    $("#f-mesh").onchange = (e) => { S.meshOn = e.target.checked; P.draw(); };
+    $("#f-avg").onchange = (e) => { S.avg = e.target.checked; P.rebuild(); };
+    $("#f-princ").onchange = (e) => { S.princ = e.target.checked; P.rebuild(); };
+    $("#f-fit").onclick = () => P.fit();
+    $("#f-name").addEventListener("input", (e) => { S.model.name = e.target.value; P.rebuild(); });
+    $("#f-json").onclick = () => { $("#f-json-text").value = JSON.stringify(S.model, null, 2); $("#f-json-msg").textContent = ""; $("#f-drawer").hidden = false; };
+    $("#f-drawer-close").onclick = () => { $("#f-drawer").hidden = true; };
+    $("#f-json-copy").onclick = () => { const t = $("#f-json-text"); navigator.clipboard.writeText(t.value).then(() => { $("#f-json-msg").textContent = "Copied."; }, () => { t.select(); $("#f-json-msg").textContent = "Select all and copy with your keyboard."; }); };
+    $("#f-json-load").onclick = () => {
+      try { const d = JSON.parse($("#f-json-text").value); FE.parseFE(d); load("custom", d); $("#f-drawer").hidden = true; }
+      catch (e) { $("#f-json-msg").textContent = `Not loaded: ${e.message}`; }
+    };
+    document.addEventListener("keydown", (e) => { if (ROOT.hidden) return; if (e.key === "Escape") { if (!$("#f-drawer").hidden) $("#f-drawer").hidden = true; else if (S.sel != null) { S.sel = null; renderResults(); P.draw(); } } });
+    const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    if (mq && mq.addEventListener) mq.addEventListener("change", () => P.theme());
+    new MutationObserver(() => P.theme()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    $("#f-ver").textContent = `v${T.VERSION}`;
+    P.bind();
+    $("#f-def").checked = S.def; $("#f-mesh").checked = S.meshOn; $("#f-avg").checked = S.avg;
+    load("wall");
+    window.TragwerkFE = { S, P, load, solve, runConvergence, render: () => { renderEditor(); renderResults(); P.rebuild(); } };
+  }
+  init();
+})();
+</script>

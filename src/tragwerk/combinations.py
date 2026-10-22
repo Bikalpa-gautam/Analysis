@@ -32,16 +32,22 @@ PSI: dict[str, tuple[float, float, float]] = {
     "snow_high": (0.7, 0.5, 0.2),   # sites at altitude H > 1000 m a.s.l.
     "wind": (0.6, 0.2, 0.0),
     "temperature": (0.6, 0.5, 0.0), # non-fire
+    # EN 1990 Annex A2, Table A2.1, road bridges, group gr1a (LM1)
+    "traffic_TS": (0.75, 0.75, 0.0),     # tandem system TS
+    "traffic_UDL": (0.40, 0.40, 0.0),    # uniformly distributed load UDL
 }
 CATEGORY_LABEL = {
     "A": "Cat. A, residential", "B": "Cat. B, office", "C": "Cat. C, congregation",
     "D": "Cat. D, shopping", "E": "Cat. E, storage", "F": "Cat. F, light traffic",
     "G": "Cat. G, medium traffic", "H": "Cat. H, roofs", "snow": "Snow, H <= 1000 m",
     "snow_high": "Snow, H > 1000 m", "wind": "Wind", "temperature": "Temperature",
+    "traffic_TS": "Road traffic LM1, tandem system", "traffic_UDL": "Road traffic LM1, UDL",
 }
+TRAFFIC = ("traffic_TS", "traffic_UDL")
 
 KINDS = ("ULS", "SLS_char", "SLS_freq", "SLS_qp")
-MAX_VARIABLE_CASES = 12
+MAX_VARIABLE_CASES = 12          # independent variable actions (an exclusive group counts once)
+MAX_VARIABLE_TOTAL = 64
 
 
 @dataclass(frozen=True)
@@ -68,6 +74,7 @@ class EN1990Factors:
     gamma_G_sup: float = 1.35
     gamma_G_inf: float = 1.00
     gamma_Q: float = 1.50
+    gamma_Q_traffic: float = 1.35    # EN 1990 Table A2.4(B), road traffic
     xi: float = 0.85
 
 
@@ -94,6 +101,7 @@ def generate(model: Model) -> CombinationSet:
         gamma_G_sup=float(params.get("gamma_G_sup", 1.35)),
         gamma_G_inf=float(params.get("gamma_G_inf", 1.00)),
         gamma_Q=float(params.get("gamma_Q", 1.50)),
+        gamma_Q_traffic=float(params.get("gamma_Q_traffic", 1.35)),
         xi=float(params.get("xi", 0.85)),
     )
     psi = dict(PSI)
@@ -106,10 +114,13 @@ def generate(model: Model) -> CombinationSet:
     idx = {cid: k for k, cid in enumerate(case_ids)}
     perm = [cid for cid in case_ids if model.load_cases[cid].type == "permanent"]
     var = [cid for cid in case_ids if model.load_cases[cid].type == "variable"]
-    if len(var) > MAX_VARIABLE_CASES:
-        raise ValueError(f"at most {MAX_VARIABLE_CASES} variable load cases are supported, got {len(var)}")
     groups = {cid: model.load_cases[cid].group for cid in var}
+    independent = len({groups[c] for c in var if groups[c]}) + sum(1 for c in var if not groups[c])
+    if independent > MAX_VARIABLE_CASES or len(var) > MAX_VARIABLE_TOTAL:
+        raise ValueError(f"at most {MAX_VARIABLE_CASES} independent variable actions (exclusive groups count once) and "
+                         f"{MAX_VARIABLE_TOTAL} variable load cases are supported, got {independent} and {len(var)}")
     ps = {cid: psi[model.load_cases[cid].category] for cid in var}
+    gq = {cid: f.gamma_Q_traffic if model.load_cases[cid].category in TRAFFIC else f.gamma_Q for cid in var}
 
     if vary_individually:
         g_sets = list(itertools.product(*[[f.gamma_G_sup, f.gamma_G_inf] for _ in perm]))
@@ -129,17 +140,31 @@ def generate(model: Model) -> CombinationSet:
         combos.append(Combination(f"{prefix}{n:03d}", kind, tuple(factors), leading, _label(case_ids, factors)))
 
     subsets = list(_active_subsets(var, groups))
+    # road traffic (LM1 tandem and UDL) is one multi-component action, group gr1a (EN 1990 A2.2.2):
+    # when it leads, all its components take characteristic values
+    act = {cid: "__traffic__" if model.load_cases[cid].category in TRAFFIC else cid for cid in var}
+
+    def leads_of(S):
+        out, seen_a = [], set()
+        for cid in S:
+            if act[cid] not in seen_a:
+                seen_a.add(act[cid])
+                out.append(cid)
+        return out or [None]
+
+    def is_lead(cid, lead):
+        return lead is not None and act[cid] == act[lead]
+
     # --- ULS
     for gset in g_sets:
         for S in subsets:
-            leads = S if S else [None]
-            for lead in leads:
+            for lead in leads_of(S):
                 if rule == "6.10":
                     vec = [0.0] * len(case_ids)
                     for cid, g in zip(perm, gset):
                         vec[idx[cid]] = g
                     for cid in S:
-                        vec[idx[cid]] = f.gamma_Q * (1.0 if cid == lead else ps[cid][0])
+                        vec[idx[cid]] = gq[cid] * (1.0 if is_lead(cid, lead) else ps[cid][0])
                     add("ULS", vec, lead)
                 else:  # 6.10a and 6.10b
                     a = [0.0] * len(case_ids)
@@ -148,20 +173,20 @@ def generate(model: Model) -> CombinationSet:
                         a[idx[cid]] = g
                         b[idx[cid]] = f.xi * g if g > 1.0 else g
                     for cid in S:
-                        a[idx[cid]] = f.gamma_Q * ps[cid][0]
-                        b[idx[cid]] = f.gamma_Q * (1.0 if cid == lead else ps[cid][0])
+                        a[idx[cid]] = gq[cid] * ps[cid][0]
+                        b[idx[cid]] = gq[cid] * (1.0 if is_lead(cid, lead) else ps[cid][0])
                     add("ULS", a, None)
                     add("ULS", b, lead)
     # --- SLS
     for S in subsets:
-        for lead in (S if S else [None]):
+        for lead in leads_of(S):
             ch = [0.0] * len(case_ids)
             fr = [0.0] * len(case_ids)
             for cid in perm:
                 ch[idx[cid]] = fr[idx[cid]] = 1.0
             for cid in S:
-                ch[idx[cid]] = 1.0 if cid == lead else ps[cid][0]
-                fr[idx[cid]] = ps[cid][1] if cid == lead else ps[cid][2]
+                ch[idx[cid]] = 1.0 if is_lead(cid, lead) else ps[cid][0]
+                fr[idx[cid]] = ps[cid][1] if is_lead(cid, lead) else ps[cid][2]
             add("SLS_char", ch, lead)
             add("SLS_freq", fr, lead)
         qp = [0.0] * len(case_ids)

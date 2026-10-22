@@ -1,7 +1,9 @@
 """Command-line interface.
 
   tragwerk run MODEL.json [--report R.html] [--pdf R.pdf] [--json R.json]
+                                 (frame models tragwerk/0.1 and tragwerk3d/0.1, or continuum FE models tragwerk-fe/0.1)
   tragwerk building [--spec SPEC.json] --out MODEL.json
+  tragwerk bridge [--spec SPEC.json] --out MODEL.json
   tragwerk verify [--html V.html] [--crosscheck]
   tragwerk serve [--host 127.0.0.1] [--port 8000]
 
@@ -21,7 +23,38 @@ from .model import ModelError, load_model
 from .solver import StructureUnstable
 
 
+def _run_fe(args, data) -> int:
+    from .fe2d import FEError, run_fe, to_dict_fe
+    try:
+        res = run_fe(data)
+    except FEError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 3
+    out = to_dict_fe(res)
+    s = out["summary"]
+    print(f"{res.model.name or 'FE model'}: {res.model.etype} {res.model.analysis.replace('_', ' ')}, {s['elements']} elements, "
+          f"{s['nodes']} nodes, {s['dofs']} DOFs")
+    print(f"  max displacement {s['max_displacement_m'] * 1000:.3f} mm, max von Mises {s['max_mises_MPa']:.3f} MPa "
+          f"at ({s['at'][0]:.3f}, {s['at'][1]:.3f}) m, strain energy {s['strain_energy_kNm']:.4g} kNm")
+    print(f"  equilibrium: Σ loads ({s['load_sum_kN'][0]:.3f}, {s['load_sum_kN'][1]:.3f}) kN, "
+          f"Σ reactions ({s['reaction_sum_kN'][0]:.3f}, {s['reaction_sum_kN'][1]:.3f}) kN")
+    if args.json:
+        Path(args.json).write_text(json.dumps(out, indent=1, allow_nan=False))
+        print(f"wrote {args.json}")
+    if args.report or args.pdf:
+        print("note: calculation reports are produced for frame models; FE results are exported with --json", file=sys.stderr)
+    return 0
+
+
 def _run(args) -> int:
+    try:
+        raw = json.loads(Path(args.model).read_text())
+    except (OSError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 3
+    from .fe2d import SCHEMA_FE
+    if isinstance(raw, dict) and raw.get("schema") == SCHEMA_FE:
+        return _run_fe(args, raw)
     from .model3d import load_any
     from .project import run, to_dict
     from .project3d import run3d, to_dict3d
@@ -74,6 +107,19 @@ def _building(args) -> int:
     return 0
 
 
+def _bridge(args) -> int:
+    from .bridge import generate_bridge
+    spec = json.loads(Path(args.spec).read_text()) if args.spec else None
+    try:
+        model = generate_bridge(spec)
+    except (TypeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 3
+    Path(args.out).write_text(json.dumps(model, indent=1))
+    print(f"wrote {args.out}: {len(model['nodes'])} nodes, {len(model['members'])} members, {len(model['load_cases'])} load cases")
+    return 0
+
+
 def _verify(args) -> int:
     from .verification.benchmarks import run_all
     results = run_all()
@@ -85,10 +131,13 @@ def _verify(args) -> int:
     cross = None
     if args.crosscheck:
         from .verification.crosscheck import run_crosschecks
-        from .verification.crosscheck3d import run_crosschecks3d
-        cross = run_crosschecks() + run_crosschecks3d()
+        from .verification.crosscheck3d import run_crosschecks3d, run_modal_crosschecks
+        cross = run_crosschecks() + run_crosschecks3d() + run_modal_crosschecks()
         for r in cross:
-            print(f"  {r['solver']:<8} frame {r['seed']:>2}: displacements {r['displacement']:.1e}, reactions {r['reaction']:.1e}")
+            if r.get("kind") == "modal":
+                print(f"  {r['solver']:<8} frame {r['seed']:>2}: frequencies {r['frequency']:.1e}, min MAC {r['mac']:.12f}")
+            else:
+                print(f"  {r['solver']:<8} frame {r['seed']:>2}: displacements {r['displacement']:.1e}, reactions {r['reaction']:.1e}")
     if args.html:
         from .verification.report import render
         Path(args.html).write_text(render(results, cross), encoding="utf-8")
@@ -121,6 +170,10 @@ def main(argv=None) -> int:
     b.add_argument("--spec", help="JSON file with BuildingSpec fields (defaults for the rest)")
     b.add_argument("--out", required=True)
     b.set_defaults(fn=_building)
+    br = sub.add_parser("bridge", help="generate a 3D girder bridge model (EN 1991-2 LM1) from a spec")
+    br.add_argument("--spec", help="JSON file with BridgeSpec fields (defaults for the rest)")
+    br.add_argument("--out", required=True)
+    br.set_defaults(fn=_bridge)
     v = sub.add_parser("verify", help="run the verification suite")
     v.add_argument("--html", help="write the verification report")
     v.add_argument("--crosscheck", action="store_true", help="also compare with PyNite/OpenSees if installed")

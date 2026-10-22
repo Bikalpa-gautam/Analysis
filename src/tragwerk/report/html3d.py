@@ -130,6 +130,98 @@ def axo_svg(res, mode="model") -> str:
             f'font-family="inherit" font-size="11">{"".join(body)}</svg>')
 
 
+def mode_svg(res, k: int, width: int = 360) -> str:
+    """Axonometric drawing of mode k (undeformed in grey, mode shape in purple)."""
+    from ..modal import member_shape
+    m, mr = res.model, res.modal
+    ax = _Axo(m, width=width, pad=40)
+    vec = mr.phi[:, k]
+    shapes, dmax = [], 0.0
+    for mid in m.members:
+        P, D = member_shape(mr, mid, vec, 4)
+        shapes.append((P, D))
+        dmax = max(dmax, float(np.max(np.linalg.norm(D, axis=1))))
+    mag = 0.08 * ax.size / dmax if dmax > 0 else 1.0
+    body = []
+    for mem in m.members.values():
+        a, b = m.nodes[mem.i], m.nodes[mem.j]
+        (x1, y1), (x2, y2) = ax.p(a.x, a.y, a.z), ax.p(b.x, b.y, b.z)
+        body.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#c3cad3" stroke-width="1"/>')
+    for P, D in shapes:
+        pts = [ax.p(*(p + mag * d)) for p, d in zip(P, D)]
+        body.append(f'<polyline points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in pts)}" fill="none" stroke="#6d28d9" stroke-width="1.5"/>')
+    rx, ry = mr.ratio("X")[k], mr.ratio("Y")[k]
+    body.append(f'<text x="10" y="16" font-weight="600" fill="#1d2430">Mode {k + 1}: T = {mr.period[k]:.3f} s, f = {mr.freq[k]:.2f} Hz</text>'
+                f'<text x="10" y="30" fill="#6b7280">mass ratio X {100 * rx:.1f} %, Y {100 * ry:.1f} %</text>')
+    return f'<svg viewBox="0 0 {ax.w} {ax.h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mode {k + 1}" font-family="inherit" font-size="10.5">{"".join(body)}</svg>'
+
+
+def spectrum_svg(sr) -> str:
+    T, Sd = sr.spectrum_curve(161)
+    W, H, l, r, t, b = 640, 230, 48, 14, 14, 34
+    smax = float(max(Sd.max(), 1e-9)) * 1.1
+    X = lambda v: l + v / 4.0 * (W - l - r)  # noqa: E731
+    Y = lambda v: t + (1 - v / smax) * (H - t - b)  # noqa: E731
+    body = [f'<polyline points="{" ".join(f"{X(a):.1f},{Y(c):.1f}" for a, c in zip(T, Sd))}" fill="none" stroke="#1f5fa8" stroke-width="2"/>',
+            f'<line x1="{l}" y1="{H - b}" x2="{W - r}" y2="{H - b}" stroke="#1d2430"/><line x1="{l}" y1="{t}" x2="{l}" y2="{H - b}" stroke="#1d2430"/>']
+    for v in range(5):
+        body.append(f'<text x="{X(v):.1f}" y="{H - b + 14}" text-anchor="middle" fill="#6b7280">{v}</text>')
+    body.append(f'<text x="{(W + l) / 2:.0f}" y="{H - 4}" text-anchor="middle" fill="#6b7280">period T [s]</text>')
+    for k in range(5):
+        v = smax / 1.1 * k / 4
+        body.append(f'<text x="{l - 6}" y="{Y(v) + 3:.1f}" text-anchor="end" fill="#6b7280">{v:.2f}</text>')
+    for k, (Ti, Si) in enumerate(zip(sr.modal.period, sr.Sd)):
+        if Ti <= 4.0:
+            body.append(f'<circle cx="{X(Ti):.1f}" cy="{Y(Si):.1f}" r="3" fill="#c4541c"/>')
+    body.append(f'<text x="{l + 8}" y="{t + 12}" fill="#1d2430">S<tspan baseline-shift="sub" font-size="8">d</tspan>(T) [m/s²]; dots: modes</text>')
+    return f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Design spectrum" font-family="inherit" font-size="10.5">{"".join(body)}</svg>'
+
+
+def _dynamics_section(res, n: int) -> list[str]:
+    mr, sr, m = res.modal, res.seismic, res.model
+    out = [f"<h2><span class='n'>{n}</span>Dynamic analysis</h2>"]
+    st = mr.settings
+    out.append(f"<p>Eigenvalue problem (K − ω²M)φ = 0 on a model with every member divided into {st.segments} element{'s' if st.segments > 1 else ''}; "
+               f"{'consistent element mass matrices M<sub>e</sub> = ∫ m̄ N<sup>T</sup>N dx' if st.mass == 'consistent' else 'lumped masses (lever rule)'}; "
+               f"modes normalised to φ<sup>T</sup>Mφ = 1. Total mass {mr.mtot['X']:.1f} t.</p>")
+    out.append(_table(["Load case", "Mass factor"], [[html.escape(c), num(f)] for c, f in mr.factors.items()], {1}))
+    rows, cx, cy = [], 0.0, 0.0
+    for k in range(len(mr.omega)):
+        cx += mr.ratio("X")[k]
+        cy += mr.ratio("Y")[k]
+        rows.append([str(k + 1), f"{mr.period[k]:.4f}", f"{mr.freq[k]:.3f}", f"{100 * mr.ratio('X')[k]:.1f}", f"{100 * mr.ratio('Y')[k]:.1f}",
+                     f"{100 * mr.ratio('Z')[k]:.1f}", f"{100 * cx:.1f}", f"{100 * cy:.1f}"])
+    out.append(_table(["Mode", "T [s]", "f [Hz]", "m<sub>eff,X</sub> [%]", "m<sub>eff,Y</sub> [%]", "m<sub>eff,Z</sub> [%]", "Σ X [%]", "Σ Y [%]"], rows, set(range(8))))
+    figs = "".join(f"<div style='min-width:0'>{mode_svg(res, k)}</div>" for k in range(min(3, len(mr.omega))))
+    out.append(f"<div class='fig' style='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px'>{figs}</div>")
+    if sr is not None:
+        s = sr.settings
+        from ..seismic import SPECTRUM
+        S, TB, TC, TD = SPECTRUM[s.spectrum_type][s.ground]
+        out.append("<h3>Response spectrum analysis, EN 1998-1</h3>")
+        out.append(_table(["Parameter", "Value"], [
+            ["a<sub>gR</sub>, γ<sub>I</sub>, a<sub>g</sub> = γ<sub>I</sub>·a<sub>gR</sub>", f"{s.agR:g} m/s², {s.importance:g}, {s.agR * s.importance:.3f} m/s²"],
+            ["Spectrum, ground type", f"type {s.spectrum_type}, ground {s.ground}: S = {S}, T<sub>B</sub> = {TB} s, T<sub>C</sub> = {TC} s, T<sub>D</sub> = {TD} s (Table 3.{1 + s.spectrum_type})"],
+            ["Behaviour factor, lower bound", f"q = {s.q:g} (DCL), β = {s.beta:g}"],
+            ["Modal combination", f"CQC with ζ = {100 * s.damping:g} % (4.3.3.3.2)"],
+            ["Directions", ", ".join(s.directions) + ("; combined by the 30 % rule (4.3.3.5.2(4))" if len(s.directions) > 1 else "")],
+            ["Seismic combination", "G + Σψ<sub>2,i</sub>Q<sub>k,i</sub> ± A<sub>Ed</sub>, and with the axial force of A<sub>Ed</sub> reversed (A<sub>Ed</sub>'); EN 1990 6.4.3.4"],
+        ]))
+        out.append(f"<div class='fig'>{spectrum_svg(sr)}<div class='cap'>Design spectrum S<sub>d</sub>(T), Eqs. (3.13)–(3.16).</div></div>")
+        W = mr.mtot["X"] * 9.81
+        out.append(_table(["Direction", "Base shear [kN]", "Share of weight W = {:.0f} kN".format(W)],
+                          [[d, num(v), f"{100 * v / W:.1f} %"] for d, v in sr.base_shear.items()], {1, 2}))
+        rows = [[f"+{r['z0']:.2f} … +{r['z1']:.2f}", str(r["columns"]), num(r["P"]), num(r["V"]["x"]), num(r["V"]["y"]),
+                 f"{1000 * r['dr']['x']:.1f}", f"{1000 * r['dr']['y']:.1f}", f"{max(r['theta'].values()):.3f}"] for r in sr.storeys]
+        if rows:
+            out.append("<h3>Storeys</h3>")
+            out.append(_table(["Storey [m]", "Columns", "P<sub>tot</sub> [kN]", "V<sub>x</sub> [kN]", "V<sub>y</sub> [kN]",
+                               "d<sub>r,x</sub> [mm]", "d<sub>r,y</sub> [mm]", "θ"], rows, set(range(1, 8))))
+            out.append("<p class='muted'>d<sub>r</sub> = q·d<sub>r,e</sub>, the mean over the storey's columns; θ = P<sub>tot</sub>d<sub>r</sub>/(V<sub>tot</sub>h), 4.4.2.2(2). "
+                       "The damage limitation check of every column is listed with its member checks.</p>")
+    return out
+
+
 def render3d(res, verification=None, project_info: dict | None = None, detail_members: int = 12, full: bool = False) -> str:
     m = res.model
     info = project_info or {}
@@ -157,7 +249,9 @@ def render3d(res, verification=None, project_info: dict | None = None, detail_me
     out.append("<h2><span class='n'>1</span>Basis of design</h2>")
     out.append(_table(["Item", "Basis"], [
         ["Analysis", "Linear-elastic 3D frame analysis (direct stiffness method, 6 DOF per node). Members with axial, St Venant torsion and biaxial bending stiffness; gross concrete sections, E = E<sub>cm</sub>, G = E/(2(1 + ν)), ν = 0.2. Exact member diagrams between nodes."],
-        ["Slabs", "Slabs are not modelled as elements. Their loads reach the beams by tributary areas; no rigid-diaphragm constraint is applied." if (m.raw.get("meta") or {}).get("slabs") else "No slabs."],
+        (["Deck", "The deck slab is not modelled as plate elements: its weight, the surfacing and the traffic reach the girders by the lever rule across the deck (EN 1991-2 Load Model 1 for traffic)."]
+         if (m.raw.get("meta") or {}).get("generator") == "tragwerk.bridge" else
+         ["Slabs", "Slabs are not modelled as elements. Their loads reach the beams by tributary areas; no rigid-diaphragm constraint is applied." if (m.raw.get("meta") or {}).get("slabs") else "No slabs."]),
         ["Combinations", f"EN 1990 Eq. ({html.escape(m.settings.combination_rule)}), pattern loading of variable cases, exclusive groups, recommended ψ factors."],
         ["Design", "EN 1992-1-1:2004 + AC:2010, recommended NDPs: bending with axial force about both axes (6.1, 5.8.9 Eq. 5.39), shear in both planes (6.2), torsion (6.3), slender columns by nominal curvature (5.8.8), detailing (8.2, 9.2, 9.5), deflection (7.4)."],
     ]))
@@ -215,7 +309,11 @@ def render3d(res, verification=None, project_info: dict | None = None, detail_me
     out.append(f"<div class='fig'>{axo_svg(res, 'def')}<div class='cap'>Short-term elastic deflections, gross sections.</div></div>")
     out.append(f"<div class='fig'>{axo_svg(res, 'util')}</div>")
 
-    out.append("<h2><span class='n'>6</span>Summary of design checks</h2>")
+    sec = 6
+    if getattr(res, "modal", None) is not None:
+        out += _dynamics_section(res, sec)
+        sec += 1
+    out.append(f"<h2><span class='n'>{sec}</span>Summary of design checks</h2>")
     ranked = []
     for mid, lst in res.checks.items():
         u, st = member_max(res, mid)
@@ -226,7 +324,7 @@ def render3d(res, verification=None, project_info: dict | None = None, detail_me
              html.escape(w.title if w else "–"), ubar(u, st), pill(st)] for _, u, mid, st, w in ranked]
     out.append(_table(["Member", "Type", "Section", "Governing check", "Utilisation η", "Result"], rows))
 
-    out.append("<h2><span class='n'>7</span>Design checks in detail</h2>")
+    out.append(f"<h2><span class='n'>{sec + 1}</span>Design checks in detail</h2>")
     if full:
         chosen = [t[2] for t in ranked]
         out.append("<p class='muted'>All members.</p>")
@@ -239,18 +337,27 @@ def render3d(res, verification=None, project_info: dict | None = None, detail_me
         out.append(f"<h3>Member {html.escape(mid)} <span class='muted' style='font-weight:400'>· {html.escape(mem.section)} · {html.escape(mem.design.type)}</span></h3>")
         out += [_check_block(c) for c in res.checks[mid]]
 
-    out.append("<h2><span class='n'>8</span>Assumptions and limitations</h2><ul class='plain'>" + "".join(f"<li>{t}</li>" for t in [
+    bridge_notes = []
+    if ((getattr(m, "raw", None) or {}).get("meta") or {}).get("generator") == "tragwerk.bridge":
+        bridge_notes = [
+            "Bridge model: girders, crossbeams and piers as frame members on their centre lines; the deck slab is not modelled as a plate, it adds weight and carries deck loads to the girders by the lever rule.",
+            "Road traffic by EN 1991-2 Load Model 1 (adjustment factors α = 1), notional lanes from the left kerb, tandem systems at the stations of the model as exclusive load cases; "
+            "γ<sub>Q</sub> = 1.35 and ψ by EN 1990 Annex A2 (group gr1a). Braking, wind, temperature, fatigue (LM3), creep and shrinkage, bearings and the EN 1992-2 specific rules are not covered.",
+            "Girders and crossbeams use 10 % of the uncracked torsional stiffness (compatibility torsion, EN 1992-1-1 6.3.1(2)).",
+        ]
+    out.append(f"<h2><span class='n'>{sec + 2}</span>Assumptions and limitations</h2><ul class='plain'>" + "".join(f"<li>{t}</li>" for t in bridge_notes + [
         "Linear-elastic first-order analysis with gross sections; slender columns get second-order moments by the nominal curvature method on the isolated member (5.8.8) with the effective lengths set in the model.",
         "The generator assumes a braced frame (effective length = storey height). For an unbraced sway frame, increase the column effective length factors.",
         "Slabs are not designed and not modelled as plates; there is no rigid-diaphragm constraint. Wind is applied at the windward facade nodes.",
         "Biaxial bending by EN 1992-1-1 Eq. 5.39 using exact uniaxial resistances; shear checked in each plane separately; torsion shown where T<sub>Ed</sub> ≥ 0.1·T<sub>Rd,c</sub>.",
         "Reinforcement uniform along each member; anchorage, laps, crack widths and punching are not checked.",
+        "Seismic design (where present) is a DCL response spectrum analysis: no capacity design, no accidental torsion, no vertical component; P-Δ sensitivity θ is reported, not applied.",
         "A licensed engineer remains responsible for the model, its inputs and the use of these results.",
     ]) + "</ul>")
     if verification is not None:
         n_c = sum(len(cs) for _, cs, _ in verification)
         ok = all(err is None and all(c.passed for c in cs) for _, cs, err in verification)
-        out.append("<h2><span class='n'>9</span>Software verification</h2>")
+        out.append(f"<h2><span class='n'>{sec + 3}</span>Software verification</h2>")
         out.append(f"<div class='callout {'ok' if ok else ''}'>This build ran its verification suite when producing this report: {len(verification)} benchmarks with {n_c} comparisons, "
                    f"<b>{'all passed' if ok else 'NOT all passed – do not rely on these results'}</b>.</div>")
     out.append(f"<footer>Generated by Tragwerk {__version__} on {today}; analysis time {res.runtime_s:.2f} s.</footer></div></body></html>")

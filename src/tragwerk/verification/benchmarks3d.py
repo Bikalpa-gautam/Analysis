@@ -273,3 +273,6 @@ def _s10():
             Comparison("M₂", step["M_{2,y}"], M2, "kNm", rel_tol=1e-9),
             Comparison("M_Ed = N·e_i + M₂ (pinned ends, no first-order moment)", MEd,
                        max(600 * 5000 / 400 * 1e-3 + M2, 600 * 20 * 1e-3), "kNm", rel_tol=1e-9)]
+
+from . import benchmarks_dyn  # noqa: E402,F401  (registers the dynamics benchmarks)
+from . import benchmarks_fe  # noqa: E402,F401  (registers the continuum FE benchmarks)

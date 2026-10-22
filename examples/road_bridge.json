@@ -1,0 +1,2513 @@
+{
+ "schema": "tragwerk3d/0.1",
+ "name": "Road bridge, 3 spans, 2 girders",
+ "design": {
+  "design_code": "EC2",
+  "combination_rule": "6.10"
+ },
+ "materials": {
+  "C35/45": {
+   "type": "concrete",
+   "fck": 35.0
+  },
+  "B500B": {
+   "type": "rebar",
+   "fyk": 500
+  }
+ },
+ "sections": {
+  "Girder": {
+   "type": "rc_rect",
+   "b_mm": 1000,
+   "h_mm": 1600,
+   "concrete": "C35/45",
+   "rebar": "B500B",
+   "cover_mm": 50,
+   "top": {
+    "n": 10,
+    "dia_mm": 40
+   },
+   "bottom": {
+    "n": 10,
+    "dia_mm": 40
+   },
+   "links": {
+    "dia_mm": 14,
+    "legs": 4,
+    "spacing_mm": 200
+   },
+   "side": {
+    "n": 4,
+    "dia_mm": 20
+   },
+   "torsion_factor": 0.1
+  },
+  "Crossbeam": {
+   "type": "rc_rect",
+   "b_mm": 500,
+   "h_mm": 1200,
+   "concrete": "C35/45",
+   "rebar": "B500B",
+   "cover_mm": 45,
+   "top": {
+    "n": 4,
+    "dia_mm": 25
+   },
+   "bottom": {
+    "n": 4,
+    "dia_mm": 25
+   },
+   "links": {
+    "dia_mm": 12,
+    "legs": 2,
+    "spacing_mm": 200
+   },
+   "side": {
+    "n": 2,
+    "dia_mm": 16
+   },
+   "torsion_factor": 0.1
+  },
+  "Pier": {
+   "type": "rc_rect",
+   "b_mm": 1000,
+   "h_mm": 1000,
+   "concrete": "C35/45",
+   "rebar": "B500B",
+   "cover_mm": 50,
+   "top": {
+    "n": 5,
+    "dia_mm": 32
+   },
+   "bottom": {
+    "n": 5,
+    "dia_mm": 32
+   },
+   "links": {
+    "dia_mm": 12,
+    "legs": 2,
+    "spacing_mm": 200
+   },
+   "side": {
+    "n": 3,
+    "dia_mm": 32
+   }
+  }
+ },
+ "nodes": [
+  {
+   "id": "G1-0",
+   "x": 0.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-1",
+   "x": 2.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-2",
+   "x": 4.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-3",
+   "x": 6.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-4",
+   "x": 8.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-5",
+   "x": 10.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-6",
+   "x": 12.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-7",
+   "x": 14.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-8",
+   "x": 16.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-9",
+   "x": 18.5,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-10",
+   "x": 21.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-11",
+   "x": 23.5,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-12",
+   "x": 26.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-13",
+   "x": 28.5,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-14",
+   "x": 31.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-15",
+   "x": 33.5,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-16",
+   "x": 36.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-17",
+   "x": 38.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-18",
+   "x": 40.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-19",
+   "x": 42.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-20",
+   "x": 44.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-21",
+   "x": 46.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-22",
+   "x": 48.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-23",
+   "x": 50.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G1-24",
+   "x": 52.0,
+   "y": -2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-0",
+   "x": 0.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-1",
+   "x": 2.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-2",
+   "x": 4.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-3",
+   "x": 6.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-4",
+   "x": 8.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-5",
+   "x": 10.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-6",
+   "x": 12.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-7",
+   "x": 14.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-8",
+   "x": 16.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-9",
+   "x": 18.5,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-10",
+   "x": 21.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-11",
+   "x": 23.5,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-12",
+   "x": 26.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-13",
+   "x": 28.5,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-14",
+   "x": 31.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-15",
+   "x": 33.5,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-16",
+   "x": 36.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-17",
+   "x": 38.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-18",
+   "x": 40.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-19",
+   "x": 42.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-20",
+   "x": 44.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-21",
+   "x": 46.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-22",
+   "x": 48.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-23",
+   "x": 50.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "G2-24",
+   "x": 52.0,
+   "y": 2.5,
+   "z": 6.0
+  },
+  {
+   "id": "P1-1-B",
+   "x": 16.0,
+   "y": -2.5,
+   "z": 0.0
+  },
+  {
+   "id": "P1-2-B",
+   "x": 16.0,
+   "y": 2.5,
+   "z": 0.0
+  },
+  {
+   "id": "P2-1-B",
+   "x": 36.0,
+   "y": -2.5,
+   "z": 0.0
+  },
+  {
+   "id": "P2-2-B",
+   "x": 36.0,
+   "y": 2.5,
+   "z": 0.0
+  }
+ ],
+ "supports": [
+  {
+   "node": "P1-1-B",
+   "ux": true,
+   "uy": true,
+   "uz": true,
+   "rx": true,
+   "ry": true,
+   "rz": true
+  },
+  {
+   "node": "P1-2-B",
+   "ux": true,
+   "uy": true,
+   "uz": true,
+   "rx": true,
+   "ry": true,
+   "rz": true
+  },
+  {
+   "node": "P2-1-B",
+   "ux": true,
+   "uy": true,
+   "uz": true,
+   "rx": true,
+   "ry": true,
+   "rz": true
+  },
+  {
+   "node": "P2-2-B",
+   "ux": true,
+   "uy": true,
+   "uz": true,
+   "rx": true,
+   "ry": true,
+   "rz": true
+  },
+  {
+   "node": "G1-0",
+   "ux": true,
+   "uy": true,
+   "uz": true,
+   "rx": false,
+   "ry": false,
+   "rz": false
+  },
+  {
+   "node": "G2-0",
+   "ux": true,
+   "uy": false,
+   "uz": true,
+   "rx": false,
+   "ry": false,
+   "rz": false
+  },
+  {
+   "node": "G1-24",
+   "ux": false,
+   "uy": true,
+   "uz": true,
+   "rx": false,
+   "ry": false,
+   "rz": false
+  },
+  {
+   "node": "G2-24",
+   "ux": false,
+   "uy": false,
+   "uz": true,
+   "rx": false,
+   "ry": false,
+   "rz": false
+  }
+ ],
+ "members": [
+  {
+   "id": "G1-S1-1",
+   "i": "G1-0",
+   "j": "G1-1",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S1-2",
+   "i": "G1-1",
+   "j": "G1-2",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S1-3",
+   "i": "G1-2",
+   "j": "G1-3",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S1-4",
+   "i": "G1-3",
+   "j": "G1-4",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S1-5",
+   "i": "G1-4",
+   "j": "G1-5",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S1-6",
+   "i": "G1-5",
+   "j": "G1-6",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S1-7",
+   "i": "G1-6",
+   "j": "G1-7",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S1-8",
+   "i": "G1-7",
+   "j": "G1-8",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S2-1",
+   "i": "G1-8",
+   "j": "G1-9",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G1-S2-2",
+   "i": "G1-9",
+   "j": "G1-10",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G1-S2-3",
+   "i": "G1-10",
+   "j": "G1-11",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G1-S2-4",
+   "i": "G1-11",
+   "j": "G1-12",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G1-S2-5",
+   "i": "G1-12",
+   "j": "G1-13",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G1-S2-6",
+   "i": "G1-13",
+   "j": "G1-14",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G1-S2-7",
+   "i": "G1-14",
+   "j": "G1-15",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G1-S2-8",
+   "i": "G1-15",
+   "j": "G1-16",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G1-S3-1",
+   "i": "G1-16",
+   "j": "G1-17",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S3-2",
+   "i": "G1-17",
+   "j": "G1-18",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S3-3",
+   "i": "G1-18",
+   "j": "G1-19",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S3-4",
+   "i": "G1-19",
+   "j": "G1-20",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S3-5",
+   "i": "G1-20",
+   "j": "G1-21",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S3-6",
+   "i": "G1-21",
+   "j": "G1-22",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S3-7",
+   "i": "G1-22",
+   "j": "G1-23",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G1-S3-8",
+   "i": "G1-23",
+   "j": "G1-24",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S1-1",
+   "i": "G2-0",
+   "j": "G2-1",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S1-2",
+   "i": "G2-1",
+   "j": "G2-2",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S1-3",
+   "i": "G2-2",
+   "j": "G2-3",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S1-4",
+   "i": "G2-3",
+   "j": "G2-4",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S1-5",
+   "i": "G2-4",
+   "j": "G2-5",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S1-6",
+   "i": "G2-5",
+   "j": "G2-6",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S1-7",
+   "i": "G2-6",
+   "j": "G2-7",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S1-8",
+   "i": "G2-7",
+   "j": "G2-8",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S2-1",
+   "i": "G2-8",
+   "j": "G2-9",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G2-S2-2",
+   "i": "G2-9",
+   "j": "G2-10",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G2-S2-3",
+   "i": "G2-10",
+   "j": "G2-11",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G2-S2-4",
+   "i": "G2-11",
+   "j": "G2-12",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G2-S2-5",
+   "i": "G2-12",
+   "j": "G2-13",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G2-S2-6",
+   "i": "G2-13",
+   "j": "G2-14",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G2-S2-7",
+   "i": "G2-14",
+   "j": "G2-15",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G2-S2-8",
+   "i": "G2-15",
+   "j": "G2-16",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "interior_span"
+   }
+  },
+  {
+   "id": "G2-S3-1",
+   "i": "G2-16",
+   "j": "G2-17",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S3-2",
+   "i": "G2-17",
+   "j": "G2-18",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S3-3",
+   "i": "G2-18",
+   "j": "G2-19",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S3-4",
+   "i": "G2-19",
+   "j": "G2-20",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S3-5",
+   "i": "G2-20",
+   "j": "G2-21",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S3-6",
+   "i": "G2-21",
+   "j": "G2-22",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S3-7",
+   "i": "G2-22",
+   "j": "G2-23",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "G2-S3-8",
+   "i": "G2-23",
+   "j": "G2-24",
+   "section": "Girder",
+   "design": {
+    "type": "beam",
+    "deflection_system": "end_span"
+   }
+  },
+  {
+   "id": "P1-1",
+   "i": "P1-1-B",
+   "j": "G1-8",
+   "section": "Pier",
+   "design": {
+    "type": "column",
+    "l0_factor": 1.0
+   }
+  },
+  {
+   "id": "P1-2",
+   "i": "P1-2-B",
+   "j": "G2-8",
+   "section": "Pier",
+   "design": {
+    "type": "column",
+    "l0_factor": 1.0
+   }
+  },
+  {
+   "id": "P2-1",
+   "i": "P2-1-B",
+   "j": "G1-16",
+   "section": "Pier",
+   "design": {
+    "type": "column",
+    "l0_factor": 1.0
+   }
+  },
+  {
+   "id": "P2-2",
+   "i": "P2-2-B",
+   "j": "G2-16",
+   "section": "Pier",
+   "design": {
+    "type": "column",
+    "l0_factor": 1.0
+   }
+  },
+  {
+   "id": "X-A0-1",
+   "i": "G1-0",
+   "j": "G2-0",
+   "section": "Crossbeam",
+   "design": {
+    "type": "beam",
+    "deflection_system": "simply_supported"
+   }
+  },
+  {
+   "id": "X-M1-1",
+   "i": "G1-4",
+   "j": "G2-4",
+   "section": "Crossbeam",
+   "design": {
+    "type": "beam",
+    "deflection_system": "simply_supported"
+   }
+  },
+  {
+   "id": "X-P1-1",
+   "i": "G1-8",
+   "j": "G2-8",
+   "section": "Crossbeam",
+   "design": {
+    "type": "beam",
+    "deflection_system": "simply_supported"
+   }
+  },
+  {
+   "id": "X-M2-1",
+   "i": "G1-12",
+   "j": "G2-12",
+   "section": "Crossbeam",
+   "design": {
+    "type": "beam",
+    "deflection_system": "simply_supported"
+   }
+  },
+  {
+   "id": "X-P2-1",
+   "i": "G1-16",
+   "j": "G2-16",
+   "section": "Crossbeam",
+   "design": {
+    "type": "beam",
+    "deflection_system": "simply_supported"
+   }
+  },
+  {
+   "id": "X-M3-1",
+   "i": "G1-20",
+   "j": "G2-20",
+   "section": "Crossbeam",
+   "design": {
+    "type": "beam",
+    "deflection_system": "simply_supported"
+   }
+  },
+  {
+   "id": "X-A3-1",
+   "i": "G1-24",
+   "j": "G2-24",
+   "section": "Crossbeam",
+   "design": {
+    "type": "beam",
+    "deflection_system": "simply_supported"
+   }
+  }
+ ],
+ "load_cases": [
+  {
+   "id": "G1",
+   "name": "Self weight of the structure and deck slab",
+   "type": "permanent",
+   "self_weight": true,
+   "loads": [
+    {
+     "type": "udl",
+     "member": "G1-S1-1",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-2",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-3",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-4",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-5",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-6",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-7",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-8",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-1",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-2",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-3",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-4",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-5",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-6",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-7",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-8",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-1",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-2",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-3",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-4",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-5",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-6",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-7",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-8",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-1",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-2",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-3",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-4",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-5",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-6",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-7",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-8",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-1",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-2",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-3",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-4",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-5",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-6",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-7",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-8",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-1",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-2",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-3",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-4",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-5",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-6",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-7",
+     "w": -31.25,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-8",
+     "w": -31.25,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "G2",
+   "name": "Surfacing and parapets",
+   "type": "permanent",
+   "loads": [
+    {
+     "type": "udl",
+     "member": "G1-S1-1",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-2",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-3",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-4",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-5",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-6",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-7",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-8",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-1",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-2",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-3",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-4",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-5",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-6",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-7",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-8",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-1",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-2",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-3",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-4",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-5",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-6",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-7",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-8",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-1",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-2",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-3",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-4",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-5",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-6",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-7",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-8",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-1",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-2",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-3",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-4",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-5",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-6",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-7",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-8",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-1",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-2",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-3",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-4",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-5",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-6",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-7",
+     "w": -11.1,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-8",
+     "w": -11.1,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "UDL1",
+   "name": "LM1 UDL on span 1",
+   "type": "variable",
+   "category": "traffic_UDL",
+   "loads": [
+    {
+     "type": "udl",
+     "member": "G1-S1-1",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-2",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-3",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-4",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-5",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-6",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-7",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S1-8",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-1",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-2",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-3",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-4",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-5",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-6",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-7",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S1-8",
+     "w": -11.4625,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "UDL2",
+   "name": "LM1 UDL on span 2",
+   "type": "variable",
+   "category": "traffic_UDL",
+   "loads": [
+    {
+     "type": "udl",
+     "member": "G1-S2-1",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-2",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-3",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-4",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-5",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-6",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-7",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S2-8",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-1",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-2",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-3",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-4",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-5",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-6",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-7",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S2-8",
+     "w": -11.4625,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "UDL3",
+   "name": "LM1 UDL on span 3",
+   "type": "variable",
+   "category": "traffic_UDL",
+   "loads": [
+    {
+     "type": "udl",
+     "member": "G1-S3-1",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-2",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-3",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-4",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-5",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-6",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-7",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G1-S3-8",
+     "w": -28.0375,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-1",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-2",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-3",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-4",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-5",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-6",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-7",
+     "w": -11.4625,
+     "direction": "global_z"
+    },
+    {
+     "type": "udl",
+     "member": "G2-S3-8",
+     "w": -11.4625,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS1.1",
+   "name": "LM1 tandem, span 1 at 5 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S1-1",
+     "p": -350.0,
+     "a": 0.8,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S1-2",
+     "p": -350.0,
+     "a": 0.0,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S1-1",
+     "p": -150.0,
+     "a": 0.8,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S1-2",
+     "p": -150.0,
+     "a": 0.0,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS1.2",
+   "name": "LM1 tandem, span 1 at 45 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S1-4",
+     "p": -350.0,
+     "a": 1.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S1-5",
+     "p": -350.0,
+     "a": 0.4,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S1-4",
+     "p": -150.0,
+     "a": 1.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S1-5",
+     "p": -150.0,
+     "a": 0.4,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS1.3",
+   "name": "LM1 tandem, span 1 at 95 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S1-8",
+     "p": -350.0,
+     "a": 1.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S2-1",
+     "p": -350.0,
+     "a": 0.4,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S1-8",
+     "p": -150.0,
+     "a": 1.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S2-1",
+     "p": -150.0,
+     "a": 0.4,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS2.1",
+   "name": "LM1 tandem, span 2 at 5 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S2-1",
+     "p": -350.0,
+     "a": 1.0,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S2-1",
+     "p": -350.0,
+     "a": 2.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S2-1",
+     "p": -150.0,
+     "a": 1.0,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S2-1",
+     "p": -150.0,
+     "a": 2.2,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS2.2",
+   "name": "LM1 tandem, span 2 at 45 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S2-4",
+     "p": -350.0,
+     "a": 1.5,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S2-5",
+     "p": -350.0,
+     "a": 0.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S2-4",
+     "p": -150.0,
+     "a": 1.5,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S2-5",
+     "p": -150.0,
+     "a": 0.2,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS2.3",
+   "name": "LM1 tandem, span 2 at 95 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S2-8",
+     "p": -350.0,
+     "a": 1.5,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S3-1",
+     "p": -350.0,
+     "a": 0.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S2-8",
+     "p": -150.0,
+     "a": 1.5,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S3-1",
+     "p": -150.0,
+     "a": 0.2,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS3.1",
+   "name": "LM1 tandem, span 3 at 5 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S3-1",
+     "p": -350.0,
+     "a": 0.8,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S3-2",
+     "p": -350.0,
+     "a": 0.0,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S3-1",
+     "p": -150.0,
+     "a": 0.8,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S3-2",
+     "p": -150.0,
+     "a": 0.0,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS3.2",
+   "name": "LM1 tandem, span 3 at 45 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S3-4",
+     "p": -350.0,
+     "a": 1.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S3-5",
+     "p": -350.0,
+     "a": 0.4,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S3-4",
+     "p": -150.0,
+     "a": 1.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S3-5",
+     "p": -150.0,
+     "a": 0.4,
+     "direction": "global_z"
+    }
+   ]
+  },
+  {
+   "id": "TS3.3",
+   "name": "LM1 tandem, span 3 at 95 %",
+   "type": "variable",
+   "category": "traffic_TS",
+   "group": "TS",
+   "loads": [
+    {
+     "type": "point",
+     "member": "G1-S3-8",
+     "p": -350.0,
+     "a": 0.0,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G1-S3-8",
+     "p": -350.0,
+     "a": 1.2,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S3-8",
+     "p": -150.0,
+     "a": 0.0,
+     "direction": "global_z"
+    },
+    {
+     "type": "point",
+     "member": "G2-S3-8",
+     "p": -150.0,
+     "a": 1.2,
+     "direction": "global_z"
+    }
+   ]
+  }
+ ],
+ "dynamics": {
+  "modes": 8
+ },
+ "meta": {
+  "generator": "tragwerk.bridge",
+  "spec": {
+   "name": "Road bridge, 3 spans, 2 girders",
+   "spans": [
+    16.0,
+    20.0,
+    16.0
+   ],
+   "width": 10.0,
+   "carriageway": 8.0,
+   "girders": 2,
+   "pier_heights": [
+    6.0,
+    6.0
+   ],
+   "pier_columns": "under_girders",
+   "divisions": 8,
+   "fck": 35.0,
+   "girder": {
+    "type": "rc_rect",
+    "b_mm": 1000,
+    "h_mm": 1600,
+    "concrete": "concrete",
+    "rebar": "B500B",
+    "cover_mm": 50,
+    "top": {
+     "n": 10,
+     "dia_mm": 40
+    },
+    "bottom": {
+     "n": 10,
+     "dia_mm": 40
+    },
+    "links": {
+     "dia_mm": 14,
+     "legs": 4,
+     "spacing_mm": 200
+    },
+    "side": {
+     "n": 4,
+     "dia_mm": 20
+    },
+    "torsion_factor": 0.1
+   },
+   "crossbeam": {
+    "type": "rc_rect",
+    "b_mm": 500,
+    "h_mm": 1200,
+    "concrete": "concrete",
+    "rebar": "B500B",
+    "cover_mm": 45,
+    "top": {
+     "n": 4,
+     "dia_mm": 25
+    },
+    "bottom": {
+     "n": 4,
+     "dia_mm": 25
+    },
+    "links": {
+     "dia_mm": 12,
+     "legs": 2,
+     "spacing_mm": 200
+    },
+    "side": {
+     "n": 2,
+     "dia_mm": 16
+    },
+    "torsion_factor": 0.1
+   },
+   "pier": {
+    "type": "rc_rect",
+    "b_mm": 1000,
+    "h_mm": 1000,
+    "concrete": "concrete",
+    "rebar": "B500B",
+    "cover_mm": 50,
+    "top": {
+     "n": 5,
+     "dia_mm": 32
+    },
+    "bottom": {
+     "n": 5,
+     "dia_mm": 32
+    },
+    "links": {
+     "dia_mm": 12,
+     "legs": 2,
+     "spacing_mm": 200
+    },
+    "side": {
+     "n": 3,
+     "dia_mm": 32
+    }
+   },
+   "pier_cap": {
+    "type": "rc_rect",
+    "b_mm": 1600,
+    "h_mm": 1800,
+    "concrete": "concrete",
+    "rebar": "B500B",
+    "cover_mm": 50,
+    "top": {
+     "n": 18,
+     "dia_mm": 40
+    },
+    "bottom": {
+     "n": 8,
+     "dia_mm": 32
+    },
+    "links": {
+     "dia_mm": 16,
+     "legs": 4,
+     "spacing_mm": 150
+    },
+    "side": {
+     "n": 4,
+     "dia_mm": 25
+    },
+    "torsion_factor": 0.1
+   },
+   "slab_mm": 250.0,
+   "surfacing": 2.4,
+   "parapet": 1.5,
+   "traffic": true,
+   "ts_stations": [
+    0.05,
+    0.45,
+    0.95
+   ],
+   "pier_l0_factor": 1.0,
+   "combination_rule": "6.10",
+   "modes": 8,
+   "seismic": null
+  },
+  "grid": {
+   "x": {
+    "A0": 0.0,
+    "P1": 16.0,
+    "P2": 36.0,
+    "A3": 52.0
+   },
+   "y": {
+    "1": -2.5,
+    "2": 2.5
+   },
+   "levels": [
+    0.0,
+    6.0
+   ]
+  },
+  "slabs": [
+   {
+    "level": 1,
+    "x0": 0.0,
+    "x1": 16.0,
+    "y0": -5.0,
+    "y1": 5.0,
+    "z": 6.0,
+    "t_mm": 250.0
+   },
+   {
+    "level": 1,
+    "x0": 16.0,
+    "x1": 36.0,
+    "y0": -5.0,
+    "y1": 5.0,
+    "z": 6.0,
+    "t_mm": 250.0
+   },
+   {
+    "level": 1,
+    "x0": 36.0,
+    "x1": 52.0,
+    "y0": -5.0,
+    "y1": 5.0,
+    "z": 6.0,
+    "t_mm": 250.0
+   }
+  ],
+  "deck_z": 6.0
+ }
+}

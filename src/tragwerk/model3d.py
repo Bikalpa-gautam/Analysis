@@ -27,7 +27,7 @@ from .model import (BarLayer, Concrete, DesignSettings, Links, ModelError, Rebar
 
 SCHEMA3D = "tragwerk3d/0.1"
 DIRECTIONS3D = ("global_x", "global_y", "global_z", "local_x", "local_y", "local_z")
-VARIABLE_CATEGORIES = ("A", "B", "C", "D", "E", "F", "G", "H", "snow", "snow_high", "wind", "temperature")
+VARIABLE_CATEGORIES = ("A", "B", "C", "D", "E", "F", "G", "H", "snow", "snow_high", "wind", "temperature", "traffic_TS", "traffic_UDL")
 DESIGN_TYPES = ("beam", "column", "none")
 DEFLECTION_SYSTEMS = ("simply_supported", "end_span", "interior_span", "cantilever")
 
@@ -239,6 +239,34 @@ class LoadCase3D:
     point: tuple[PointLoad3D, ...] = ()
 
 
+@dataclass(frozen=True)
+class DynamicsSettings:
+    """Modal analysis. Masses in tonnes (kN·s²/m)."""
+    modes: int = 12
+    mass: str = "consistent"            # consistent | lumped
+    segments: int = 2                   # elements per member for the dynamic model
+    mass_cases: dict | None = None      # load case -> factor; default: permanent 1.0, variable psi2
+    masses: tuple = ()                  # ((node, m), ...) additional translational masses
+
+
+GROUND = ("A", "B", "C", "D", "E")
+
+
+@dataclass(frozen=True)
+class SeismicSettings:
+    """EN 1998-1 horizontal response spectrum analysis (DCL, behaviour factor q)."""
+    agR: float                          # reference peak ground acceleration on type A ground, m/s²
+    importance: float = 1.0             # gamma_I
+    ground: str = "B"
+    spectrum_type: int = 1
+    q: float = 1.5
+    beta: float = 0.2
+    damping: float = 0.05
+    directions: tuple = ("X", "Y")
+    drift_limit: float = 0.005          # alpha in 4.4.3.2: 0.005 brittle, 0.0075 ductile, 0.010 none
+    nu: float = 0.5                     # reduction factor for the damage limitation requirement
+
+
 @dataclass
 class Model3D:
     name: str
@@ -250,6 +278,8 @@ class Model3D:
     settings: DesignSettings = field(default_factory=DesignSettings)
     raw: dict = field(default_factory=dict, repr=False)
     is3d: bool = True
+    dynamics: DynamicsSettings | None = None
+    seismic: SeismicSettings | None = None
 
     def axes(self, mid: str) -> tuple[float, np.ndarray]:
         """(length, 3x3 matrix whose rows are the local x, y, z unit vectors in global axes)."""
@@ -475,7 +505,67 @@ def parse_model3d(data: dict) -> Model3D:
         raise ModelError("design.design_code: expected 'EC2' or 'SIA262'")
     settings = DesignSettings(design_code=code, combination_rule=rule, params=dict(sd.get("params", {}) or {}),
                               stations_per_member=int(_num(sd.get("stations_per_member", 20), "design.stations_per_member", positive=True)))
-    return Model3D(str(data.get("name", "Untitled model")), nodes, members, sections, supports, load_cases, settings, raw=data)
+    dynamics, seismic = _dynamics(data, nodes, load_cases)
+    return Model3D(str(data.get("name", "Untitled model")), nodes, members, sections, supports, load_cases, settings, raw=data,
+                   dynamics=dynamics, seismic=seismic)
+
+
+def _dynamics(data: dict, nodes: dict, load_cases: dict):
+    dd, sd = data.get("dynamics"), data.get("seismic")
+    dyn = sei = None
+    if dd is not None or sd is not None:
+        dd = dd or {}
+        if not isinstance(dd, dict):
+            raise ModelError("dynamics: expected an object")
+        modes = int(_num(dd.get("modes", 12), "dynamics.modes", positive=True))
+        if modes > 60:
+            raise ModelError("dynamics.modes: at most 60 modes")
+        mass = dd.get("mass", "consistent")
+        if mass not in ("consistent", "lumped"):
+            raise ModelError("dynamics.mass: expected 'consistent' or 'lumped'")
+        seg = int(_num(dd.get("segments", 2), "dynamics.segments", positive=True))
+        if seg > 8:
+            raise ModelError("dynamics.segments: at most 8 elements per member")
+        mc = dd.get("mass_cases")
+        if mc is not None:
+            if not isinstance(mc, dict):
+                raise ModelError("dynamics.mass_cases: expected an object {load case: factor}")
+            for cid, f in mc.items():
+                if cid not in load_cases:
+                    raise ModelError(f"dynamics.mass_cases: unknown load case '{cid}'")
+                _num(f, f"dynamics.mass_cases.{cid}", nonneg=True)
+            mc = {str(k): float(v) for k, v in mc.items()}
+        masses = []
+        for k, m in enumerate(dd.get("masses", []) or []):
+            nid = str(_req(m, "node", f"dynamics.masses[{k}]"))
+            if nid not in nodes:
+                raise ModelError(f"dynamics.masses[{k}].node: unknown node '{nid}'")
+            masses.append((nid, _num(_req(m, "m", f"dynamics.masses[{k}]"), f"dynamics.masses[{k}].m", nonneg=True)))
+        dyn = DynamicsSettings(modes, mass, seg, mc, tuple(masses))
+    if sd is not None:
+        if not isinstance(sd, dict):
+            raise ModelError("seismic: expected an object")
+        agR = _num(_req(sd, "agR", "seismic"), "seismic.agR", positive=True)
+        if agR > 15:
+            raise ModelError("seismic.agR: expected m/s², got more than 15")
+        ground = sd.get("ground", "B")
+        if ground not in GROUND:
+            raise ModelError(f"seismic.ground: expected one of {GROUND}")
+        st = int(_num(sd.get("spectrum_type", 1), "seismic.spectrum_type", positive=True))
+        if st not in (1, 2):
+            raise ModelError("seismic.spectrum_type: expected 1 or 2")
+        q = _num(sd.get("q", 1.5), "seismic.q", positive=True)
+        if q < 1.0:
+            raise ModelError("seismic.q: the behaviour factor must be at least 1.0")
+        dirs = tuple(sd.get("directions", ["X", "Y"]))
+        if not dirs or any(d not in ("X", "Y") for d in dirs):
+            raise ModelError("seismic.directions: a non-empty subset of ['X', 'Y']")
+        sei = SeismicSettings(agR, _num(sd.get("importance", 1.0), "seismic.importance", positive=True), ground, st, q,
+                              _num(sd.get("beta", 0.2), "seismic.beta", nonneg=True),
+                              _num(sd.get("damping", 0.05), "seismic.damping", positive=True), dirs,
+                              _num(sd.get("drift_limit", 0.005), "seismic.drift_limit", positive=True),
+                              _num(sd.get("nu", 0.5), "seismic.nu", positive=True))
+    return dyn, sei
 
 
 def load_any(path_or_data):

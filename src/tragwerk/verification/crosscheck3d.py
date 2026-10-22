@@ -129,3 +129,49 @@ def run_crosschecks3d(seeds=range(8)) -> list[dict]:
             continue
         out += [fn(s) for s in seeds]
     return out
+
+
+def compare_opensees_modal(seed: int, modes: int = 6) -> dict:
+    """Natural frequencies and mode shapes against OpenSees with the same (lumped) masses."""
+    import openseespy.opensees as ops
+    from ..modal import modal
+    d = rectangular_frame3d(seed)
+    d["dynamics"] = {"modes": modes, "mass": "lumped", "segments": 1}
+    model = parse_model3d(d)
+    mr = modal(model)
+    fa = mr.analysis
+    ops.wipe()
+    ops.model("basic", "-ndm", 3, "-ndf", 6)
+    tags = {nid: k + 1 for k, nid in enumerate(fa.node_ids)}
+    for nid, n in model.nodes.items():
+        ops.node(tags[nid], n.x, n.y, n.z)
+        k = fa.nidx[nid]
+        ops.mass(tags[nid], *[float(mr.M[6 * k + q, 6 * k + q]) for q in range(6)])
+    for nid, sp in model.supports.items():
+        ops.fix(tags[nid], *[int(f) for f in sp.fix])
+    for k, (mid, m) in enumerate(model.members.items()):
+        md = fa.members[mid]
+        s = model.sections[m.section]
+        E = analysis_modulus3d(s)
+        ops.geomTransf("Linear", k + 1, *md.lam[2])
+        ops.element("elasticBeamColumn", k + 1, tags[m.i], tags[m.j], s.area_m2, E, E / (2 * (1 + NU_CONCRETE)),
+                    s.J_m4, s.Iy_m4, s.Iz_m4, k + 1)
+    lam = np.array(ops.eigen("-fullGenLapack", modes))
+    w = np.sqrt(lam)
+    dfreq = float(np.max(np.abs(w - mr.omega[:modes]) / mr.omega[:modes]))
+    macs = []
+    for i in range(modes):
+        v = np.array([ops.nodeEigenvector(tags[nid], i + 1)[q] for nid in fa.node_ids for q in range(6)])
+        p = mr.phi[:, i]
+        macs.append(float((p @ v) ** 2 / ((p @ p) * (v @ v))))
+    ops.wipe()
+    return {"kind": "modal", "solver": "OpenSees modal", "seed": seed, "nodes": len(model.nodes), "members": len(model.members),
+            "modes": modes, "frequency": dfreq, "mac": min(macs)}
+
+
+def run_modal_crosschecks(seeds=range(6)) -> list[dict]:
+    try:
+        __import__("openseespy")
+    except ImportError:
+        return []
+    return [compare_opensees_modal(s) for s in seeds]

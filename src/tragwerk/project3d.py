@@ -47,7 +47,20 @@ def run3d(model: Model3D) -> ProjectResult:
     combos = generate(model)
     params = make_params({k: v for k, v in model.settings.params.items() if k not in COMBO_KEYS})
     res = ProjectResult(model, fa, cases, combos, params, {}, {}, {})
+    res.modal = res.seismic = None
     warnings = []
+    if model.dynamics is not None or model.seismic is not None:
+        from .modal import modal
+        res.modal = modal(model, model.dynamics)
+        warnings += res.modal.warnings
+        if model.seismic is not None:
+            from .seismic import pseudo_cases, rsa, seismic_combinations
+            sr = rsa(model, fa, cases, res.modal)
+            res.seismic = sr
+            warnings += sr.warnings
+            cases.update(pseudo_cases(fa, sr, model))
+            combos = seismic_combinations(model, combos, sr.gravity_factors)
+            res.combos = combos
     names = ("X", "Y", "Z")
     for d in fa.auto_fixed:
         warnings.append(f"Node '{fa.node_ids[d // 6]}': rotation about {names[d % 6 - 3]} has no stiffness (released on every member) and was restrained automatically.")
@@ -80,6 +93,9 @@ def run3d(model: Model3D) -> ProjectResult:
             cache[m.section] = checks3d.section_models(model.sections[m.section], params)
         if model.settings.design_code == "EC2":
             res.checks[mid] = checks3d.check_member3d(m, cache[m.section], _forces(res, mid), params)
+            if res.seismic is not None and mid in res.seismic.drift:
+                from .seismic import drift_check
+                res.checks[mid].append(drift_check(mid, res.seismic))
         else:
             res.checks[mid] = sia262.check_member(m, None, None, None, params)
     res.warnings = warnings
@@ -112,4 +128,23 @@ def to_dict3d(res: ProjectResult) -> dict:
         "reactions": res.reactions,
         "checks": {mid: [c.to_dict() for c in lst] for mid, lst in res.checks.items()},
     }
+    mr = getattr(res, "modal", None)
+    if mr is not None:
+        out["modal"] = {
+            "settings": {"modes": mr.settings.modes, "mass": mr.settings.mass, "segments": mr.settings.segments},
+            "mass_factors": mr.factors, "total_mass_t": mr.mtot,
+            "modes": [{"mode": k + 1, "omega": float(mr.omega[k]), "f_hz": float(mr.freq[k]), "T_s": float(mr.period[k]),
+                       **{f"mass_ratio_{d}": float(mr.ratio(d)[k]) for d in ("X", "Y", "Z")}} for k in range(len(mr.omega))],
+            "shapes": {nid: _arr(mr.phi[6 * mr.analysis.nidx[nid]:6 * mr.analysis.nidx[nid] + 6].T) for nid in m.nodes},
+        }
+    sr = getattr(res, "seismic", None)
+    if sr is not None:
+        st = sr.settings
+        out["seismic"] = {
+            "settings": {"agR": st.agR, "importance": st.importance, "ground": st.ground, "spectrum_type": st.spectrum_type, "q": st.q,
+                         "beta": st.beta, "damping": st.damping, "directions": list(st.directions), "drift_limit": st.drift_limit, "nu": st.nu},
+            "Sd": _arr(sr.Sd), "base_shear": sr.base_shear,
+            "storeys": [{"z0": r["z0"], "z1": r["z1"], "P": r["P"], "V": r["V"], "dr": r["dr"], "theta": r["theta"]} for r in sr.storeys],
+            "displacements": {nid: _arr(v) for nid, v in sr.displacements.items()},
+        }
     return _plain(out)

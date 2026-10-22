@@ -58,7 +58,7 @@ def make_params(overrides: dict | None = None) -> EC2Params:
     if not overrides:
         return EC2Params()
     known = {f.name for f in fields(EC2Params)}
-    unknown = sorted(set(overrides) - known - {"gamma_G_sup", "gamma_G_inf", "gamma_Q", "xi", "psi"})
+    unknown = sorted(set(overrides) - known - {"gamma_G_sup", "gamma_G_inf", "gamma_Q", "gamma_Q_traffic", "xi", "psi"})
     if unknown:
         raise ValueError(f"unknown design parameter(s): {', '.join(unknown)}")
     return replace(EC2Params(), **{k: float(v) for k, v in overrides.items() if k in known})
