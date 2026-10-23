@@ -5,6 +5,10 @@ POST /v1/report       model JSON -> HTML calculation report
 POST /v1/report.pdf   model JSON -> PDF calculation report (needs playwright)
 POST /v1/building     building spec -> 3D model JSON (2D and 3D models are accepted everywhere)
 POST /v1/bridge       bridge spec -> 3D model JSON of a continuous girder bridge
+POST /v1/buckling     {"model": 3D model, "modes": 4, "segments": 4} -> α_cr per ULS combination, buckling modes
+POST /v1/fe/design    FE model -> EN 1992-1-1 Annex F reinforcement design and a bar proposal
+POST /v1/fe/nonlinear {"model": FE model, "options": NLOptions fields} -> load path, capacity, crack and yield summary
+POST /v1/fe/time-history {"model": FE model, "record": {...}, "options": DynOptions fields} -> histories and energies
 GET  /v1/verification -> benchmark results JSON
 GET  /v1/examples/{name}
 GET  /v1/health
@@ -27,7 +31,7 @@ from .solver import StructureUnstable
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 
 app = FastAPI(title="Tragwerk API", version=__version__,
-              description="Linear frame analysis and Eurocode 2 checks with traceable calculation steps.")
+              description="Frame, building, bridge and plane FE analysis (linear, nonlinear, dynamic, buckling) with Eurocode checks and traceable calculation steps.")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
 
 
@@ -112,6 +116,75 @@ def report_pdf(model: dict = Body(...), author: str = "", project: str = "Projec
         data = path.read_bytes()
     return Response(data, media_type="application/pdf",
                     headers={"Content-Disposition": 'attachment; filename="calculation.pdf"'})
+
+
+def _fe_model(model: dict):
+    from .fe2d import FEError, parse_fe
+    try:
+        return parse_fe(model)
+    except FEError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+
+def _options(cls, opts: dict, what: str):
+    from dataclasses import fields
+    names = {f.name for f in fields(cls)}
+    bad = sorted(set(opts or {}) - names)
+    if bad:
+        raise HTTPException(status_code=422, detail=f"{what}: unknown option {bad[0]!r} (allowed: {', '.join(sorted(names))})")
+    return cls(**{k: tuple(v) if isinstance(v, list) else v for k, v in (opts or {}).items()})
+
+
+@app.post("/v1/buckling")
+def buckling_endpoint(body: dict = Body(...)):
+    from .buckling import buckling, to_dict_buckling
+    from .model3d import load_any
+    try:
+        m = load_any(body.get("model", {}))
+        if not getattr(m, "is3d", False):
+            raise ValueError("linear buckling needs a 3D model (tragwerk3d/0.1)")
+        br = buckling(m, modes=int(body.get("modes", 4)), segments=int(body.get("segments", 4)))
+    except (ModelError, StructureUnstable, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return to_dict_buckling(br, m)
+
+
+@app.post("/v1/fe/design")
+def fe_design(model: dict = Body(...)):
+    from .fe2d import FEError
+    from .fe2d_design import design_reinforcement, propose_layers, to_dict_design
+    m = _fe_model(model)
+    try:
+        des = design_reinforcement(m)
+    except FEError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    out = to_dict_design(m, des)
+    layers, notes = propose_layers(m, des)
+    out["proposal"] = {"layers": layers, "notes": notes}
+    return out
+
+
+@app.post("/v1/fe/nonlinear")
+def fe_nonlinear(body: dict = Body(...)):
+    from .fe2d import FEError
+    from .fe2d_nl import NLOptions, run_nonlinear, summary
+    m = _fe_model(body.get("model", {}))
+    try:
+        return summary(run_nonlinear(m, _options(NLOptions, body.get("options"), "options")))
+    except (FEError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+
+@app.post("/v1/fe/time-history")
+def fe_time_history(body: dict = Body(...)):
+    from .dynamics_nl import DynOptions, fe_dynamic, parse_record, to_dict_dynamic
+    from .fe2d import FEError
+    m = _fe_model(body.get("model", {}))
+    try:
+        rec = parse_record(body.get("record", {}))
+        return to_dict_dynamic(fe_dynamic(m, rec, _options(DynOptions, body.get("options"), "options")), rec, every=int(body.get("every", 1)))
+    except (FEError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
 
 
 @app.get("/v1/verification")

@@ -199,6 +199,66 @@ def test_fe_lab_matches_python(page):
     assert not errors, errors
 
 
+def test_buckling_matches_python(page):
+    """α_cr of every ULS combination and the governing buckling modes equal tragwerk.buckling; mode rows select the view."""
+    import numpy as np
+
+    from tragwerk.buckling import buckling
+    pg, errors = page
+    J = "window.TragwerkStudio3D"
+    if pg.locator("#mode-fe").is_visible():
+        pg.click("#mode-fe [data-mode='3d']")
+    pg.select_option("#b-preset", "office")
+    _idle(pg)
+    pg.wait_for_function(f"{J}.S.buckRes && !{J}.S.buckProg", timeout=120000)
+    js = pg.evaluate(f"({{g: {J}.S.buckRes.governing, a: {J}.S.buckRes.alpha, c: {J}.S.buckRes.combos.map((c) => [c.id, c.alpha_cr]), o: {J}.S.buck}})")
+    br = buckling(parse_model3d(pg.evaluate(f"{J}.S.data")), modes=js["o"]["modes"], segments=js["o"]["segments"])
+    assert js["g"] == br.governing and np.allclose(js["a"], br.alpha, rtol=1e-8)
+    assert [c[0] for c in js["c"]] == [c.id for c in br.combos]
+    assert np.allclose([c[1] for c in js["c"]], [c.alpha_cr for c in br.combos], rtol=1e-8)
+    pg.click("[data-rtab=modes]")
+    pg.click("tr[data-bmode='1']")
+    assert pg.evaluate(f"{J}.S.source") == "buck:1" and pg.evaluate(f"{J}.S.show") == "modes"
+    pg.wait_for_function("document.getElementById('b-legend').textContent.includes('Buckling mode 2')", timeout=10000)
+    pg.click("[data-show=util]")
+    assert not errors, errors
+
+
+def test_fe_nonlinear_matches_python(page):
+    """Nonlinear runs in the FE lab (worker) give the same load factors as tragwerk.fe2d_nl."""
+    from dataclasses import fields
+
+    from tragwerk.fe2d import parse_fe
+    from tragwerk.fe2d_nl import NLOptions, run_nonlinear
+    pg, errors = page
+    if pg.locator("#mode-3d").is_visible():
+        pg.click("#mode-3d [data-mode='fe']")
+    pg.wait_for_function("window.TragwerkFE && window.TragwerkFE.S.res", timeout=30000)
+    names = {f.name for f in fields(NLOptions)}
+    for key in ("panel", "hill", "elastica"):
+        pg.select_option("#f-preset", key)
+        pg.wait_for_function("document.getElementById('f-busy').hidden", timeout=30000)
+        pg.evaluate("window.TragwerkFE.runNonlinear()")
+        pg.wait_for_function("window.TragwerkFE.S.nl && !window.TragwerkFE.S.nlRun", timeout=120000)
+        js = pg.evaluate("({lam: window.TragwerkFE.S.nl.steps.map((s) => s.lam), o: window.TragwerkFE.S.nl.options, m: window.TragwerkFE.S.model})")
+        res = run_nonlinear(parse_fe(js["m"]), NLOptions(**{k: v for k, v in js["o"].items() if k in names}))
+        peak_py = max(s.lam for s in res.steps)
+        assert abs(max(js["lam"]) - peak_py) <= 5e-3 * abs(peak_py), (key, max(js["lam"]), peak_py)
+        assert pg.evaluate("window.TragwerkFE.S.src") == "nl"
+        if key == "panel":                                 # mesh check: the panel's capacity does not depend on the mesh
+            pg.click("[data-frtab=nl]")
+            pg.click("#f-mesh2")
+            pg.wait_for_function("window.TragwerkFE.S.nlMesh && window.TragwerkFE.S.nlMesh.rows.length === 2 && !window.TragwerkFE.S.nlMesh.running", timeout=60000)
+            lams = pg.evaluate("window.TragwerkFE.S.nlMesh.rows.map((r) => r.lam)")
+            assert abs(lams[1] - lams[0]) <= 1e-3 * lams[0]
+            assert "The meshes agree" in pg.locator("#f-results").inner_text()
+    for f in ("crack", "s2", "umag") if pg.locator("[data-field=crack]").count() else ("umag",):
+        if pg.locator(f"[data-field={f}]").count():
+            pg.click(f"[data-field={f}]")
+    pg.click("#mode-fe [data-mode='3d']")
+    assert not errors, errors
+
+
 def test_bridge_matches_python(page):
     """The bridge presets in the studio give the same results as the Python core."""
     pg, errors = page

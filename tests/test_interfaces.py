@@ -127,3 +127,69 @@ def test_browser_app_builds(tmp_path):
     import re
     for src in re.findall(r'<script src="([^"]+)"', text):
         assert src.startswith("https://cdnjs.cloudflare.com/ajax/libs/") and re.search(r"/r?\d+(\.\d+)*/", src)
+
+
+# ---------------------------------------------------------------- nonlinear FE, design, time history, buckling
+def _rc_panel(n=2):
+    return {"schema": "tragwerk-fe/0.1", "name": "RC panel", "analysis": "plane_stress", "element": "Q4",
+            "material": {"E_MPa": 30000, "nu": 0.0, "thickness_m": 0.2, "density_kNm3": 0, "model": "rc", "fck_MPa": 30, "values": "mean"},
+            "design": {"member": "none"}, "reinforcement": {"k": 1.0, "layers": [{"dir": "x", "dia_mm": 12, "spacing_mm": 150, "faces": 2},
+                                                                                 {"dir": "y", "dia_mm": 12, "spacing_mm": 150, "faces": 2}]},
+            "geometry": {"type": "rectangle", "Lx": 1, "Ly": 1, "h": 1 / n},
+            "supports": [{"at": [0, 0], "ux": True, "uy": True}, {"at": [1, 0], "uy": True}],
+            "loads": [{"edge": "right", "qy": 200}, {"edge": "left", "qy": -200}, {"edge": "top", "qx": 200}, {"edge": "bottom", "qx": -200}],
+            "self_weight": False, "nonlinear": {"control": "arc", "combination": "char", "steps": 10, "to_failure": True, "max_steps": 60, "tol": 1e-6}}
+
+
+def test_cli_fe_design_and_nonlinear(tmp_path, capsys):
+    p, out = tmp_path / "panel.json", tmp_path / "r.json"
+    p.write_text(json.dumps(_rc_panel()))
+    assert main(["run", str(p), "--design", "--nonlinear", "--json", str(out)]) == 0
+    r = json.loads(out.read_text())
+    rho = 2 * 3.14159265 * 36 / 150 / 200                  # 2 faces of Ø12 @ 150 in 200 mm
+    assert r["nonlinear"]["lam_peak"] == pytest.approx(rho * 1.1 * 500, rel=1e-3)   # τ_u = ρ f_y, f_y = 1.1 f_yk (mean values)
+    assert r["design"]["summary"]["max_As_req_x"] > 0 and r["design"]["proposal"]["layers"]
+    text = capsys.readouterr().out
+    assert "nonlinear:" in text and "design (Annex F" in text
+    bad = _rc_panel()
+    bad["nonlinear"]["no_such_option"] = 1
+    p.write_text(json.dumps(bad))
+    assert main(["run", str(p), "--nonlinear"]) == 3
+
+
+def test_cli_buckling(tmp_path, capsys):
+    b, out = tmp_path / "b.json", tmp_path / "r.json"
+    assert main(["building", "--out", str(b)]) == 0
+    data = json.loads(b.read_text())
+    from tragwerk.building import generate_building
+    small = generate_building({"spans_x": [6.0], "spans_y": [5.0], "storeys": [3.5, 3.2]})
+    b.write_text(json.dumps(small))
+    main(["run", str(b), "--buckling", "--buckling-modes", "2", "--json", str(out)])
+    r = json.loads(out.read_text())
+    assert r["buckling"]["governing"] and len(r["buckling"]["alpha"]) == 2 and r["buckling"]["alpha"][0] > 1
+    assert "buckling: α_cr" in capsys.readouterr().out
+    assert data["schema"] == "tragwerk3d/0.1"
+
+
+def test_api_buckling_and_fe(client):
+    from tragwerk.building import generate_building
+    small = generate_building({"spans_x": [6.0], "spans_y": [5.0], "storeys": [3.5]})
+    r = client.post("/v1/buckling", json={"model": small, "modes": 2, "segments": 2})
+    assert r.status_code == 200 and r.json()["alpha"][0] > 1
+    assert client.post("/v1/buckling", json={"model": json.loads(EX.read_text())}).status_code == 422
+    panel = _rc_panel()
+    opts = panel.pop("nonlinear")
+    r = client.post("/v1/fe/nonlinear", json={"model": panel, "options": opts})
+    assert r.status_code == 200 and r.json()["status"] in ("post-peak", "limit", "drop", "complete", "max-steps")
+    assert client.post("/v1/fe/nonlinear", json={"model": panel, "options": {"bad": 1}}).status_code == 422
+    r = client.post("/v1/fe/design", json=panel)
+    assert r.status_code == 200 and "proposal" in r.json()
+    wall = {"schema": "tragwerk-fe/0.1", "element": "Q4", "analysis": "plane_stress",
+            "material": {"E_MPa": 30000, "nu": 0.2, "thickness_m": 0.25, "density_kNm3": 25},
+            "geometry": {"type": "rectangle", "Lx": 2.0, "Ly": 4.0, "h": 1.0}, "self_weight": True,
+            "supports": [{"edge": "bottom", "ux": True, "uy": True}], "loads": [{"edge": "top", "qy": -100}]}
+    rec = {"type": "synthetic", "ag_g": 0.2, "soil": "B", "duration_s": 3.0, "dt_s": 0.01, "seed": 1, "rise_s": 0.5, "strong_s": 1.5}
+    r = client.post("/v1/fe/time-history", json={"model": wall, "record": rec, "every": 5})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "complete" and body["energy_balance_error"] < 1e-4 and len(body["t_s"]) == len(body["u_mon_m"])

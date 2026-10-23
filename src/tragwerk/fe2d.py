@@ -12,8 +12,9 @@ functions N_i(ξ, η)
     m_e = ∫∫ ρ t Nᵀ N det J dξ dη,   f_e = ∫ Nᵀ t̄ ds + ∫∫ Nᵀ b t dA
 
 Elements: T3 (constant strain triangle), T6 (linear strain triangle), Q4
-(bilinear quadrilateral) and Q8 (serendipity quadrilateral), integrated with
-Gauss quadrature (T3 1 point, T6 3 points, Q4 2×2, Q8 3×3). Stresses are
+(bilinear quadrilateral), Q8 (serendipity quadrilateral) and Q8R (Q8 with
+reduced 2×2 integration), integrated with Gauss quadrature (T3 1 point, T6 3
+points, Q4 and Q8R 2×2, Q8 3×3). Stresses are
 recovered at the Gauss points and extrapolated to the nodes (2×2 points for Q4
 and Q8, 3 points for T6), then averaged over the elements meeting at a node.
 
@@ -32,10 +33,12 @@ from scipy.sparse import coo_matrix
 from scipy.sparse.linalg import spsolve
 
 SCHEMA_FE = "tragwerk-fe/0.1"
-ELEMENT_TYPES = ("T3", "T6", "Q4", "Q8")
-NNODES = {"T3": 3, "T6": 6, "Q4": 4, "Q8": 8}
+ELEMENT_TYPES = ("T3", "T6", "Q4", "Q8", "Q8R")
+NNODES = {"T3": 3, "T6": 6, "Q4": 4, "Q8": 8, "Q8R": 8}
 EDGES = {"T3": [(0, 1), (1, 2), (2, 0)], "T6": [(0, 3, 1), (1, 4, 2), (2, 5, 0)],
          "Q4": [(0, 1), (1, 2), (2, 3), (3, 0)], "Q8": [(0, 4, 1), (1, 5, 2), (2, 6, 3), (3, 7, 0)]}
+EDGES["Q8R"] = EDGES["Q8"]
+QUADRATIC = ("T6", "Q8", "Q8R")
 Q4_NODES = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]], dtype=float)
 Q8_NODES = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [1, 0], [0, 1], [-1, 0]], dtype=float)
 G2 = 1 / math.sqrt(3)
@@ -66,7 +69,7 @@ def shape(etype: str, xi: float, eta: float) -> tuple[np.ndarray, np.ndarray]:
         N = 0.25 * (1 + xi * xs) * (1 + eta * es)
         dN = np.array([0.25 * xs * (1 + eta * es), 0.25 * es * (1 + xi * xs)])
         return N, dN
-    if etype == "Q8":
+    if etype in ("Q8", "Q8R"):
         N, dN = np.zeros(8), np.zeros((2, 8))
         for i, (a, b) in enumerate(Q8_NODES):
             if i < 4:
@@ -87,8 +90,8 @@ def shape(etype: str, xi: float, eta: float) -> tuple[np.ndarray, np.ndarray]:
 
 def gauss(etype: str, purpose: str = "stiffness") -> list[tuple[float, float, float]]:
     """Gauss points (ξ, η, w) of the parent element."""
-    if etype in ("Q4", "Q8"):
-        if etype == "Q4" and purpose == "stiffness":
+    if etype in ("Q4", "Q8", "Q8R"):
+        if etype in ("Q4", "Q8R") and purpose == "stiffness":
             pts, w = [-G2, G2], [1.0, 1.0]
         else:
             pts, w = [-G3, 0.0, G3], [5 / 9, 8 / 9, 5 / 9]
@@ -196,7 +199,7 @@ def _mid_pairs(etype: str) -> list[tuple[int, int, int]]:
     """(midside node, corner a, corner b) of quadratic elements."""
     if etype == "T6":
         return [(3, 0, 1), (4, 1, 2), (5, 2, 0)]
-    if etype == "Q8":
+    if etype in ("Q8", "Q8R"):
         return [(4, 0, 1), (5, 1, 2), (6, 2, 3), (7, 3, 0)]
     return []
 
@@ -214,8 +217,12 @@ class FEModel:
     nodes: np.ndarray              # (n, 2)
     elements: np.ndarray           # (ne, nn)
     fixed: dict = field(default_factory=dict)      # dof -> prescribed value (m)
-    forces: np.ndarray = None      # (2n,)
+    forces: np.ndarray = None      # (2n,) all applied loads (G and Q), without self weight
+    forces_q: np.ndarray = None    # (2n,) the variable (Q) part of forces
     self_weight: bool = False
+    material: dict = field(default_factory=dict)   # normalised material model, kN/m² internally
+    reinforcement: dict = field(default_factory=dict)
+    design: dict = field(default_factory=dict)     # partial and combination factors, member type
     geometry: dict = field(default_factory=dict)
     edges: dict = field(default_factory=dict)      # name -> list of element edges (tuples of node indices)
     meta: dict = field(default_factory=dict)
@@ -258,14 +265,14 @@ def mesh_rectangle(Lx: float, Ly: float, h: float, etype: str, openings=()) -> t
 
 def _assemble_grid(X, Y, point, keep, nx, ny, etype):
     """Elements on a structured (doubled) index grid, nodes numbered for a narrow band."""
-    quad = etype in ("T6", "Q8")
+    quad = etype in QUADRATIC
     conn = []
     for i, j in keep:
         a, b, c, d = (2 * i, 2 * j), (2 * i + 2, 2 * j), (2 * i + 2, 2 * j + 2), (2 * i, 2 * j + 2)
         mid = lambda p, q: ((p[0] + q[0]) // 2, (p[1] + q[1]) // 2)  # noqa: E731
         if etype == "Q4":
             conn.append([a, b, c, d])
-        elif etype == "Q8":
+        elif etype in ("Q8", "Q8R"):
             conn.append([a, b, c, d, mid(a, b), mid(b, c), mid(c, d), mid(d, a)])
         else:
             tris = [(a, b, c), (a, c, d)] if (i + j) % 2 == 0 else [(a, b, d), (b, c, d)]
@@ -304,6 +311,27 @@ def mesh_plate_hole(W: float, a: float, n_theta: int, n_r: int, etype: str, grad
     return nodes, elements
 
 
+def mesh_ring(a: float, b: float, n_theta: int, n_r: int, etype: str, grading: float = 1.0):
+    """Quarter of a thick ring a ≤ r ≤ b, 0 ≤ θ ≤ 90° (mapped mesh, midside nodes on the arcs)."""
+    if not 0 < a < b:
+        raise FEError("the inner radius must be smaller than the outer radius")
+    nt = n_theta
+
+    def point(p, q):                                   # p along θ (doubled grid), q radial
+        th = (math.pi / 2) * p / (2 * nt)
+        rs = lambda j: (j / n_r) ** grading                          # noqa: E731
+        s = rs(q // 2) if q % 2 == 0 else 0.5 * (rs(q // 2) + rs(q // 2 + 1))
+        r = a + (b - a) * s
+        if p == 0:
+            return (r, 0.0)
+        if p == 2 * nt:
+            return (0.0, r)
+        return (r * math.cos(th), r * math.sin(th))
+
+    keep = [(j, i) for i in range(nt) for j in range(n_r)]
+    return _assemble_grid(None, None, lambda p, q: point(q, p), keep, n_r, nt, etype)
+
+
 def _edge_sets(nodes: np.ndarray, elements: np.ndarray, etype: str, geometry: dict) -> dict:
     lo, hi = nodes.min(axis=0), nodes.max(axis=0)
     tol = 1e-9 * max(float(np.max(hi - lo)), 1.0)
@@ -312,6 +340,10 @@ def _edge_sets(nodes: np.ndarray, elements: np.ndarray, etype: str, geometry: di
     if geometry.get("type") == "plate_hole":
         a = geometry["a"]
         on["hole"] = lambda p: abs(math.hypot(p[0], p[1]) - a) < 1e-7 * a
+    if geometry.get("type") == "ring":
+        ra, rb = geometry["a"], geometry["b"]
+        on["inner"] = lambda p: abs(math.hypot(p[0], p[1]) - ra) < 1e-7 * rb
+        on["outer"] = lambda p: abs(math.hypot(p[0], p[1]) - rb) < 1e-7 * rb
     out = {k: [] for k in on}
     for e in elements:
         for ed in EDGES[etype]:
@@ -335,12 +367,25 @@ def _in_range(nodes: np.ndarray, edges: list, name: str, spec: dict, what: str) 
     return [ed for ed in edges if all(lo - tol <= nodes[i][c] <= hi + tol for i in ed)]
 
 
+SUPPORT_KEYS = ("edge", "at", "ux", "uy", "from", "to", "label")
+LOAD_KEYS = ("edge", "at", "qx", "qy", "p", "fx", "fy", "case", "profile", "P", "dir", "from", "to", "label")
+
+
+def _known(spec: dict, keys: tuple, what: str) -> None:
+    """Reject misspelt keys instead of silently ignoring them (a support range written x0/x1 would otherwise
+    support the whole edge)."""
+    bad = [k for k in spec if k not in keys]
+    if bad:
+        raise FEError(f"{what}: unknown key {bad[0]!r} (allowed: {', '.join(keys)})")
+
+
 def _nearest(nodes: np.ndarray, at) -> int:
     return int(np.argmin(np.hypot(nodes[:, 0] - at[0], nodes[:, 1] - at[1])))
 
 
-def _edge_load(nodes, edge: tuple, qfun) -> list[tuple[int, float, float]]:
-    """Consistent nodal forces of a traction q(x, y) = (qx, qy) kN/m along one element edge."""
+def _edge_load(nodes, edge: tuple, qfun, p: float = 0.0) -> list[tuple[int, float, float]]:
+    """Consistent nodal forces of a traction q(x, y) = (qx, qy) kN/m along one element edge, plus a
+    pressure p (kN/m, positive pushing into the element: traction −p·n with n the outward normal)."""
     pts = nodes[list(edge)]
     if len(edge) == 2:
         gp, gw = [-G3, 0.0, G3], [5 / 9, 8 / 9, 5 / 9]
@@ -351,6 +396,7 @@ def _edge_load(nodes, edge: tuple, qfun) -> list[tuple[int, float, float]]:
             ds = math.hypot(*dx)
             x, y = N @ pts
             qx, qy = qfun(x, y)
+            qx, qy = qx - p * dx[1] / ds, qy + p * dx[0] / ds          # edges run counter-clockwise round the element
             for k, i in enumerate(edge):
                 out[i][0] += w * N[k] * qx * ds
                 out[i][1] += w * N[k] * qy * ds
@@ -365,6 +411,7 @@ def _edge_load(nodes, edge: tuple, qfun) -> list[tuple[int, float, float]]:
         ds = math.hypot(*dx)
         x, y = N @ pts
         qx, qy = qfun(x, y)
+        qx, qy = qx - p * dx[1] / ds, qy + p * dx[0] / ds
         for k, i in enumerate(edge):
             out[i][0] += w * N[k] * qx * ds
             out[i][1] += w * N[k] * qy * ds
@@ -384,6 +431,117 @@ def _num(v, what, lo=None, hi=None):
 MAX_NODES = 40000
 
 
+def concrete_props(fck: float) -> dict:
+    """EN 1992-1-1 Table 3.1 (fck in MPa): fcm, fctm, fctk,0.05, Ecm (MPa)."""
+    fcm = fck + 8.0
+    fctm = 0.30 * fck ** (2 / 3) if fck <= 50 else 2.12 * math.log(1 + fcm / 10)
+    return {"fcm": fcm, "fctm": fctm, "fctk005": 0.7 * fctm, "Ecm": 22000.0 * (fcm / 10) ** 0.3}
+
+
+def _parse_design(d: dict) -> dict:
+    return {"gamma_G": _num(d.get("gamma_G", 1.35), "design.gamma_G", 0.0), "gamma_Q": _num(d.get("gamma_Q", 1.5), "design.gamma_Q", 0.0),
+            "psi2": _num(d.get("psi2", 0.3), "design.psi2", 0.0, 1.0), "gamma_c": _num(d.get("gamma_c", 1.5), "design.gamma_c", 1.0),
+            "gamma_s": _num(d.get("gamma_s", 1.15), "design.gamma_s", 1.0), "alpha_cc": _num(d.get("alpha_cc", 1.0), "design.alpha_cc", 0.5, 1.0),
+            "member": d.get("member", "wall") if d.get("member", "wall") in ("wall", "deep_beam", "none") else _bad("design.member: wall, deep_beam or none"),
+            "w_max_mm": _num(d.get("w_max_mm", 0.3), "design.w_max_mm", 0.01)}
+
+
+def _bad(msg):
+    raise FEError(msg)
+
+
+def _parse_material(mat: dict, analysis: str, design: dict, reinf: dict) -> dict:
+    model = mat.get("model", "elastic")
+    if model not in ("elastic", "j2", "rc"):
+        raise FEError("material.model must be elastic, j2 or rc")
+    out = {"model": model}
+    if model == "j2":
+        out["fy"] = _num(mat.get("fy_MPa", 355), "material.fy_MPa", 1e-3) * 1000.0
+        out["H"] = _num(mat.get("H_MPa", 0.0), "material.H_MPa", 0.0) * 1000.0
+    if model == "rc":
+        if analysis != "plane_stress":
+            raise FEError("the reinforced concrete model is a plane stress (membrane) model")
+        fck = _num(mat.get("fck_MPa", 30), "material.fck_MPa", 12, 90)
+        cp = concrete_props(fck)
+        values = mat.get("values", "design")
+        if values not in ("design", "mean"):
+            raise FEError("material.values must be design or mean")
+        fyk = reinf.get("fyk", 500.0)
+        if values == "design":
+            fc = design["alpha_cc"] * fck / design["gamma_c"]
+            fct = cp["fctk005"] / design["gamma_c"]
+            fy = fyk / design["gamma_s"]
+        else:
+            fc, fct, fy = cp["fcm"], cp["fctm"], 1.1 * fyk
+        soft = mat.get("softening", "mcft")
+        if soft not in ("mcft", "ec2"):
+            raise FEError("material.softening must be mcft or ec2")
+        tension = mat.get("tension", "stiffening")
+        if tension not in ("stiffening", "none"):
+            raise FEError("material.tension must be stiffening or none")
+        k, euk = reinf.get("k", 1.08), reinf.get("euk", 0.05)
+        Es = reinf.get("Es", 200000.0)
+        eud = 0.9 * euk
+        out.update({"fck": fck, "values": values, "fc": fc * 1000.0, "fct": fct * 1000.0, "eps_c0": _num(mat.get("eps_c0", 0.002), "material.eps_c0", 1e-4, 0.01),
+                    "softening": soft, "tension": tension, "nu_ec2": 0.6 * (1 - fck / 250.0),
+                    "Gf": _num(mat.get("Gf_Nmm", 0.073 * cp["fcm"] ** 0.18), "material.Gf_Nmm", 1e-3),        # N/mm = kN/m (fib MC2010 5.1-9)
+                    "fy": fy * 1000.0, "Es": Es * 1000.0, "Esh": (k - 1) * fy * 1000.0 / max(eud - fy / Es, 1e-6), "eud": eud})
+    return out
+
+
+def _parse_reinforcement(r: dict) -> dict:
+    """Bar layers: a mesh ``{"dir", "dia_mm", "spacing_mm", "faces"}`` or a tie ``{"dir", "dia_mm", "n", "band"}``,
+    each optionally limited to a region ``{"x0", "y0", "x1", "y1"}``. Areas are kept in mm² per m."""
+    out = {"cover_mm": _num(r.get("cover_mm", 30), "reinforcement.cover_mm", 0.0), "fyk": _num(r.get("fyk_MPa", 500), "reinforcement.fyk_MPa", 100, 1000),
+           "Es": _num(r.get("Es_MPa", 200000), "reinforcement.Es_MPa", 1e3), "k": _num(r.get("k", 1.08), "reinforcement.k", 1.0, 1.5),
+           "euk": _num(r.get("euk", 0.05), "reinforcement.euk", 0.01, 0.2), "layers": []}
+    for k, L in enumerate(r.get("layers", [])):
+        w = f"reinforcement.layers[{k}]"
+        d = L.get("dir")
+        if d not in ("x", "y"):
+            raise FEError(f"{w}.dir must be x or y")
+        dia = _num(L.get("dia_mm"), f"{w}.dia_mm", 4, 50)
+        area = math.pi * dia * dia / 4
+        region = L.get("region") or L.get("band")
+        reg = None
+        if region:
+            reg = {q: _num(region.get(q, (-1e9 if q in ("x0", "y0") else 1e9)), f"{w}.region.{q}") for q in ("x0", "y0", "x1", "y1")}
+            if reg["x1"] <= reg["x0"] or reg["y1"] <= reg["y0"]:
+                raise FEError(f"{w}: region needs x1 > x0 and y1 > y0")
+        if "n" in L:                                   # a tie: n bars spread over the band width across the bars
+            if not reg:
+                raise FEError(f"{w}: a tie of n bars needs its band (region)")
+            width = (reg["y1"] - reg["y0"]) if d == "x" else (reg["x1"] - reg["x0"])
+            As = _num(L["n"], f"{w}.n", 1, 200) * area / width
+        else:
+            s_ = _num(L.get("spacing_mm"), f"{w}.spacing_mm", 25, 1000)
+            As = _num(L.get("faces", 2), f"{w}.faces", 1, 2) * area * 1000.0 / s_
+        out["layers"].append({"dir": d, "dia": dia, "As": As, "region": reg, "label": L.get("label", "")})
+    return out
+
+
+def element_centroids(m: "FEModel") -> np.ndarray:
+    return np.array([m.nodes[e].mean(axis=0) for e in m.elements])
+
+
+def element_reinforcement(m: "FEModel") -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Per element: As_x and As_y in mm²/m (both faces) and the largest bar diameter in each direction."""
+    c = element_centroids(m)
+    ne = len(m.elements)
+    As = np.zeros((ne, 2))
+    dia = np.zeros((ne, 2))
+    for L in m.reinforcement.get("layers", []):
+        j = 0 if L["dir"] == "x" else 1
+        if L["region"] is None:
+            inside = np.ones(ne, dtype=bool)
+        else:
+            r = L["region"]
+            inside = (c[:, 0] >= r["x0"]) & (c[:, 0] <= r["x1"]) & (c[:, 1] >= r["y0"]) & (c[:, 1] <= r["y1"])
+        As[inside, j] += L["As"]
+        dia[inside, j] = np.maximum(dia[inside, j], L["dia"])
+    return As[:, 0], As[:, 1], dia[:, 0], dia[:, 1]
+
+
 def parse_fe(data: dict) -> FEModel:
     if data.get("schema") != SCHEMA_FE:
         raise FEError(f"expected schema {SCHEMA_FE!r}")
@@ -397,12 +555,16 @@ def parse_fe(data: dict) -> FEModel:
     t = _num(mat.get("thickness_m", 0.25), "material.thickness_m", 1e-6)
     gamma = _num(mat.get("density_kNm3", 25.0), "material.density_kNm3", 0.0)
     constitutive(E, nu, analysis)
+    design = _parse_design(data.get("design", {}))
+    design["fck"] = _num(mat.get("fck_MPa", 30), "material.fck_MPa", 12, 90)
+    reinf = _parse_reinforcement(data.get("reinforcement", {}))
+    material = _parse_material(mat, analysis, design, reinf)
     g = data.get("geometry", {})
     kind = g.get("type", "rectangle")
     if kind == "rectangle":
         Lx, Ly = _num(g.get("Lx"), "geometry.Lx", 1e-6), _num(g.get("Ly"), "geometry.Ly", 1e-6)
         h = _num(g.get("h", min(Lx, Ly) / 8), "geometry.h", 1e-6)
-        if (Lx / h) * (Ly / h) > MAX_NODES / (4 if etype in ("T6", "Q8") else 1):
+        if (Lx / h) * (Ly / h) > MAX_NODES / (4 if etype in QUADRATIC else 1):
             raise FEError("mesh too fine: increase the element size h")
         openings = []
         for k, o in enumerate(g.get("openings", [])):
@@ -415,19 +577,24 @@ def parse_fe(data: dict) -> FEModel:
         W, a = _num(g.get("W"), "geometry.W", 1e-6), _num(g.get("a"), "geometry.a", 1e-6)
         nt, nr = int(_num(g.get("n_theta", 8), "geometry.n_theta", 1, 200)), int(_num(g.get("n_r", 8), "geometry.n_r", 1, 200))
         nodes, elements = mesh_plate_hole(W, a, nt, nr, etype, _num(g.get("grading", 1.6), "geometry.grading", 1.0, 4.0))
+    elif kind == "ring":
+        a, b = _num(g.get("a"), "geometry.a", 1e-6), _num(g.get("b"), "geometry.b", 1e-6)
+        nt, nr = int(_num(g.get("n_theta", 8), "geometry.n_theta", 1, 200)), int(_num(g.get("n_r", 6), "geometry.n_r", 1, 200))
+        nodes, elements = mesh_ring(a, b, nt, nr, etype, _num(g.get("grading", 1.0), "geometry.grading", 1.0, 4.0))
     elif kind == "mesh":
         nodes = np.array([[_num(p[0], "node x"), _num(p[1], "node y")] for p in g.get("nodes", [])], dtype=float)
         elements = np.array(g.get("elements", []), dtype=int)
         if elements.ndim != 2 or elements.shape[1] != NNODES[etype] or elements.min() < 0 or elements.max() >= len(nodes):
             raise FEError(f"geometry.elements must list {NNODES[etype]} valid node indices per {etype} element")
     else:
-        raise FEError(f"geometry.type must be rectangle, plate_hole or mesh, not {kind!r}")
+        raise FEError(f"geometry.type must be rectangle, plate_hole, ring or mesh, not {kind!r}")
     if len(nodes) > MAX_NODES:
         raise FEError(f"{len(nodes)} nodes: at most {MAX_NODES}")
     edges = _edge_sets(nodes, elements, etype, g if kind != "mesh" else {})
     n = len(nodes)
     fixed: dict[int, float] = {}
     for k, s in enumerate(data.get("supports", [])):
+        _known(s, SUPPORT_KEYS, f"supports[{k}]")
         if "edge" in s:
             if s["edge"] not in edges:
                 raise FEError(f"supports[{k}]: unknown edge {s['edge']!r} (one of {', '.join(edges)})")
@@ -448,13 +615,20 @@ def parse_fe(data: dict) -> FEModel:
     if not fixed:
         raise FEError("the model has no supports")
     f = np.zeros(2 * n)
+    fq = np.zeros(2 * n)
     for k, ld in enumerate(data.get("loads", [])):
+        _known(ld, LOAD_KEYS, f"loads[{k}]")
+        case = ld.get("case", "G")
+        if case not in ("G", "Q"):
+            raise FEError(f"loads[{k}].case must be G (permanent) or Q (variable)")
+        target = [f] if case == "G" else [f, fq]
         if "edge" in ld:
             if ld["edge"] not in edges or not edges[ld["edge"]]:
                 raise FEError(f"loads[{k}]: unknown or empty edge {ld.get('edge')!r}")
             eds = _in_range(nodes, edges[ld["edge"]], ld["edge"], ld, f"loads[{k}]")
             if not eds:
                 raise FEError(f"loads[{k}]: no element edges on {ld['edge']!r} in the given range")
+            pr = 0.0
             if ld.get("profile") == "parabolic":
                 P = _num(ld.get("P", 0), f"loads[{k}].P")
                 along = ld.get("dir", "y")
@@ -470,22 +644,55 @@ def parse_fe(data: dict) -> FEModel:
                     return (q, 0.0) if c == 0 else (0.0, q)
             else:
                 qx, qy = _num(ld.get("qx", 0), f"loads[{k}].qx"), _num(ld.get("qy", 0), f"loads[{k}].qy")
+                pr = _num(ld.get("p", 0), f"loads[{k}].p")
 
                 def qfun(x, y, qx=qx, qy=qy):
                     return qx, qy
             for ed in eds:
-                for i, fx, fy in _edge_load(nodes, ed, qfun):
-                    f[2 * i] += fx
-                    f[2 * i + 1] += fy
+                for i, fx, fy in _edge_load(nodes, ed, qfun, pr):
+                    for vec in target:
+                        vec[2 * i] += fx
+                        vec[2 * i + 1] += fy
         elif "at" in ld:
             i = _nearest(nodes, ld["at"])
-            f[2 * i] += _num(ld.get("fx", 0), f"loads[{k}].fx")
-            f[2 * i + 1] += _num(ld.get("fy", 0), f"loads[{k}].fy")
+            for vec in target:
+                vec[2 * i] += _num(ld.get("fx", 0), f"loads[{k}].fx")
+                vec[2 * i + 1] += _num(ld.get("fy", 0), f"loads[{k}].fy")
         else:
             raise FEError(f"loads[{k}] needs an edge or a point 'at'")
     return FEModel(name=str(data.get("name", "")), analysis=analysis, etype=etype, E=E, nu=nu, t=t, gamma=gamma,
-                   nodes=nodes, elements=elements, fixed=fixed, forces=f, self_weight=bool(data.get("self_weight", False)),
-                   geometry=dict(g), edges=edges, raw=data)
+                   nodes=nodes, elements=elements, fixed=fixed, forces=f, forces_q=fq, self_weight=bool(data.get("self_weight", False)),
+                   geometry=dict(g), edges=edges, material=material, reinforcement=reinf, design=design, raw=data)
+
+
+COMBINATIONS = ("char", "uls", "qp")
+
+
+def combination_factors(m: "FEModel", combo: str | None) -> tuple[float, float]:
+    """(a_G, a_Q) for a combination: char G + Q, uls γ_G G + γ_Q Q (EN 1990 6.10), qp G + ψ2 Q."""
+    if combo in (None, "char"):
+        return 1.0, 1.0
+    if combo == "uls":
+        return m.design["gamma_G"], m.design["gamma_Q"]
+    if combo == "qp":
+        return 1.0, m.design["psi2"]
+    raise FEError(f"combination must be one of {', '.join(COMBINATIONS)}")
+
+
+def self_weight_vector(m: "FEModel") -> np.ndarray:
+    f = np.zeros(2 * len(m.nodes))
+    if m.self_weight and m.gamma > 0:
+        for e in m.elements:
+            dofs = np.empty(2 * len(e), dtype=int)
+            dofs[0::2], dofs[1::2] = 2 * e, 2 * e + 1
+            f[dofs] += body_force(m.etype, m.nodes[e], (0.0, -m.gamma), m.t)
+    return f
+
+
+def load_vector(m: "FEModel", combo: str | None = None) -> np.ndarray:
+    aG, aQ = combination_factors(m, combo)
+    fg = m.forces - m.forces_q + self_weight_vector(m)
+    return aG * fg + aQ * m.forces_q
 
 
 # ============================================================== analysis
@@ -520,11 +727,10 @@ class FEResult:
         raise FEError(f"unknown field {name!r}")
 
 
-def assemble(m: FEModel):
+def assemble(m: FEModel, combo: str | None = None):
     n, et = len(m.nodes), m.etype
     C = m.C
     rows, cols, vals = [], [], []
-    f = m.forces.copy()
     for e in m.elements:
         xy = m.nodes[e]
         k, _ = element_stiffness(et, xy, C, m.t)
@@ -533,10 +739,8 @@ def assemble(m: FEModel):
         rows.append(np.repeat(dofs, len(dofs)))
         cols.append(np.tile(dofs, len(dofs)))
         vals.append(k.ravel())
-        if m.self_weight and m.gamma > 0:
-            f[dofs] += body_force(et, xy, (0.0, -m.gamma), m.t)
     K = coo_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))), shape=(2 * n, 2 * n)).tocsr()
-    return K, f
+    return K, load_vector(m, combo)
 
 
 def recover(m: FEModel, u_flat: np.ndarray):
@@ -577,8 +781,8 @@ def recover(m: FEModel, u_flat: np.ndarray):
     return elem_nodal, nodal, gp_out
 
 
-def solve_fe(m: FEModel, prescribed: dict | None = None) -> FEResult:
-    K, f = assemble(m)
+def solve_fe(m: FEModel, prescribed: dict | None = None, combo: str | None = None) -> FEResult:
+    K, f = assemble(m, combo)
     n2 = K.shape[0]
     fixed = dict(m.fixed)
     if prescribed:

@@ -6,7 +6,7 @@
  */
 (function (root) {
   "use strict";
-  const VERSION = "0.3.0";
+  const VERSION = "0.4.0";
 
   // ---------------------------------------------------------------- model
   const LOAD_DIRECTIONS = ["global_x", "global_y", "local_x", "local_y"];

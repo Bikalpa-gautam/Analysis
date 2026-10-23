@@ -10,6 +10,9 @@
 /* 3D studio: same drafting-room tokens as the 2D workspace. The structure is the
    hero; the checker's yellow highlighter marks what is selected. */
 .mode { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.spin { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--rule); border-top-color: var(--ink); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 4px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 .modes { display: inline-flex; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; background: var(--sheet); flex: none; }
 .modes button { border: 0; background: transparent; padding: 0 12px; height: 30px; cursor: pointer; color: var(--ink-2); font-weight: 500; white-space: nowrap; }
 .modes button[aria-selected="true"] { background: var(--ink); color: var(--sheet); }
@@ -237,8 +240,17 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
 <script>
 /*__BRIDGE__*/
 </script>
-<script>
+<script id="s-fe2d">
 /*__FE2D__*/
+</script>
+<script id="s-fe2dnl">
+/*__FE2DNL__*/
+</script>
+<script id="s-fe2ddesign">
+/*__FE2DDESIGN__*/
+</script>
+<script id="s-dynnl">
+/*__DYNNL__*/
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -293,6 +305,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
   const LIST_RANGE = { spans_x: [1, 40], spans_y: [1, 40], storeys: [1, 40], spans: [5, 200], pier_heights: [1, 100], ts_stations: [0, 1] };
   const DYN0 = () => ({ on: true, modes: 12, mass: "consistent", segments: 2, mass_cases: null });
   const SEIS0 = () => ({ on: false, agR: 1.0, importance: 1.0, ground: "B", spectrum_type: 1, q: 1.5, X: true, Y: true, drift_limit: 0.005, nu: 0.5 });
+  const BUCK0 = () => ({ on: true, modes: 4, segments: 4 });
 
   const S = {
     spec: null, gen: "building", base: null, extraSections: {}, edits: [], redo: [], data: null, result: null, error: null,
@@ -301,7 +314,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
     tool: "select", plane: { kind: "XY", at: 0, step: 1.0 }, draw: null, activeSection: null, memberType: "auto", supportKind: "fixed",
     formLoad: { kind: "udl", w: 5, p: 20, a: 1.0, caseId: null, dir: "global_z" }, formNodal: [0, 0, -50, 0, 0, 0], formFloor: { z: null, q: 3, dist: "two_way" },
     formRepeat: { d: [0, 0, 3.2], n: 1, link: true, sup: null }, formMove: [0, 0, 0], formSplit: 2, newNode: [0, 0, 0], newMember: { i: "", j: "" },
-    newCase: { id: "", name: "", type: "variable", category: "B", group: "" }, tables: "", dyn: DYN0(), seis: SEIS0(),
+    newCase: { id: "", name: "", type: "variable", category: "B", group: "" }, tables: "", dyn: DYN0(), seis: SEIS0(), buck: BUCK0(), buckRes: null, buckErr: null,
   };
   try {
     const st = JSON.parse(localStorage.getItem("tragwerk3d.view") || "{}");
@@ -367,15 +380,53 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
         S.error = null;
       } catch (e) { S.error = friendly(e.message); S.result = null; }
     }
+    S.buckRes = null; S.buckErr = null;
     const nids = new Set((S.data ? S.data.nodes : []).map((n) => n.id)), mids = new Set((S.data ? S.data.members : []).map((m) => m.id));
     for (const id of [...S.selM]) if (!mids.has(id)) S.selM.delete(id);
     for (const id of [...S.selN]) if (!nids.has(id)) S.selN.delete(id);
     if (S.sel && !mids.has(S.sel)) { S.sel = null; S.openCheck = null; }
     if (S.selNode && !nids.has(S.selNode)) S.selNode = null;
-    if (S.show === "modes" && !(S.result && S.result.modal)) S.show = "util";
+    if (S.show === "modes" && !(S.result && (S.result.modal || S.buck.on))) S.show = "util";
     $("#b-busy").hidden = true;
     renderHeader(); syncLookControls(); renderSource(); renderLevels(); renderEditorHints(); renderResults();
     V.rebuild(); V.refreshOverlay();
+    startBuckling();
+  }
+  // Linear buckling runs after the main analysis, one ULS combination at a time in ~30 ms slices, so the studio stays
+  // responsive; a new analysis cancels a running job.
+  let buckJob = null, buckTimer = null;
+  function startBuckling() {
+    clearTimeout(buckTimer); buckJob = null; S.buckProg = null;
+    if (!(S.result && S.buck.on)) { bucklingDone(); return; }
+    const model = S.result.model, opts = { modes: S.buck.modes, segments: S.buck.segments };
+    S.buckProg = [0, 0];
+    buckTimer = setTimeout(() => {
+      let job;
+      try { job = T.bucklingJob(model, opts); } catch (e) { S.buckErr = e.message; S.buckProg = null; bucklingDone(); return; }
+      buckJob = job; S.buckProg = [0, job.total];
+      const tick = () => {
+        if (buckJob !== job) return;
+        const t0 = performance.now();
+        try {
+          let done = false;
+          do { done = job.step(); } while (!done && performance.now() - t0 < 30);
+          if (done) { S.buckRes = job.finish(); buckJob = null; S.buckProg = null; bucklingDone(); return; }
+        } catch (e) { S.buckErr = e.message; buckJob = null; S.buckProg = null; bucklingDone(); return; }
+        S.buckProg = [job.done(), job.total];
+        const el = $("#b-buck-prog");
+        if (el) el.textContent = `${S.buckProg[0]} of ${S.buckProg[1]} ULS combinations`;
+        buckTimer = setTimeout(tick, 0);
+      };
+      tick();
+    }, 40);
+  }
+  function bucklingDone() {
+    const has = !!(S.buckRes && S.buckRes.modes.length);
+    if (S.source && S.source.startsWith("buck:") && !has) S.source = S.result && S.result.modal ? "mode:0" : "";
+    if (S.show === "modes" && !(S.result && (S.result.modal || has))) { setShow("util"); return; }
+    syncLookControls();
+    if (S.show === "modes") { renderSource(); V.refreshOverlay(); }
+    if (S.rtab === "modes") renderResults();
   }
   function friendly(msg) {
     if (/no supports/i.test(msg)) return "Add supports: pick the support tool (right of the view) and click the nodes that stand on the ground.";
@@ -699,6 +750,10 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
         ${s.q > 1.5 ? `<p class="hint" style="color:var(--nc)">q > 1.5 assumes ductile design (DCM/DCH); its capacity design rules are not checked here.</p>` : ""}
         <div id="b-spec-svg"></div>
       </div>
+      <div class="group"><div class="group-hd"><h3>Linear buckling, α<sub>cr</sub></h3><label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="b-buck-on" ${S.buck.on ? "checked" : ""}> On</label></div>
+        <p class="hint">(K + α K<sub>G</sub>(N<sub>Ed</sub>)) φ = 0 for every ULS combination: K<sub>G</sub> from the first-order axial forces with cubic shape functions, members divided into elements. α<sub>cr</sub> ≥ 10: second-order effects may be neglected (EN 1993-1-1 5.2.1, EN 1992-1-1 5.8.2(6)); below, they amplify first-order results by about 1/(1 − 1/α<sub>cr</sub>).</p>
+        <div class="grid3"><label class="field">Modes${numIn('id="b-buck-modes"', S.buck.modes, 1, 'min="1" max="12"')}</label><label class="field">Elements per member${numIn('id="b-buck-seg"', S.buck.segments, 1, 'min="1" max="8"')}</label><span></span></div>
+      </div>
     </div>`;
   }
   function spectrumSvg(curve, marks) {
@@ -928,6 +983,9 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
     on("#b-clear", "click", () => { S.edits = []; S.redo = []; afterEdit(); });
     // dynamics tab
     on("#b-dyn-on", "change", (e) => { S.dyn.on = e.target.checked; schedule(60); });
+    on("#b-buck-on", "change", (e) => { S.buck.on = e.target.checked; schedule(60); });
+    on("#b-buck-modes", "input", (e) => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= 12) { S.buck.modes = v; schedule(); } });
+    on("#b-buck-seg", "input", (e) => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= 8) { S.buck.segments = v; schedule(); } });
     on("#b-dyn-modes", "input", (e) => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= 60) { S.dyn.modes = v; schedule(); } });
     on("#b-dyn-mass", "change", (e) => { S.dyn.mass = e.target.value; schedule(60); });
     on("#b-dyn-seg", "input", (e) => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= 8) { S.dyn.segments = v; schedule(); } });
@@ -1006,6 +1064,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
       const lc = r && r.model.load_cases[id]; return lc ? `${lc.id}, ${lc.name}` : id;
     }
     if (src.startsWith("mode:")) return `mode ${+src.slice(5) + 1}`;
+    if (src.startsWith("buck:")) return `buckling mode ${+src.slice(5) + 1}`;
     const c = r && r.combos.combos.find((x) => x.id === src.slice(6));
     return c ? `${c.id}: ${c.label}` : src;
   }
@@ -1047,10 +1106,11 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
     }
     if (!r) { sel.innerHTML = `<option>–</option>`; sel.disabled = true; return; }
     if (show === "modes") {
-      const mr = r.modal;
-      sel.disabled = !mr;
-      sel.innerHTML = mr ? mr.period.map((t, k) => `<option value="mode:${k}">Mode ${k + 1} · T ${t.toFixed(3)} s · X ${(100 * mr.ratio("X")[k]).toFixed(0)} % · Y ${(100 * mr.ratio("Y")[k]).toFixed(0)} %</option>`).join("") : "";
-      if (![...sel.options].some((o) => o.value === S.source)) S.source = "mode:0";
+      const mr = r.modal, br = S.buckRes && S.buckRes.modes.length ? S.buckRes : null;
+      sel.disabled = !mr && !br;
+      sel.innerHTML = (mr ? `<optgroup label="Natural modes">${mr.period.map((t, k) => `<option value="mode:${k}">Mode ${k + 1} · T ${t.toFixed(3)} s · X ${(100 * mr.ratio("X")[k]).toFixed(0)} % · Y ${(100 * mr.ratio("Y")[k]).toFixed(0)} %</option>`).join("")}</optgroup>` : "")
+        + (br ? `<optgroup label="Buckling modes, ${esc(br.governing)}">${br.alpha.map((a, k) => `<option value="buck:${k}">Buckling ${k + 1} · α_cr ${a.toFixed(2)}</option>`).join("")}</optgroup>` : "");
+      if (![...sel.options].some((o) => o.value === S.source)) S.source = mr ? "mode:0" : "buck:0";
       sel.value = S.source;
       return;
     }
@@ -1241,9 +1301,24 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
       ${rows.length ? rows.slice(0, 80).map((x) => { const g = gov(x.mid); return `<button class="crit${x.mid === S.sel ? " sel" : ""}" data-pick="${esc(x.mid)}"><span><b>${esc(x.mid)}</b><span class="meta">${esc(x.m.design.type)} · ${esc(x.m.section)}${g ? " · " + esc(g.title.toLowerCase()) : ""}</span></span>${ubar(x.u, x.st)}${pill(x.st)}</button>`; }).join("") : `<p class="empty">No members match.</p>`}
       ${rows.length > 80 ? `<p class="hint" style="padding:8px 12px">Top 80 of ${rows.length} shown.</p>` : ""}`;
   }
+  function bucklingPanel() {
+    const br = S.buckRes;
+    if (S.buckErr) return `<div style="padding:10px 12px" class="group"><h3>Linear buckling</h3><p class="hint" style="color:var(--bad)">${esc(S.buckErr)}</p></div>`;
+    if (!br && S.buckProg) return `<div style="padding:10px 12px" class="group"><h3>Linear buckling, α<sub>cr</sub></h3><p class="hint"><span class="spin" aria-hidden="true"></span> Computing the critical load factors: <span id="b-buck-prog">${S.buckProg[1] ? `${S.buckProg[0]} of ${S.buckProg[1]} ULS combinations` : "assembling"}</span>…</p></div>`;
+    if (!br) return S.buck.on ? "" : `<div style="padding:10px 12px" class="group"><p class="hint">Linear buckling is off. <button class="link-btn" id="b-buck-enable">Switch on</button> to get the elastic critical load factor α<sub>cr</sub> of every ULS combination.</p></div>`;
+    if (!br.alpha.length) return `<div style="padding:10px 12px" class="group"><h3>Linear buckling</h3><p class="hint">${br.warnings.map(esc).join(" ")}</p></div>`;
+    const cur = S.source && S.source.startsWith("buck:") && S.show === "modes" ? +S.source.slice(5) : -1;
+    const a = br.alpha[0], combos = br.combos.filter((c) => c.alpha_cr != null).sort((p, q) => p.alpha_cr - q.alpha_cr);
+    return `<div style="padding:10px 12px" class="group"><h3>Linear buckling, α<sub>cr</sub> <span class="hint" style="font-weight:400">${S.buck.segments} elements per member</span></h3>
+      <div class="stat3"><b style="font:600 22px var(--font-num);color:${a < 10 ? "var(--bad)" : "var(--ink)"}">${a.toFixed(2)}</b> <span class="hint">smallest α<sub>cr</sub>, ${esc(br.governing)}${a >= 10 ? " ≥ 10: first-order analysis sufficient" : `: amplification 1/(1 − 1/α<sub>cr</sub>) = ${(1 / (1 - 1 / a)).toFixed(2)}`}</span></div>
+      <div class="scroll-x"><table class="data"><thead><tr><th>Buckling mode</th><th>α<sub>cr</sub></th><th>1/(1 − 1/α)</th></tr></thead><tbody>${br.alpha.map((x, k) => `<tr class="pick${k === cur ? " on" : ""}" data-bmode="${k}" tabindex="0"><td>${k + 1}</td><td>${x.toFixed(3)}</td><td>${x > 1 ? (1 / (1 - 1 / x)).toFixed(3) : "–"}</td></tr>`).join("")}</tbody></table></div>
+      <h3 style="margin-top:6px">Per ULS combination</h3>
+      <div class="scroll-x" style="max-height:220px;overflow:auto"><table class="data"><thead><tr><th style="text-align:left">Combination</th><th>α<sub>cr</sub></th></tr></thead><tbody>${combos.slice(0, 40).map((c) => `<tr><td style="text-align:left">${esc(c.id)}: ${esc(c.label)}</td><td>${c.alpha_cr.toFixed(2)}</td></tr>`).join("")}</tbody></table></div>
+      <p class="hint">Click a buckling mode to show it. Geometric stiffness of the axial forces of a first-order analysis (cubic shape functions, torsional term N r²/L); imperfections and second-order moments themselves are designed in the column checks (EN 1992-1-1 5.8.8).</p></div>`;
+  }
   function modesPanel() {
     const r = S.result, mr = r.modal;
-    if (!mr) return `<div class="empty"><b>Modal analysis is off.</b><br>Switch it on in the Dynamics tab to get natural frequencies, mode shapes and participating masses. <button class="link-btn" id="b-dyn-enable">Switch on</button></div>`;
+    if (!mr) return `<div class="empty"><b>Modal analysis is off.</b><br>Switch it on in the Dynamics tab to get natural frequencies, mode shapes and participating masses. <button class="link-btn" id="b-dyn-enable">Switch on</button></div>` + bucklingPanel();
     const cur = S.source && S.source.startsWith("mode:") && S.show === "modes" ? +S.source.slice(5) : -1;
     let cx = 0, cy = 0;
     const sr = r.seismic;
@@ -1262,7 +1337,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
         ${sr.storeys.length ? `<div class="scroll-x"><table class="data"><thead><tr><th>Storey m</th><th>P<sub>tot</sub> kN</th><th>V<sub>x</sub></th><th>V<sub>y</sub></th><th>d<sub>r</sub> mm</th><th>θ</th></tr></thead><tbody>${sr.storeys.map((s) => `<tr><td>${s.z0.toFixed(1)}–${s.z1.toFixed(1)}</td><td>${f3(s.P)}</td><td>${f3(s.V.x)}</td><td>${f3(s.V.y)}</td><td>${(1000 * Math.max(s.dr.x, s.dr.y)).toFixed(1)}</td><td>${Math.max(s.theta.x, s.theta.y).toFixed(3)}</td></tr>`).join("")}</tbody></table></div>` : ""}
         <p class="hint">d<sub>r</sub> = q·d<sub>r,e</sub> (mean of the storey's columns); θ = P<sub>tot</sub>d<sub>r</sub>/(V<sub>tot</sub>h). Show A<sub>Ed</sub> on the members with the M<sub>y</sub>, M<sub>z</sub> or N view and the "A<sub>Ed</sub>" source.</p>`;
     }
-    return html + "</div>";
+    return html + "</div>" + bucklingPanel();
   }
   function reactionsPanel() {
     const r = S.result;
@@ -1293,7 +1368,12 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
       const go = () => { S.source = `mode:${row.dataset.mode}`; setShow("modes", true); renderResults(); };
       row.onclick = go; row.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
     });
+    out.querySelectorAll("[data-bmode]").forEach((row) => {
+      const go = () => { S.source = `buck:${row.dataset.bmode}`; setShow("modes", true); renderResults(); };
+      row.onclick = go; row.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
+    });
     on("#b-dyn-enable", "click", () => { S.dyn.on = true; S.btab = "dynamics"; renderEditor(); schedule(30); });
+    on("#b-buck-enable", "click", () => { S.buck.on = true; S.btab = "dynamics"; renderEditor(); schedule(30); });
     // node inspector
     const nid = S.selNode;
     on("#b-nmove", "click", () => {
@@ -2024,7 +2104,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
       const r = S.result, cut = zCut();
       const g = (v.geom || []).filter((m) => m.zmax <= cut + 1e-6);
       if (S.show === "loads") drawLoads(g);
-      else if (r && S.show === "modes" && r.modal) drawModes(r, g.filter((m) => r.model.members[m.id]));
+      else if (r && S.show === "modes" && (r.modal || (S.buckRes && S.buckRes.modes.length))) drawModes(r, g.filter((m) => r.model.members[m.id]));
       else if (r && S.show !== "model" && S.show !== "util") {
         const gg = g.filter((m) => r.model.members[m.id]);
         if (S.show === "def") drawDeformed(r, gg); else drawDiagram(r, gg, S.show);
@@ -2158,11 +2238,15 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
       if (pts.length) { const l = lineSeg(pts, colors.load, 1); l.renderOrder = 4; gOverlay.add(l); }
     }
     function drawModes(r, g) {
-      const mr = r.modal, k = Math.min(+(S.source || "mode:0").slice(5) || 0, mr.omega.length - 1);
+      const buck = S.source && S.source.startsWith("buck:") && S.buckRes && S.buckRes.modes.length;
+      const mr = buck ? S.buckRes : r.modal;
+      if (!mr) return;
+      const nmodes = buck ? mr.modes.length : mr.omega.length, k = Math.min(+(S.source || "mode:0").slice(5) || 0, nmodes - 1);
+      const vec = buck ? mr.modes[k] : mr.phi[k];
       const P = [], D = [];
       let dmax = 0;
       for (const m of g) {
-        const sh = T.memberShape(mr, m.id, mr.phi[k], 6);
+        const sh = T.memberShape(mr, m.id, vec, 6);
         for (let i = 0; i + 1 < sh.P.length; i++) { P.push(...sh.P[i], ...sh.P[i + 1]); D.push(...sh.D[i], ...sh.D[i + 1]); }
         for (const d of sh.D) dmax = Math.max(dmax, Math.hypot(...d));
       }
@@ -2172,7 +2256,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
       const mesh = tubes(P, Math.max(ctl.size * 0.0032, 0.045), colors.def);
       setTubes(mesh, P, Math.max(ctl.size * 0.0032, 0.045), 1, Ds);
       mesh.renderOrder = 4; gOverlay.add(mesh);
-      v.modeInfo = { k, T: mr.period[k], f: mr.freq[k], rx: mr.ratio("X")[k], ry: mr.ratio("Y")[k], rz: mr.ratio("Z")[k] };
+      v.modeInfo = buck ? { k, buck: true, alpha: mr.alpha[k], combo: mr.governing } : { k, T: mr.period[k], f: mr.freq[k], rx: mr.ratio("X")[k], ry: mr.ratio("Y")[k], rz: mr.ratio("Z")[k] };
       anim = { mesh, P, Ds, t: Math.max(ctl.size * 0.0032, 0.045), t0: performance.now() };
       if (S.animate) requestAnimationFrame(frame);
     }
@@ -2210,6 +2294,9 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
       if (S.show === "loads") {
         const li = v.loadInfo || {};
         html = li.lc ? `<b>Loads, ${esc(li.lc.id)}</b> ${esc(li.lc.name || "")} · ${li.nU} line, ${li.nP} point, ${li.nN} nodal${li.wmax ? ` · largest ${f3(li.wmax)} kN/m` : ""}${li.pmax ? `, ${f3(li.pmax)} kN` : ""}${li.lc.self_weight ? "<br>plus member self weight, added by the analysis" : ""}` : "<b>Loads</b>: no load case";
+      } else if (S.show === "modes" && r && v.modeInfo && v.modeInfo.buck) {
+        const m = v.modeInfo;
+        html = `<b>Buckling mode ${m.k + 1}</b>: α<sub>cr</sub> = ${m.alpha.toFixed(2)} for ${esc(m.combo)} · the frame buckles when the design loads are multiplied by α<sub>cr</sub>${m.alpha < 10 ? " · <b>below 10: second-order effects count</b>" : ""}`;
       } else if (S.show === "modes" && r && r.modal && v.modeInfo) {
         const m = v.modeInfo;
         html = `<b>Mode ${m.k + 1}</b>: T = ${m.T.toFixed(3)} s, f = ${m.f.toFixed(2)} Hz · effective mass X ${(100 * m.rx).toFixed(1)} %, Y ${(100 * m.ry).toFixed(1)} %, Z ${(100 * m.rz).toFixed(1)} %`;
@@ -2278,9 +2365,9 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
   function setShow(s, keepSource) {
     S.show = s; saveView();
     if (!keepSource) {
-      if (s === "modes") S.source = "mode:0";
+      if (s === "modes") S.source = S.result && S.result.modal ? "mode:0" : "buck:0";
       else if (s === "loads") S.source = "";
-      else if (S.source && (S.source.startsWith("mode:") || (S.source.startsWith("case:") && s === "def" && (S.source.slice(5) === T.CASE_E || S.source.slice(5) === T.CASE_E2)))) S.source = "env";
+      else if (S.source && (S.source.startsWith("mode:") || S.source.startsWith("buck:") || (S.source.startsWith("case:") && s === "def" && (S.source.slice(5) === T.CASE_E || S.source.slice(5) === T.CASE_E2)))) S.source = "env";
     }
     $$("[data-show]").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.show === S.show)));
     syncLookControls(); renderSource(); V.rebuild(); V.refreshOverlay();
@@ -2290,9 +2377,9 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
     const diagView = LINE_VIEWS.includes(S.show);
     $$("[data-look]").forEach((b) => { b.disabled = diagView; b.setAttribute("aria-pressed", String(!diagView && b.dataset.look === S.look)); });
     $("#b-slabs").disabled = diagView || S.look !== "solid";
-    const hasModes = !!(S.result && S.result.modal);
+    const hasModes = !!(S.result && (S.result.modal || (S.buckRes && S.buckRes.modes.length)));
     const mc = $("[data-show=modes]");
-    mc.disabled = !hasModes; mc.title = hasModes ? "" : "Switch on modal analysis in the Dynamics tab";
+    mc.disabled = !hasModes; mc.title = hasModes ? "" : S.buckProg ? "Buckling modes are being computed" : "Switch on modal analysis or linear buckling in the Dynamics tab";
   }
   function setLook(l) {
     S.look = l; saveView();

@@ -1,10 +1,12 @@
 <style>
-/* FE lab: plane stress / plane strain continuum. Shares the drafting-room tokens. */
+/* FE lab: plane stress / plane strain continuum, linear and nonlinear, static and dynamic. Shares the drafting-room tokens. */
 #mode-fe .canvasfe { flex: 1; min-height: 340px; position: relative; overflow: hidden; background: var(--sheet); border-radius: 0 0 6px 6px; }
 #mode-fe canvas.fe { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
-#mode-fe .legendfe { position: absolute; left: 10px; top: 8px; max-width: min(520px, calc(100% - 20px)); font-size: 12px; color: var(--ink-2); pointer-events: none;
-  background: color-mix(in srgb, var(--sheet) 86%, transparent); border-radius: 4px; padding: 4px 6px; }
+#mode-fe .legendfe { position: absolute; left: 10px; top: 8px; max-width: min(540px, calc(100% - 20px)); font-size: 12px; color: var(--ink-2); pointer-events: none;
+  background: color-mix(in srgb, var(--sheet) 86%, transparent); border-radius: 4px; padding: 4px 6px; z-index: 2; }
 #mode-fe .legendfe b { color: var(--ink); font-weight: 600; }
+#mode-fe .legendfe i.sw { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin: 0 4px 0 8px; }
+#mode-fe .legendfe i.dot { display: inline-block; width: 7px; height: 7px; vertical-align: middle; margin: 0 4px 0 8px; }
 #mode-fe .bands { display: flex; height: 10px; width: 260px; max-width: 100%; margin-top: 4px; border-radius: 2px; overflow: hidden; }
 #mode-fe .bands i { flex: 1; }
 #mode-fe .bandticks { position: relative; width: 260px; max-width: 100%; height: 14px; font: 500 10.5px var(--font-num); color: var(--ink-3); }
@@ -14,15 +16,22 @@
 #mode-fe .toolsfe { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; width: 100%; font-size: 13px; color: var(--ink-2); }
 #mode-fe .toolsfe label { display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
 #mode-fe .toolsfe input[type="number"] { width: 64px; height: 26px; border: 1px solid var(--rule); border-radius: 3px; background: var(--sheet); padding: 0 4px; font: 12.5px var(--font-num); }
-#mode-fe .etypes { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+#mode-fe .etypes { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
 #mode-fe .etypes button { border: 0; border-right: 1px solid var(--rule); background: var(--sheet); height: 30px; cursor: pointer; font: 600 13px var(--font-num); color: var(--ink-2); }
 #mode-fe .etypes button:last-child { border-right: 0; }
 #mode-fe .etypes button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
+#mode-fe .seg3 { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+#mode-fe .seg3 button { border: 0; border-right: 1px solid var(--rule); background: var(--sheet); min-height: 30px; padding: 3px 4px; cursor: pointer; font: 500 12.5px var(--font-body); color: var(--ink-2); line-height: 1.15; }
+#mode-fe .seg3 button:last-child { border-right: 0; }
+#mode-fe .seg3 button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); font-weight: 600; }
+#mode-fe .seg3 button:disabled { opacity: .4; cursor: default; }
 #mode-fe .rows { display: flex; flex-direction: column; }
 #mode-fe .frow { display: grid; gap: 6px; align-items: end; padding: 7px 0; border-top: 1px solid var(--rule-2); }
 #mode-fe .frow.sup { grid-template-columns: 1.2fr .8fr .8fr auto auto 26px; }
 #mode-fe .frow.ld { grid-template-columns: 1.25fr 1fr 1fr 1fr 26px; }
 #mode-fe .frow.op { grid-template-columns: repeat(4, minmax(0, 1fr)) 26px; }
+#mode-fe .frow.rb { grid-template-columns: .8fr .9fr 1fr .9fr 26px; }
+#mode-fe .frow.rb2 { grid-template-columns: repeat(4, minmax(0, 1fr)) 26px; border-top: 0; padding-top: 0; }
 #mode-fe .frow .chk { display: flex; gap: 4px; align-items: center; height: 28px; font-size: 12.5px; color: var(--ink); }
 #mode-fe .frow .chk input { width: 15px; height: 15px; margin: 0; }
 #mode-fe .frow .icon-btn { align-self: center; }
@@ -44,19 +53,42 @@
 #mode-fe .cmp { display: grid; grid-template-columns: 1fr auto auto; gap: 3px 12px; font-size: 12.5px; }
 #mode-fe .cmp .v { font-family: var(--font-num); text-align: right; }
 #mode-fe .cmp .h { color: var(--ink-3); font-size: 11.5px; }
-#mode-fe .conv svg { width: 100%; height: auto; display: block; }
-#mode-fe .conv text { font: 10.5px var(--font-num); fill: var(--ink-3); }
+#mode-fe .conv svg, #mode-fe svg.chart { width: 100%; height: auto; display: block; }
+#mode-fe .conv text, #mode-fe svg.chart text { font: 10.5px var(--font-num); fill: var(--ink-3); }
+#mode-fe svg.chart .lab { fill: var(--ink-2); }
 #mode-fe .tipfe { position: absolute; pointer-events: none; background: var(--ink); color: var(--sheet); font-size: 12px; padding: 4px 8px; border-radius: 4px; white-space: nowrap; z-index: 4; }
 #mode-fe .busyfe { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: var(--ink); color: var(--sheet); padding: 4px 12px; border-radius: 12px; font-size: 12px; z-index: 5; }
-#mode-fe .bannerfe { position: absolute; left: 10px; right: 10px; bottom: 44px; padding: 8px 12px; border-radius: 5px; background: var(--bad-bg); color: var(--bad); font-weight: 500; border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); z-index: 3; }
+#mode-fe .bannerfe { position: absolute; left: 10px; right: 10px; bottom: 50px; padding: 8px 12px; border-radius: 5px; background: var(--bad-bg); color: var(--bad); font-weight: 500; border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); z-index: 3; }
 #mode-fe .viewsfe { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 2px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: 2px; z-index: 2; }
 #mode-fe .viewsfe button { border: 0; background: transparent; padding: 3px 8px; font-size: 12px; cursor: pointer; border-radius: 3px; color: var(--ink-2); }
 #mode-fe .viewsfe button:hover { color: var(--ink); }
-@media (max-width: 760px) { #mode-fe .canvasfe { flex: none; height: 56vh; min-height: 340px; } }
+#mode-fe .timeline { position: absolute; left: 60px; right: 10px; bottom: 10px; display: flex; gap: 8px; align-items: center; background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: 3px 8px; z-index: 2; font: 12px var(--font-num); color: var(--ink-2); }
+#mode-fe .timeline input[type="range"] { flex: 1; min-width: 60px; }
+#mode-fe .timeline button { border: 1px solid var(--rule); background: var(--sheet); border-radius: 3px; width: 28px; height: 24px; cursor: pointer; color: var(--ink); }
+#mode-fe .timeline .tl-lab { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#mode-fe .srcbar { display: flex; gap: 8px; align-items: center; width: 100%; flex-wrap: wrap; }
+#mode-fe .srcbar .seg button { height: 26px; }
+#mode-fe .layers { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+#mode-fe .run { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#mode-fe .run .btn.primary { min-width: 120px; }
+#mode-fe #f-preset { max-width: 360px; min-width: 0; text-overflow: ellipsis; }
+#mode-fe .prog { height: 6px; border-radius: 3px; background: var(--rule-2); overflow: hidden; flex: 1; min-width: 80px; }
+#mode-fe .prog i { display: block; height: 100%; background: var(--ink); width: 0; }
+#mode-fe .stat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+#mode-fe .stat div { background: var(--paper); border-radius: 4px; padding: 6px 8px; }
+#mode-fe .stat b { display: block; font: 600 17px var(--font-num); color: var(--ink); }
+#mode-fe .stat span { font-size: 11px; color: var(--ink-3); }
+#mode-fe .note { font-size: 12.5px; padding: 7px 9px; border-radius: 4px; background: var(--paper); color: var(--ink-2); }
+#mode-fe .note.bad { background: var(--bad-bg); color: var(--bad); }
+#mode-fe .note.ok { background: color-mix(in srgb, var(--pass, #1f8a70) 12%, transparent); color: var(--ink); }
+#mode-fe .log { max-height: 240px; overflow: auto; border: 1px solid var(--rule-2); border-radius: 4px; }
+#mode-fe .log table { width: 100%; }
+#mode-fe textarea.vals { width: 100%; min-height: 70px; font: 11.5px var(--font-num); border: 1px solid var(--rule); border-radius: 3px; background: var(--sheet); padding: 4px; }
+@media (max-width: 760px) { #mode-fe .canvasfe { flex: none; height: 56vh; min-height: 340px; } #mode-fe .frow.rb { grid-template-columns: 1fr 1fr 1fr 1fr 26px; } }
 </style>
 
 <header class="bar">
-  <div class="brand"><b>Tragwerk</b><span id="f-ver">v0.3</span></div>
+  <div class="brand"><b>Tragwerk</b><span id="f-ver">v0.4</span></div>
   <div class="modes" role="tablist" aria-label="Workspace"><button role="tab" data-mode="3d" aria-selected="false">3D</button><button role="tab" data-mode="2d" aria-selected="false">2D frame</button><button role="tab" data-mode="fe" aria-selected="true">FE plate</button></div>
   <input id="f-name" class="model-name" aria-label="Model name" value="">
   <select id="f-preset" aria-label="Start from"></select>
@@ -68,37 +100,44 @@
   <section class="pane editor" aria-label="Build the FE model">
     <div class="pane-hd"><div class="tabs" role="tablist">
       <button class="tab" role="tab" data-ftab="geom" aria-selected="true">Geometry</button>
-      <button class="tab" role="tab" data-ftab="bc" aria-selected="false">Supports &amp; loads</button>
+      <button class="tab" role="tab" data-ftab="bc" aria-selected="false">Loads</button>
       <button class="tab" role="tab" data-ftab="mat" aria-selected="false">Material</button>
+      <button class="tab" role="tab" data-ftab="reinf" aria-selected="false">Rebar</button>
+      <button class="tab" role="tab" data-ftab="an" aria-selected="false">Analysis</button>
     </div></div>
     <div class="pane-bd" id="f-editor"></div>
   </section>
 
   <section class="pane draw" aria-label="Contour plot">
     <div class="pane-hd">
-      <div class="chips" role="group" aria-label="Field" id="f-fields">
-        <button class="chip" data-field="mesh">Mesh</button>
-        <button class="chip" data-field="umag">|u|</button>
-        <button class="chip" data-field="ux">u<sub>x</sub></button>
-        <button class="chip" data-field="uy">u<sub>y</sub></button>
-        <button class="chip" data-field="sxx">σ<sub>xx</sub></button>
-        <button class="chip" data-field="syy">σ<sub>yy</sub></button>
-        <button class="chip" data-field="txy">τ<sub>xy</sub></button>
-        <button class="chip" data-field="s1">σ<sub>1</sub></button>
-        <button class="chip" data-field="s2">σ<sub>2</sub></button>
-        <button class="chip" data-field="mises">von Mises</button>
+      <div class="srcbar">
+        <span class="seg" role="group" aria-label="Results to show" id="f-src">
+          <button data-src="lin" aria-pressed="true">Linear</button><button data-src="des">Design</button><button data-src="nl">Nonlinear</button><button data-src="dyn">Dynamic</button>
+        </span>
+        <span class="hint" id="f-srchint"></span>
       </div>
+      <div class="chips" role="group" aria-label="Field" id="f-fields"></div>
       <div class="toolsfe">
         <label><input type="checkbox" id="f-def"> Deformed ×<input type="number" id="f-scale" min="0" step="any" aria-label="Deformation scale"></label>
         <label><input type="checkbox" id="f-mesh" checked> Mesh</label>
-        <label><input type="checkbox" id="f-avg" checked> Averaged at nodes</label>
+        <label><input type="checkbox" id="f-avg" checked> Averaged</label>
         <label><input type="checkbox" id="f-princ"> Principal directions</label>
+        <span class="layers" id="f-layers">
+          <label><input type="checkbox" data-layer="cracks" checked> Cracks</label>
+          <label><input type="checkbox" data-layer="yield" checked> Yield / crushing</label>
+          <label><input type="checkbox" data-layer="rebar"> Rebar</label>
+        </span>
       </div>
     </div>
     <div class="canvasfe" id="f-canvas">
       <canvas class="fe" aria-label="Finite element mesh and contour plot. Drag to pan, scroll or pinch to zoom, click an element to inspect it." role="img"></canvas>
       <div class="legendfe" id="f-legend"></div>
       <div class="viewsfe"><button id="f-fit" title="Fit the model in view">Fit</button></div>
+      <div class="timeline" id="f-timeline" hidden>
+        <button id="f-play" aria-label="Play">▶</button>
+        <input type="range" id="f-step" min="0" max="0" value="0" aria-label="Step">
+        <span class="tl-lab" id="f-steplab"></span>
+      </div>
       <div class="titleblock" id="f-title"></div>
       <div class="bannerfe" id="f-banner" hidden></div>
       <div class="tipfe" id="f-tip" hidden></div>
@@ -109,8 +148,11 @@
   <section class="pane results" aria-label="FE results">
     <div class="rtabs" role="tablist">
       <button class="tab" role="tab" data-frtab="res" aria-selected="true">Results</button>
+      <button class="tab" role="tab" data-frtab="des" aria-selected="false">Design</button>
+      <button class="tab" role="tab" data-frtab="nl" aria-selected="false">Nonlinear</button>
+      <button class="tab" role="tab" data-frtab="dyn" aria-selected="false">Dynamics</button>
       <button class="tab" role="tab" data-frtab="elem" aria-selected="false">Element</button>
-      <button class="tab" role="tab" data-frtab="conv" aria-selected="false">Convergence</button>
+      <button class="tab" role="tab" data-frtab="conv" aria-selected="false">Mesh</button>
     </div>
     <div class="pane-bd" id="f-results"></div>
   </section>
@@ -128,7 +170,7 @@
 <script>
 (function () {
   "use strict";
-  const T = window.Tragwerk, FE = T.FE;
+  const T = window.Tragwerk, FE = T.FE, NL = T.FENL, DS = T.FEDesign, DY = T.DYN;
   const ROOT = document.getElementById("mode-fe");
   const $ = (s, el = ROOT) => el.querySelector(s);
   const $$ = (s, el = ROOT) => Array.from(el.querySelectorAll(s));
@@ -137,17 +179,56 @@
   const fmt = (v, d = 3) => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e5 || (Math.abs(v) < 1e-3 && v !== 0) ? v.toExponential(2) : (+v.toPrecision(d + 1)).toString());
   const fx = (v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
   const opt = (v, l, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? " selected" : ""}>${esc(l)}</option>`;
+  const amax = (a) => { let v = -Infinity; for (const x of a) if (x > v) v = x; return v; };
+  const amin = (a) => { let v = Infinity; for (const x of a) if (x < v) v = x; return v; };
+  const now = () => performance.now();
 
+  // ------------------------------------------------------------ examples
+  const RC = (extra) => Object.assign({ E_MPa: 33000, nu: 0.2, thickness_m: 0.25, density_kNm3: 25, model: "rc", fck_MPa: 30, values: "mean", softening: "mcft", tension: "stiffening" }, extra || {});
   const PRESETS = {
     wall: { label: "Shear wall with a door opening", model: { schema: FE.SCHEMA_FE, name: "Shear wall with a door opening", analysis: "plane_stress", element: "Q8",
-      material: { E_MPa: 33000, nu: 0.2, thickness_m: 0.25, density_kNm3: 25 },
+      material: { E_MPa: 33000, nu: 0.2, thickness_m: 0.25, density_kNm3: 25, fck_MPa: 30 }, design: { member: "wall" },
+      reinforcement: { cover_mm: 30, layers: [{ dir: "x", dia_mm: 10, spacing_mm: 200, faces: 2 }, { dir: "y", dia_mm: 10, spacing_mm: 200, faces: 2 }] },
       geometry: { type: "rectangle", Lx: 6, Ly: 3, h: 0.25, openings: [{ x0: 2.4, y0: 0, x1: 3.4, y1: 2.2 }] },
-      supports: [{ edge: "bottom", ux: true, uy: true }], loads: [{ edge: "top", qx: 0, qy: -120 }, { edge: "left", qx: 25, qy: 0 }], self_weight: true }, field: "mises" },
-    deep: { label: "Transfer deep beam on two columns", model: { schema: FE.SCHEMA_FE, name: "Transfer deep beam, column load at midspan", analysis: "plane_stress", element: "Q8",
-      material: { E_MPa: 33000, nu: 0.2, thickness_m: 0.4, density_kNm3: 25 },
-      geometry: { type: "rectangle", Lx: 6, Ly: 3, h: 0.2, openings: [] },
-      supports: [{ edge: "bottom", from: 0, to: 0.4, ux: true, uy: true }, { edge: "bottom", from: 5.6, to: 6, uy: true }],
-      loads: [{ edge: "top", from: 2.8, to: 3.2, qx: 0, qy: -5000 }, { edge: "top", qx: 0, qy: -40 }], self_weight: true }, field: "s2", princ: true },
+      supports: [{ edge: "bottom", ux: true, uy: true }], loads: [{ edge: "top", qx: 0, qy: -120 }, { edge: "left", qx: 25, qy: 0, case: "Q" }], self_weight: true }, field: "mises" },
+    rcwall: { label: "RC shear wall with an opening: pushover to failure", model: { schema: FE.SCHEMA_FE, name: "RC shear wall, lateral pushover", analysis: "plane_stress", element: "Q8",
+      material: RC(), design: { member: "wall" },
+      reinforcement: { cover_mm: 30, layers: [{ dir: "x", dia_mm: 10, spacing_mm: 200, faces: 2, label: "mesh" }, { dir: "y", dia_mm: 10, spacing_mm: 200, faces: 2, label: "mesh" },
+        { dir: "y", dia_mm: 16, n: 6, region: { x0: 0, x1: 0.5, y0: 0, y1: 3 }, label: "boundary element" }, { dir: "y", dia_mm: 16, n: 6, region: { x0: 5.5, x1: 6, y0: 0, y1: 3 }, label: "boundary element" },
+        { dir: "x", dia_mm: 12, n: 4, region: { x0: 1.6, x1: 4.2, y0: 2.2, y1: 2.6 }, label: "lintel" }] },
+      geometry: { type: "rectangle", Lx: 6, Ly: 3, h: 0.25, openings: [{ x0: 2.4, y0: 0, x1: 3.4, y1: 2.2 }] },
+      supports: [{ edge: "bottom", ux: true, uy: true }], loads: [{ edge: "top", qx: 0, qy: -150 }, { edge: "top", qx: 200, qy: 0, case: "Q" }], self_weight: true },
+      field: "crack", src: "nl", analysis: { type: "nl", control: "arc", combination: "char", load_pattern: "variable", steps: 12, to_failure: true, max_steps: 120, max_bisections: 5 } },
+    deep: { label: "Deep beam on short supports: design, then verify to failure", model: { schema: FE.SCHEMA_FE, name: "Deep beam on short supports", analysis: "plane_stress", element: "Q8",
+      material: RC({ thickness_m: 0.3, values: "design" }), design: { member: "deep_beam" }, reinforcement: { cover_mm: 35, layers: [] },
+      geometry: { type: "rectangle", Lx: 6, Ly: 3, h: 0.5, openings: [] },
+      supports: [{ edge: "bottom", from: 0, to: 0.5, uy: true }, { edge: "bottom", from: 5.5, to: 6, uy: true }, { at: [0, 0], ux: true }],
+      loads: [{ edge: "top", qx: 0, qy: -250 }, { edge: "top", qx: 0, qy: -120, case: "Q" }], self_weight: true },
+      field: "asx", src: "des", analysis: { type: "nl", control: "arc", combination: "uls", steps: 10, to_failure: true, max_steps: 80 } },
+    panel: { label: "RC panel in pure shear (Vecchio & Collins): τ_u = ρ f_y", model: { schema: FE.SCHEMA_FE, name: "Reinforced concrete panel in pure shear", analysis: "plane_stress", element: "Q4",
+      material: RC({ thickness_m: 0.2, nu: 0, density_kNm3: 0 }), design: { member: "none" },
+      reinforcement: { k: 1.0, layers: [{ dir: "x", dia_mm: 12, spacing_mm: 150, faces: 2 }, { dir: "y", dia_mm: 12, spacing_mm: 150, faces: 2 }] },
+      geometry: { type: "rectangle", Lx: 1, Ly: 1, h: 0.5 },
+      supports: [{ at: [0, 0], ux: true, uy: true }, { at: [1, 0], uy: true }],
+      loads: [{ edge: "right", qx: 0, qy: 200 }, { edge: "left", qx: 0, qy: -200 }, { edge: "top", qx: 200, qy: 0 }, { edge: "bottom", qx: -200, qy: 0 }], self_weight: false },
+      field: "s2", src: "nl", analysis: { type: "nl", control: "arc", combination: "char", steps: 10, to_failure: true, max_steps: 60, tol: 1e-6 } },
+    hill: { label: "Thick cylinder, von Mises plasticity (Hill)", model: { schema: FE.SCHEMA_FE, name: "Thick cylinder under internal pressure", analysis: "plane_strain", element: "Q8R",
+      material: { E_MPa: 210000, nu: 0.3, thickness_m: 1, density_kNm3: 0, model: "j2", fy_MPa: 240, H_MPa: 0 },
+      geometry: { type: "ring", a: 1, b: 2, n_theta: 4, n_r: 8 },
+      supports: [{ edge: "left", ux: true }, { edge: "bottom", uy: true }], loads: [{ edge: "inner", p: 192127 }], self_weight: false },
+      field: "alpha", src: "nl", analysis: { type: "nl", control: "arc", combination: "char", steps: 10, to_failure: true, max_steps: 60 } },
+    elastica: { label: "Cantilever, large deflection (elastica)", model: { schema: FE.SCHEMA_FE, name: "Cantilever under a tip load, large deflection", analysis: "plane_stress", element: "Q8",
+      material: { E_MPa: 10000, nu: 0, thickness_m: 0.1, density_kNm3: 0 },
+      geometry: { type: "rectangle", Lx: 10, Ly: 0.25, h: 0.125 },
+      supports: [{ edge: "left", ux: true, uy: true }], loads: [{ edge: "right", qx: 0, qy: -52.08 }], self_weight: false },
+      field: "umag", src: "nl", def: true, analysis: { type: "nl", geometric: true, control: "load", combination: "char", steps: 10, lam_max: 2, to_failure: false } },
+    quake: { label: "RC wall under an earthquake (time history)", model: { schema: FE.SCHEMA_FE, name: "Slender RC wall, EN 1998 spectrum-compatible record", analysis: "plane_stress", element: "Q8",
+      material: RC(), design: { member: "wall" },
+      reinforcement: { cover_mm: 30, layers: [{ dir: "x", dia_mm: 10, spacing_mm: 200 }, { dir: "y", dia_mm: 10, spacing_mm: 200 },
+        { dir: "y", dia_mm: 16, n: 6, region: { x0: 0, x1: 0.4, y0: 0, y1: 8 }, label: "boundary element" }, { dir: "y", dia_mm: 16, n: 6, region: { x0: 1.6, x1: 2, y0: 0, y1: 8 }, label: "boundary element" }] },
+      geometry: { type: "rectangle", Lx: 2, Ly: 8, h: 0.5 }, supports: [{ edge: "bottom", ux: true, uy: true }],
+      loads: [{ edge: "top", qx: 0, qy: -300 }, { edge: "top", qx: 0, qy: -100, case: "Q" }], self_weight: true },
+      field: "crack", src: "dyn", analysis: { type: "dyn" }, record: { type: "synthetic", ag_g: 0.25, soil: "B", spectrum_type: 1, duration_s: 10, dt_s: 0.01, seed: 2, rise_s: 1, strong_s: 5 } },
     cantilever: { label: "Cantilever with end shear (Timoshenko)", model: { schema: FE.SCHEMA_FE, name: "Cantilever with a parabolic end shear", analysis: "plane_stress", element: "Q8",
       material: { E_MPa: 30000, nu: 0.25, thickness_m: 0.3, density_kNm3: 0 },
       geometry: { type: "rectangle", Lx: 8, Ly: 1, h: 0.25, openings: [] },
@@ -158,43 +239,302 @@
       supports: [{ edge: "left", ux: true, uy: false }, { edge: "bottom", ux: false, uy: true }], loads: [{ edge: "right", qx: 2000, qy: 0 }], self_weight: false }, field: "sxx" },
   };
   const FIELDS = {
-    mesh: { label: "Mesh" }, umag: { label: "|u|", unit: "mm", seq: true, k: 1000 }, ux: { label: "u<sub>x</sub>", unit: "mm", k: 1000 }, uy: { label: "u<sub>y</sub>", unit: "mm", k: 1000 },
-    sxx: { label: "σ<sub>xx</sub>", unit: "MPa" }, syy: { label: "σ<sub>yy</sub>", unit: "MPa" }, txy: { label: "τ<sub>xy</sub>", unit: "MPa" },
-    s1: { label: "σ<sub>1</sub>, major principal", unit: "MPa" }, s2: { label: "σ<sub>2</sub>, minor principal", unit: "MPa" }, mises: { label: "von Mises", unit: "MPa", seq: true },
+    mesh: { label: "Mesh", chip: "Mesh" }, umag: { label: "|u|", unit: "mm", seq: true, k: 1000, chip: "|u|" }, ux: { label: "u<sub>x</sub>", unit: "mm", k: 1000, chip: "u<sub>x</sub>" },
+    uy: { label: "u<sub>y</sub>", unit: "mm", k: 1000, chip: "u<sub>y</sub>" },
+    sxx: { label: "σ<sub>xx</sub>", unit: "MPa", chip: "σ<sub>xx</sub>" }, syy: { label: "σ<sub>yy</sub>", unit: "MPa", chip: "σ<sub>yy</sub>" }, txy: { label: "τ<sub>xy</sub>", unit: "MPa", chip: "τ<sub>xy</sub>" },
+    s1: { label: "σ<sub>1</sub>, major principal", unit: "MPa", chip: "σ<sub>1</sub>" }, s2: { label: "σ<sub>2</sub>, minor principal", unit: "MPa", chip: "σ<sub>2</sub>" },
+    mises: { label: "von Mises", unit: "MPa", seq: true, chip: "von Mises" },
+    crack: { label: "crack width w", unit: "mm", seq: true, chip: "Crack w", gp: true }, sc2: { label: "concrete σ<sub>c2</sub> (compression field)", unit: "MPa", chip: "σ<sub>c2</sub>", gp: true },
+    ssx: { label: "steel stress σ<sub>sx</sub>", unit: "MPa", chip: "σ<sub>sx</sub>", gp: true }, ssy: { label: "steel stress σ<sub>sy</sub>", unit: "MPa", chip: "σ<sub>sy</sub>", gp: true },
+    e1: { label: "principal tensile strain ε<sub>1</sub>", unit: "‰", seq: true, chip: "ε<sub>1</sub>", gp: true, k: 1000 },
+    alpha: { label: "equivalent plastic strain ε̄<sub>p</sub>", unit: "‰", seq: true, chip: "ε̄<sub>p</sub>", gp: true, k: 1000 },
+    asx: { label: "required reinforcement A<sub>s,x</sub> (both faces)", unit: "mm²/m", seq: true, chip: "A<sub>s,x</sub> req", elem: true },
+    asy: { label: "required reinforcement A<sub>s,y</sub> (both faces)", unit: "mm²/m", seq: true, chip: "A<sub>s,y</sub> req", elem: true },
+    us: { label: "steel utilisation A<sub>s,req</sub>/A<sub>s,prov</sub>", unit: "", seq: true, chip: "Steel η", elem: true, util: true },
+    uc: { label: "concrete utilisation σ<sub>cd</sub>/(ν f<sub>cd</sub>)", unit: "", seq: true, chip: "Concrete η", elem: true, util: true },
+  };
+  const SRC_FIELDS = {
+    lin: ["mesh", "umag", "ux", "uy", "sxx", "syy", "txy", "s1", "s2", "mises"],
+    des: ["asx", "asy", "us", "uc", "s1", "s2", "mesh"],
+    nl: ["mesh", "umag", "ux", "uy", "sxx", "syy", "txy", "s1", "s2", "mises"],
   };
   const DESCR = {
     T3: "3-node constant strain triangle (CST): linear N, 1 Gauss point; stiff in bending.",
     T6: "6-node linear strain triangle (LST): quadratic N, 3 Gauss points.",
     Q4: "4-node bilinear quadrilateral: 2 × 2 Gauss points; shear locking in bending.",
     Q8: "8-node serendipity quadrilateral: quadratic N, 3 × 3 Gauss points; curved edges.",
+    Q8R: "Q8 with reduced 2 × 2 integration: no volumetric locking, so the choice for plasticity of nearly incompressible flow (one spurious mode per element, harmless in a mesh).",
   };
-  const S = { model: null, preset: "wall", ftab: "geom", frtab: "res", field: "mises", def: false, scale: null, meshOn: true, avg: true, princ: false,
-    res: null, err: null, sel: null, gsel: 0, conv: null, view: null };
+  const S = { model: null, preset: "wall", ftab: "geom", frtab: "res", src: "lin", field: "mises", def: false, scale: null, meshOn: true, avg: true, princ: false,
+    layers: { cracks: true, yield: true, rebar: false }, res: null, err: null, sel: null, gsel: 0, conv: null, view: null, combo: "char",
+    an: { type: "nl", geometric: false, control: "load", iteration: "newton", combination: "uls", load_pattern: "all", steps: 10, lam_max: 1, to_failure: true, tol: null, max_steps: 200 }, prefField: null,
+    des: null, desErr: null, nl: null, nlRun: null, dyn: { spec: { type: "synthetic", ag_g: 0.25, soil: "B", spectrum_type: 1, duration_s: 10, dt_s: 0.01, seed: 1, rise_s: 1.5, strong_s: 5 },
+      rec: null, sdof: { m: 100, k: 4e4, uy: 0.01, alpha: 0.05, n: 2, xi: 0.05 }, sdofRes: null, fe: null, run: null, xi: 0.05, combination: "qp", values: "" },
+    step: 0, playing: false };
 
-  // ------------------------------------------------------------ solve
+  // ------------------------------------------------------------ background worker (keeps the page responsive)
+  function workerMain() {
+    /* runs inside the worker: the FE engine scripts are concatenated before this function */
+    const T = self.Tragwerk;
+    const f32 = (a) => (a instanceof Float64Array ? new Float32Array(a) : a);
+    self.onmessage = (ev) => {
+      const { id, job, model, opts, record } = ev.data;
+      try {
+        if (job === "nl") {
+          const m = T.FE.parseFE(model);
+          let last = 0;
+          const res = T.FENL.runNonlinear(m, opts, (st) => {
+            const t = Date.now();
+            if (t - last > 120) { last = t; self.postMessage({ id, type: "progress", lam: st.lam, monitor: st.monitor, iterations: st.iterations, matrix: st.matrix }); }
+          });
+          const N = res.kernel.N, n = res.steps.length, budget = 4e6;
+          const stride = Math.max(1, Math.ceil(n * N * 14 / budget));
+          // the capacity state: the first step that reaches the peak load (a plastic plateau repeats it)
+          const lp = res.steps.reduce((v, s) => Math.max(v, s.lam), -Infinity);
+          let kPeak = res.steps.findIndex((s) => s.lam >= lp - 1e-4 * Math.abs(lp));
+          if (kPeak < 0) kPeak = 0;
+          const steps = res.steps.map((s, k) => {
+            const full = k % stride === 0 || k === n - 1 || k === kPeak;
+            const extra = {};
+            if (full) for (const [key, v] of Object.entries(s.extra)) extra[key] = f32(v);
+            return { lam: s.lam, monitor: s.monitor, iterations: s.iterations, residuals: s.residuals, reaction: s.reaction, matrix: s.matrix, converged: s.converged, u: s.u, full,
+              gp_stress: full ? f32(s.gp_stress) : null, extra };
+          });
+          self.postMessage({ id, type: "done", result: { steps, status: res.status, message: res.message, lam_peak: res.lam_peak, monitor_dof: res.monitor_dof, elapsed_ms: res.elapsed_ms, summary: T.FENL.summary(res) } });
+        } else if (job === "record") {
+          const rec = T.DYN.parseRecord(record);
+          self.postMessage({ id, type: "done", result: { t: rec.t, a: rec.a, dt: rec.dt, name: rec.name, match: rec.match, pga: rec.pga } });
+        } else if (job === "dyn") {
+          const m = T.FE.parseFE(model), rec = T.DYN.parseRecord(record);
+          let last = 0;
+          const r = T.DYN.feDynamic(m, rec, opts, (i, nT, rr) => {
+            const t = Date.now();
+            if (t - last > 150) { last = t; self.postMessage({ id, type: "progress", i, nT, u: rr.u_mon.slice(0, i + 1), V: rr.base_shear.slice(0, i + 1) }); }
+          });
+          const frames = r.frames.map((f) => { const extra = {}; for (const [key, v] of Object.entries(f.extra || {})) extra[key] = f32(v); return { i: f.i, u: f.u, gp_stress: f.gp_stress ? f32(f.gp_stress) : null, extra }; });
+          self.postMessage({ id, type: "done", result: { t: r.t, u_mon: r.u_mon, v_mon: r.v_mon, a_mon_abs: r.a_mon_abs, base_shear: r.base_shear, periods: r.periods, rayleigh: r.rayleigh,
+            monitor_dof: r.monitor_dof, frames, energy: r.energy, status: r.status, message: r.message, iterations: r.iterations, substeps: r.substeps, mass_total: r.mass_total,
+            elapsed_ms: r.elapsed_ms, record: { t: rec.t, a: rec.a, dt: rec.dt, name: rec.name, match: rec.match, pga: rec.pga } } });
+        }
+      } catch (e) {
+        self.postMessage({ id, type: "error", message: e.message });
+      }
+    };
+  }
+  const W = { worker: null, seq: 0, jobs: new Map(), failed: false };
+  function getWorker() {
+    if (W.worker || W.failed) return W.worker;
+    try {
+      const parts = ["s-fe2d", "s-fe2dnl", "s-fe2ddesign", "s-dynnl"].map((id) => { const el = document.getElementById(id); return el ? el.textContent : null; });
+      if (parts.some((p) => p == null) || typeof Worker === "undefined") { W.failed = true; return null; }
+      const src = "self.window = undefined;\n" + parts.join("\n;\n") + "\n;(" + workerMain.toString() + ")();";
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      W.worker = new Worker(url);
+      W.worker.onmessage = (ev) => { const j = W.jobs.get(ev.data.id); if (!j) return; if (ev.data.type === "progress") j.progress(ev.data); else { W.jobs.delete(ev.data.id); if (ev.data.type === "done") j.resolve(ev.data.result); else j.reject(new Error(ev.data.message)); } };
+      W.worker.onerror = (e) => { for (const j of W.jobs.values()) j.reject(new Error(e.message || "worker failed")); W.jobs.clear(); W.worker = null; W.failed = true; };
+    } catch (e) { W.failed = true; W.worker = null; }
+    return W.worker;
+  }
+  function runJob(job, payload, progress = () => {}) {
+    const w = getWorker();
+    if (!w) return new Promise((resolve, reject) => setTimeout(() => { try { resolve(runInline(job, payload, progress)); } catch (e) { reject(e); } }, 20));
+    const id = ++W.seq;
+    return new Promise((resolve, reject) => { W.jobs.set(id, { resolve, reject, progress }); w.postMessage(Object.assign({ id, job }, payload)); });
+  }
+  function cancelJobs() {
+    if (W.worker) { W.worker.terminate(); W.worker = null; }
+    for (const j of W.jobs.values()) j.reject(new Error("stopped"));
+    W.jobs.clear();
+  }
+  function runInline(job, { model, opts, record }, progress) {
+    if (job === "nl") {
+      const m = FE.parseFE(model), res = NL.runNonlinear(m, opts);
+      return { steps: res.steps.map((s) => Object.assign({ full: true }, s)), status: res.status, message: res.message, lam_peak: res.lam_peak, monitor_dof: res.monitor_dof, elapsed_ms: res.elapsed_ms, summary: NL.summary(res) };
+    }
+    if (job === "record") { const r = DY.parseRecord(record); return { t: r.t, a: r.a, dt: r.dt, name: r.name, match: r.match, pga: r.pga }; }
+    const m = FE.parseFE(model), rec = DY.parseRecord(record), r = DY.feDynamic(m, rec, opts);
+    return Object.assign({}, r, { record: { t: rec.t, a: rec.a, dt: rec.dt, name: rec.name, match: rec.match, pga: rec.pga } });
+  }
+
+  // ------------------------------------------------------------ linear solve and design (instant, on every edit)
   let timer = null;
-  function schedule(delay = 250) { clearTimeout(timer); $("#f-busy").hidden = false; timer = setTimeout(solve, delay); }
+  function schedule(delay = 250) { clearTimeout(timer); $("#f-busy").hidden = false; $("#f-busy").textContent = "Solving…"; timer = setTimeout(solve, delay); }
   function solve() {
     clearTimeout(timer);
     try {
       const m = FE.parseFE(S.model);
       if (m.nodes.length > 20000) throw new FE.FEError(`${m.nodes.length} nodes: the browser lab handles up to 20 000; coarsen the mesh or use the Python package.`);
-      S.res = FE.solveFE(m); S.err = null;
+      S.res = FE.solveFE(m, null, S.combo); S.err = null;
       if (S.sel != null && S.sel >= m.elements.length) S.sel = null;
     } catch (e) { S.res = null; S.err = e.message; }
+    S.des = null; S.desErr = null;
+    if (S.res && (S.src === "des" || S.frtab === "des")) computeDesign();
     $("#f-busy").hidden = true;
     S.scale = null;
-    renderHeader(); renderEditorHints(); renderResults(); P.rebuild();
+    renderHeader(); renderEditorHints(); renderResults(); renderChips(); P.rebuild();
+  }
+  function computeDesign() {
+    try { const m = FE.parseFE(S.model); const d = DS.designReinforcement(m); const p = DS.proposeLayers(m, d); S.des = { m, d, proposal: p }; S.desErr = null; }
+    catch (e) { S.des = null; S.desErr = e.message; }
+  }
+  function staleResults() {           // the model changed: nonlinear and dynamic results no longer belong to it
+    if (S.nl) S.nl.stale = true;
+    if (S.dyn.fe) S.dyn.fe.stale = true;
+  }
+  // ------------------------------------------------------------ mesh check of a nonlinear result
+  function meshVariant(model, f) {               // f = 2: twice as coarse, 0.5: twice as fine
+    const g = model.geometry, out = clone(model);
+    if (g.type === "rectangle") out.geometry.h = g.h * f;
+    else if (g.type === "plate_hole" || g.type === "ring") { out.geometry.n_theta = Math.max(1, Math.round(g.n_theta / f)); out.geometry.n_r = Math.max(1, Math.round(g.n_r / f)); }
+    else return null;
+    return out;
+  }
+  function runMeshCheck(f) {
+    const nl = S.nl;
+    if (!nl) return;
+    const model = meshVariant(S.model, f);
+    const keep = S.nlMesh && S.nlMesh.key === nl ? S.nlMesh.rows : [{ label: "this mesh", ne: nl.model.elements.length, lam: nl.summary.lam_peak, status: nl.summary.status }];
+    S.nlMesh = { key: nl, rows: keep, running: null, err: null };
+    let m = null;
+    try { if (!model) throw new Error("A mesh given node by node cannot be coarsened or refined automatically."); m = FE.parseFE(model); }
+    catch (e) { S.nlMesh.err = e.message; renderResults(); return; }
+    S.nlMesh.running = f;
+    renderResults();
+    runJob("nl", { model, opts: nl.options }).then((res) => {
+      if (!S.nlMesh || S.nlMesh.key !== nl) return;
+      S.nlMesh.rows.push({ label: f > 1 ? "twice as coarse (2h)" : "twice as fine (h/2)", ne: m.elements.length, lam: res.lam_peak, status: res.status });
+      S.nlMesh.running = null;
+      renderResults();
+    }, (e) => { if (S.nlMesh) { S.nlMesh.running = null; if (e.message !== "stopped") S.nlMesh.err = e.message; } renderResults(); });
   }
   function load(key, model) {
     S.preset = key;
     const p = PRESETS[key];
     S.model = clone(model || p.model);
-    if (p && !model) { S.field = p.field; S.princ = !!p.princ; }
-    S.sel = null; S.conv = null; S.view = null;
-    $("#f-princ").checked = S.princ;
-    $$("[data-field]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.field === S.field)));
+    if (p && !model) {
+      S.field = p.field; S.princ = !!p.princ; S.def = !!p.def;
+      S.an = Object.assign({ type: "nl", geometric: false, control: "load", iteration: "newton", combination: "uls", load_pattern: "all", steps: 10, lam_max: 1, to_failure: true, tol: null, max_steps: 200 }, p.analysis || {});
+      S.prefField = p.field;
+      if (p.record) S.dyn.spec = clone(p.record);
+      S.src = "lin";
+    } else {
+      S.src = "lin";
+      // a model file may carry the options of its nonlinear analysis (the "nonlinear" block of tragwerk-fe/0.1)
+      if (S.model.nonlinear) S.an = Object.assign({ type: "nl", geometric: false, control: "load", iteration: "newton", combination: "uls", load_pattern: "all", steps: 10, lam_max: 1, to_failure: true, tol: null, max_steps: 200 }, S.model.nonlinear, { type: "nl" });
+    }
+    S.nl = null; S.dyn.fe = null; S.dyn.rec = null; S.dyn.sdofRes = null; S.des = null;
+    S.sel = null; S.conv = null; S.view = null; S.step = 0;
+    S.combo = S.model.loads && S.model.loads.some((l) => l.case === "Q") ? "char" : "char";
+    $("#f-princ").checked = S.princ; $("#f-def").checked = S.def;
+    S.ftab = (p && p.analysis) || (model && model.nonlinear) ? "an" : "geom";
+    S.frtab = p && p.src === "des" ? "des" : p && p.src === "nl" ? "nl" : p && p.src === "dyn" ? "dyn" : "res";
     renderEditor(); solve(); P.fit();
+    if (p && p.src === "des") setSource("des");
+  }
+
+  // ------------------------------------------------------------ result adapters for the plot
+  function stepView() {        // the current nonlinear step as a plottable result
+    const nl = S.nl;
+    if (!nl) return null;
+    const fullIdx = nl.full, k = fullIdx[Math.min(S.step, fullIdx.length - 1)], st = nl.steps[k];
+    return frameView(nl.model, nl.kernel, st.u, st.gp_stress, st.extra, `step ${k} · λ = ${fmt(st.lam, 4)}`, k);
+  }
+  function dynView() {
+    const d = S.dyn.fe;
+    if (!d) return null;
+    const f = d.frames[Math.min(S.step, d.frames.length - 1)];
+    const t = d.t[Math.min(f.i, d.t.length - 1)];
+    return frameView(d.model, d.kernel, f.u, f.gp_stress, f.extra, `t = ${fx(t, 2)} s`, f.i);
+  }
+  const viewCache = new Map();
+  function frameView(m, kernel, uflat, gp, extra, label, key) {
+    const ck = `${label}|${key}|${m.elements.length}`;
+    if (viewCache.has(ck)) return viewCache.get(ck);
+    const n = m.nodes.length, U = Array.from({ length: n }, (_, i) => [uflat[2 * i], uflat[2 * i + 1]]);
+    const resLike = { model: m, kernel };
+    let gpS = gp;
+    if (!gpS) {                     // linear dynamic frame: stresses from the displacements
+      const rec = FE.recover(m, uflat);
+      gpS = null;
+      const out = { model: m, u: U, label, nodal: rec.nodal, elemNodal: rec.elemNodal, extra: {}, kernel };
+      out.field = (name, averaged = true) => fieldLinear(out, name, averaged, rec);
+      viewCache.set(ck, out);
+      if (viewCache.size > 40) viewCache.delete(viewCache.keys().next().value);
+      return out;
+    }
+    const comp = (c) => NL.elementNodal(resLike, (i) => gp[3 * i + c]);
+    const en = [0, 1, 2].map(comp), elemNodal = m.elements.map((e, q) => e.map((_, j) => [en[0][q][j], en[1][q][j], en[2][q][j]]));
+    const nodalArr = [0, 1, 2].map((c) => NL.averageNodal(m, en[c])), nodal = m.nodes.map((_, i) => [nodalArr[0][i], nodalArr[1][i], nodalArr[2][i]]);
+    const out = { model: m, u: U, label, nodal, elemNodal, extra, kernel, gp };
+    out.field = (name, averaged = true) => {
+      if (name === "umag") return U.map(([a, b]) => Math.hypot(a, b));
+      if (name === "ux") return U.map((v) => v[0]);
+      if (name === "uy") return U.map((v) => v[1]);
+      if (FIELDS[name] && FIELDS[name].gp) {
+        let get;
+        if (name === "crack") { const w = gpCrack(m, kernel, extra); get = (i) => w[i]; }
+        else { const a = extra[name]; if (!a) return null; get = (i) => a[i] / (name === "ssx" || name === "ssy" || name === "sc2" ? 1000 : 1); }
+        let ev = NL.elementNodal(resLike, get);
+        if (FIELDS[name].seq) ev = ev.map((vals) => vals.map((v) => Math.max(v, 0)));     // extrapolation must not make a width negative
+        return averaged ? NL.averageNodal(m, ev) : ev;
+      }
+      return averaged ? nodal.map((s) => FE.fieldOf(m, s, name)) : elemNodal.map((vals) => vals.map((s) => FE.fieldOf(m, s, name)));
+    };
+    viewCache.set(ck, out);
+    if (viewCache.size > 40) viewCache.delete(viewCache.keys().next().value);
+    return out;
+  }
+  function gpCrack(m, kernel, extra) {
+    if (!extra || !extra.e1) return new Float64Array(kernel.N);
+    return NL.crackWidths({ model: m, kernel }, { extra });
+  }
+  function fieldLinear(r, name, averaged, rec) {
+    if (name === "umag") return r.u.map(([a, b]) => Math.hypot(a, b));
+    if (name === "ux") return r.u.map((v) => v[0]);
+    if (name === "uy") return r.u.map((v) => v[1]);
+    if (FIELDS[name] && (FIELDS[name].gp || FIELDS[name].elem)) return null;
+    return averaged ? rec.nodal.map((s) => FE.fieldOf(r.model, s, name)) : rec.elemNodal.map((vals) => vals.map((s) => FE.fieldOf(r.model, s, name)));
+  }
+  function designView() {
+    if (!S.des) return null;
+    const { m, d } = S.des, r = d.result;
+    const elem = (f) => m.elements.map((e, q) => e.map(() => f(q)));
+    return { model: m, u: r.u, label: "ULS, linear elastic", nodal: r.nodal, elemNodal: r.elemNodal, extra: {}, des: d,
+      field: (name, averaged = true) => {
+        if (name === "asx") return elem((q) => d.As_req[q][0]);
+        if (name === "asy") return elem((q) => d.As_req[q][1]);
+        if (name === "us") return elem((q) => Math.min(Math.max(...d.util_steel[q].map((v) => (isFinite(v) ? v : 9.99))), 9.99));
+        if (name === "uc") return elem((q) => d.util_concrete[q]);
+        return r.field(name, averaged);
+      } };
+  }
+  function current() {
+    if (S.src === "nl" && S.nl) return stepView();
+    if (S.src === "dyn" && S.dyn.fe) return dynView();
+    if (S.src === "des") { if (!S.des && S.res) computeDesign(); return designView() || S.res; }
+    return S.res;
+  }
+  function fieldsFor() {
+    if (S.src === "des") return SRC_FIELDS.des;
+    if (S.src === "nl" || S.src === "dyn") {
+      const kind = (S.model.material && S.model.material.model) || "elastic", base = SRC_FIELDS.nl.slice();
+      const r = current();
+      if (r && r.extra && r.extra.e1) base.push("crack", "e1", "sc2", "ssx", "ssy");
+      else if (r && r.extra && r.extra.alpha) base.push("alpha");
+      void kind;
+      return base;
+    }
+    return SRC_FIELDS.lin;
+  }
+  function setSource(src) {
+    if (src === "des" && !S.des && S.res) computeDesign();
+    if (src !== S.src) { S.scale = null; P.unlock(); }
+    S.src = src;
+    if (!fieldsFor().includes(S.field)) S.field = src === "des" ? "asx" : "mises";
+    S.step = src === "nl" && S.nl ? S.nl.full.length - 1 : src === "dyn" && S.dyn.fe ? S.dyn.fe.frames.length - 1 : 0;
+    if (src === "nl" && S.nl && S.nl.peakFull != null) S.step = S.nl.peakFull;
+    stopPlay();
+    renderChips(); renderTimeline(); P.rebuild();
   }
 
   // ------------------------------------------------------------ header
@@ -202,79 +542,189 @@
     const name = $("#f-name");
     if (document.activeElement !== name) name.value = S.model.name || "";
     const v = $("#f-verdict"), r = S.res;
+    if (S.nl && !S.nl.stale && S.nl.summary) {
+      const s = S.nl.summary;
+      v.innerHTML = `<span class="eta">${fx(s.lam_peak, 3)}</span><span class="lbl">λ<sub>u</sub> nonlinear<br>${esc(statusText(s.status))}</span>`;
+      return;
+    }
     if (!r) { v.innerHTML = `<span class="lbl">Cannot solve</span>`; return; }
     const vm = r.field("mises"), um = r.field("umag");
-    v.innerHTML = `<span class="eta">${fx(Math.max(...vm), 2)}</span><span class="lbl">max σ<sub>vM</sub> MPa<br>|u| ${fx(1000 * Math.max(...um), 3)} mm</span>`;
+    v.innerHTML = `<span class="eta">${fx(amax(vm), 2)}</span><span class="lbl">max σ<sub>vM</sub> MPa<br>|u| ${fx(1000 * amax(um), 3)} mm</span>`;
   }
+  const statusText = (s) => ({ complete: "load reached", limit: "limit point", "post-peak": "failure (post-peak)", rupture: "rebar rupture", drop: "brittle failure", "max-steps": "step limit", failed: "did not start" }[s] || s);
 
   // ------------------------------------------------------------ editor
   const numIn = (attr, v, step = "any", extra = "") => `<input type="number" step="${step}" ${attr} value="${esc(v ?? "")}" ${extra}>`;
-  function edgesFor() { return S.model.geometry.type === "plate_hole" ? ["left", "right", "bottom", "top", "hole"] : ["left", "right", "bottom", "top"]; }
+  function edgesFor() { const t = S.model.geometry.type; return t === "plate_hole" ? ["left", "right", "bottom", "top", "hole"] : t === "ring" ? ["inner", "outer", "left", "bottom"] : ["left", "right", "bottom", "top"]; }
+  function matKind() { return (S.model.material && S.model.material.model) || "elastic"; }
   function renderEditor() {
     $$("[data-ftab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.ftab === S.ftab)));
-    const ed = $("#f-editor"), m = S.model, g = m.geometry;
-    if (S.ftab === "geom") {
-      ed.innerHTML = `<div class="tabpanel">
-        <div class="group"><h3>Shape</h3>
-          <label class="field">Geometry<select id="f-gtype">${opt("rectangle", "Rectangle with openings (wall, deep beam, beam)", g.type)}${opt("plate_hole", "Square plate with a central hole (quarter model)", g.type)}</select></label>
-          ${g.type === "rectangle" ? `<div class="grid3"><label class="field"><span>L<sub>x</sub> (m)</span>${numIn('data-g="Lx"', g.Lx, 0.1, 'min="0.1"')}</label><label class="field"><span>L<sub>y</sub> (m)</span>${numIn('data-g="Ly"', g.Ly, 0.1, 'min="0.1"')}</label><span></span></div>
-            <div class="subhd">Openings (m)</div>
-            <div class="rows">${(g.openings || []).map((o, k) => `<div class="frow op">${["x0", "y0", "x1", "y1"].map((q) => `<label class="field">${q}${numIn(`data-op="${k}" data-k="${q}"`, o[q], 0.1)}</label>`).join("")}<button class="icon-btn" data-delop="${k}" aria-label="Remove opening ${k + 1}">×</button></div>`).join("")}</div>
-            <div><button class="btn sm" id="f-addop">Add opening</button></div>`
-          : `<div class="grid3"><label class="field">Half width W (m)${numIn('data-g="W"', g.W, 0.5, 'min="0.1"')}</label><label class="field">Hole radius a (m)${numIn('data-g="a"', g.a, 0.1, 'min="0.01"')}</label><span></span></div>
-             <p class="hint">A quarter of a 2W × 2W plate: give the left and bottom edges symmetry supports (u<sub>x</sub> = 0 and u<sub>y</sub> = 0). The hole edge is curved: with T6 and Q8 the midside nodes sit on the arc, an isoparametric curved boundary.</p>`}
-        </div>
-        <div class="group"><h3>Elements</h3>
-          <div class="etypes" role="group" aria-label="Element type">${FE.TYPES.map((t) => `<button data-et="${t}" aria-pressed="${m.element === t}">${t}</button>`).join("")}</div>
-          <p class="hint">${DESCR[m.element]}</p>
-          ${g.type === "rectangle" ? `<div class="fieldrow"><label class="field">Element size h (m)${numIn('data-g="h"', g.h, 0.05, 'min="0.01"')}</label><span class="stepper"><button data-hstep="2" aria-label="Coarser mesh">−</button><button data-hstep="0.5" aria-label="Finer mesh">+</button></span></div>`
-          : `<div class="grid3"><label class="field"><span>n<sub>θ</sub> per 45°</span>${numIn('data-g="n_theta"', g.n_theta, 1, 'min="1" max="60"')}</label><label class="field"><span>n<sub>r</sub> radial</span>${numIn('data-g="n_r"', g.n_r, 1, 'min="1" max="60"')}</label><label class="field">Grading${numIn('data-g="grading"', g.grading ?? 1.6, 0.1, 'min="1" max="4"')}</label></div>
-             <div><span class="stepper"><button data-nstep="0.5" aria-label="Coarser mesh">−</button><button data-nstep="2" aria-label="Finer mesh">+</button></span> <span class="hint">halve or double the divisions</span></div>`}
-          <p class="hint" id="f-meshsum"></p>
-        </div>
-      </div>`;
-    } else if (S.ftab === "bc") {
-      const E = edgesFor(), edgeSel = (attr, cur) => `<select ${attr}>${E.map((e) => opt(e, e, cur)).join("")}</select>`;
-      const sup = (m.supports || []).map((s, k) => `<div class="frow sup">
-          <label class="field">Edge${"at" in s ? `<input value="point ${esc(s.at.join(", "))}" disabled>` : edgeSel(`data-sup="${k}" data-k="edge"`, s.edge)}</label>
-          <label class="field">from${numIn(`data-sup="${k}" data-k="from"`, s.from, 0.1, 'placeholder="start"')}</label><label class="field">to${numIn(`data-sup="${k}" data-k="to"`, s.to, 0.1, 'placeholder="end"')}</label>
-          <label class="chk"><input type="checkbox" data-sup="${k}" data-k="ux" ${s.ux === true ? "checked" : ""}>u<sub>x</sub></label><label class="chk"><input type="checkbox" data-sup="${k}" data-k="uy" ${s.uy === true ? "checked" : ""}>u<sub>y</sub></label>
-          <button class="icon-btn" data-delsup="${k}" aria-label="Remove support ${k + 1}">×</button></div>`).join("");
-      const lds = (m.loads || []).map((l, k) => {
-        const kind = "at" in l ? "point" : l.profile === "parabolic" ? "parabolic" : "edge";
-        const where = kind === "point" ? `<label class="field">x (m)${numIn(`data-ld="${k}" data-k="ax"`, l.at[0], 0.1)}</label><label class="field">y (m)${numIn(`data-ld="${k}" data-k="ay"`, l.at[1], 0.1)}</label>`
-          : `<label class="field">Edge${edgeSel(`data-ld="${k}" data-k="edge"`, l.edge)}</label>${kind === "edge" ? `<label class="field">from / to${`<span style="display:flex;gap:3px">${numIn(`data-ld="${k}" data-k="from"`, l.from, 0.1, 'placeholder="start" aria-label="from"')}${numIn(`data-ld="${k}" data-k="to"`, l.to, 0.1, 'placeholder="end" aria-label="to"')}</span>`}</label>` : "<span></span>"}`;
-        const vals = kind === "point" ? `<label class="field"><span>F<sub>x</sub> kN</span>${numIn(`data-ld="${k}" data-k="fx"`, l.fx ?? 0, 1)}</label><label class="field"><span>F<sub>y</sub> kN</span>${numIn(`data-ld="${k}" data-k="fy"`, l.fy ?? 0, 1)}</label>`
-          : kind === "parabolic" ? `<label class="field">P kN, ${l.dir === "x" ? "x" : "y"}${numIn(`data-ld="${k}" data-k="P"`, l.P, 1)}</label><span></span>`
-          : `<label class="field"><span>q<sub>x</sub> kN/m</span>${numIn(`data-ld="${k}" data-k="qx"`, l.qx ?? 0, 1)}</label><label class="field"><span>q<sub>y</sub> kN/m</span>${numIn(`data-ld="${k}" data-k="qy"`, l.qy ?? 0, 1)}</label>`;
-        return `<div class="frow ld"><label class="field">Kind<select data-ld="${k}" data-k="kind">${opt("edge", "Edge, uniform", kind)}${opt("parabolic", "Edge, parabolic shear", kind)}${opt("point", "Point", kind)}</select></label>${where}${kind === "point" ? "" : ""}<button class="icon-btn" data-delld="${k}" aria-label="Remove load ${k + 1}">×</button></div>
-          <div class="frow ld" style="border-top:0;padding-top:0"><span></span>${vals}<span></span><span></span></div>`;
-      }).join("");
-      ed.innerHTML = `<div class="tabpanel">
-        <div class="group"><div class="group-hd"><h3>Supports</h3><span class="hint">edges named by side; from/to in m along the edge</span></div>
-          <div class="rows">${sup || `<p class="hint">No supports yet.</p>`}</div>
-          <div><button class="btn sm" id="f-addsup">Add support</button></div>
-          <p class="hint">Fixing every node of an edge is a clamped boundary. A support on a short length (a column or bearing) concentrates the reaction: the stresses there depend on the mesh, as they would at a point load.</p></div>
-        <div class="group"><div class="group-hd"><h3>Loads</h3><span class="hint">kN/m along an edge (through the thickness), kN at a point</span></div>
-          <div class="rows">${lds || `<p class="hint">No loads yet.</p>`}</div>
-          <div class="actions"><button class="btn sm" id="f-addld">Add edge load</button><button class="btn sm" id="f-addpt">Add point load</button></div>
-          <label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink-2)"><input type="checkbox" id="f-sw" ${m.self_weight ? "checked" : ""}> Self weight (γ in the Material tab)</label></div>
-      </div>`;
-    } else {
-      const mt = m.material;
-      ed.innerHTML = `<div class="tabpanel">
-        <div class="group"><h3>Analysis</h3>
-          <label class="field">Idealisation<select id="f-an">${opt("plane_stress", "Plane stress (thin: walls, deep beams, plates)", m.analysis)}${opt("plane_strain", "Plane strain (long: dams, tunnels, retaining walls)", m.analysis)}</select></label>
-          <div class="eq" id="f-ceq"></div></div>
-        <div class="group"><h3>Material and thickness</h3>
-          <div class="grid2"><label class="field">E (MPa)${numIn('data-mt="E_MPa"', mt.E_MPa, 1000, 'min="1"')}</label><label class="field">ν${numIn('data-mt="nu"', mt.nu, 0.05, 'min="0" max="0.49"')}</label>
-          <label class="field">Thickness t (m)${numIn('data-mt="thickness_m"', mt.thickness_m, 0.01, 'min="0.001"')}</label><label class="field">γ (kN/m³)${numIn('data-mt="density_kNm3"', mt.density_kNm3, 1, 'min="0"')}</label></div>
-          <div class="actions"><button class="btn sm" data-matp="concrete">Concrete C30/37</button><button class="btn sm" data-matp="steel">Steel S355</button><button class="btn sm" data-matp="masonry">Masonry</button></div>
-          <p class="hint">Linear elastic, isotropic. Plane strain: σ<sub>zz</sub> = ν(σ<sub>xx</sub> + σ<sub>yy</sub>) is included in the von Mises stress.</p></div>
-      </div>`;
-    }
+    const ed = $("#f-editor");
+    ed.innerHTML = { geom: editGeometry, bc: editLoads, mat: editMaterial, reinf: editReinforcement, an: editAnalysis }[S.ftab]();
     bindEditor();
     renderEditorHints();
+  }
+  function editGeometry() {
+    const m = S.model, g = m.geometry;
+    const shape = g.type === "rectangle" ? `<div class="grid3"><label class="field"><span>L<sub>x</sub> (m)</span>${numIn('data-g="Lx"', g.Lx, 0.1, 'min="0.1"')}</label><label class="field"><span>L<sub>y</sub> (m)</span>${numIn('data-g="Ly"', g.Ly, 0.1, 'min="0.1"')}</label><span></span></div>
+        <div class="subhd">Openings (m)</div>
+        <div class="rows">${(g.openings || []).map((o, k) => `<div class="frow op">${["x0", "y0", "x1", "y1"].map((q) => `<label class="field">${q}${numIn(`data-op="${k}" data-k="${q}"`, o[q], 0.1)}</label>`).join("")}<button class="icon-btn" data-delop="${k}" aria-label="Remove opening ${k + 1}">×</button></div>`).join("")}</div>
+        <div><button class="btn sm" id="f-addop">Add opening</button></div>`
+      : g.type === "plate_hole" ? `<div class="grid3"><label class="field">Half width W (m)${numIn('data-g="W"', g.W, 0.5, 'min="0.1"')}</label><label class="field">Hole radius a (m)${numIn('data-g="a"', g.a, 0.1, 'min="0.01"')}</label><span></span></div>
+         <p class="hint">A quarter of a 2W × 2W plate: give the left and bottom edges symmetry supports (u<sub>x</sub> = 0 and u<sub>y</sub> = 0). With T6, Q8 and Q8R the midside nodes sit on the arc: an isoparametric curved boundary.</p>`
+      : `<div class="grid3"><label class="field">Inner radius a (m)${numIn('data-g="a"', g.a, 0.1, 'min="0.01"')}</label><label class="field">Outer radius b (m)${numIn('data-g="b"', g.b, 0.1, 'min="0.02"')}</label><span></span></div>
+         <p class="hint">A quarter of a thick ring or cylinder; edges <span class="num">inner</span>, <span class="num">outer</span>, <span class="num">left</span> and <span class="num">bottom</span>. Give the straight edges symmetry supports and the inner edge a pressure p.</p>`;
+    const mesh = g.type === "rectangle" ? `<div class="fieldrow"><label class="field">Element size h (m)${numIn('data-g="h"', g.h, 0.05, 'min="0.01"')}</label><span class="stepper"><button data-hstep="2" aria-label="Coarser mesh">−</button><button data-hstep="0.5" aria-label="Finer mesh">+</button></span></div>`
+      : `<div class="grid3"><label class="field"><span>n<sub>θ</sub>${g.type === "plate_hole" ? " per 45°" : ""}</span>${numIn('data-g="n_theta"', g.n_theta, 1, 'min="1" max="60"')}</label><label class="field"><span>n<sub>r</sub> radial</span>${numIn('data-g="n_r"', g.n_r, 1, 'min="1" max="60"')}</label><label class="field">Grading${numIn('data-g="grading"', g.grading ?? (g.type === "ring" ? 1 : 1.6), 0.1, 'min="1" max="4"')}</label></div>
+         <div><span class="stepper"><button data-nstep="0.5" aria-label="Coarser mesh">−</button><button data-nstep="2" aria-label="Finer mesh">+</button></span> <span class="hint">halve or double the divisions</span></div>`;
+    return `<div class="tabpanel">
+      <div class="group"><h3>Shape</h3>
+        <label class="field">Geometry<select id="f-gtype">${opt("rectangle", "Rectangle with openings (wall, deep beam, beam)", g.type)}${opt("plate_hole", "Square plate with a central hole (quarter model)", g.type)}${opt("ring", "Thick ring or cylinder (quarter model)", g.type)}</select></label>
+        ${shape}</div>
+      <div class="group"><h3>Elements</h3>
+        <div class="etypes" role="group" aria-label="Element type">${FE.TYPES.map((t) => `<button data-et="${t}" aria-pressed="${m.element === t}">${t}</button>`).join("")}</div>
+        <p class="hint">${DESCR[m.element] || ""}</p>${mesh}
+        <p class="hint" id="f-meshsum"></p></div>
+    </div>`;
+  }
+  function editLoads() {
+    const m = S.model, E = edgesFor(), edgeSel = (attr, cur) => `<select ${attr}>${E.map((e) => opt(e, e, cur)).join("")}</select>`;
+    const sup = (m.supports || []).map((s, k) => `<div class="frow sup">
+        <label class="field">Edge${"at" in s ? `<input value="point ${esc(s.at.join(", "))}" disabled>` : edgeSel(`data-sup="${k}" data-k="edge"`, s.edge)}</label>
+        <label class="field">from${numIn(`data-sup="${k}" data-k="from"`, s.from, 0.1, 'placeholder="start"')}</label><label class="field">to${numIn(`data-sup="${k}" data-k="to"`, s.to, 0.1, 'placeholder="end"')}</label>
+        <label class="chk"><input type="checkbox" data-sup="${k}" data-k="ux" ${s.ux === true ? "checked" : ""}>u<sub>x</sub></label><label class="chk"><input type="checkbox" data-sup="${k}" data-k="uy" ${s.uy === true ? "checked" : ""}>u<sub>y</sub></label>
+        <button class="icon-btn" data-delsup="${k}" aria-label="Remove support ${k + 1}">×</button></div>`).join("");
+    const lds = (m.loads || []).map((l, k) => {
+      const kind = "at" in l ? "point" : l.profile === "parabolic" ? "parabolic" : "p" in l && !(l.qx || l.qy) ? "pressure" : "edge";
+      const where = kind === "point" ? `<label class="field">x (m)${numIn(`data-ld="${k}" data-k="ax"`, l.at[0], 0.1)}</label><label class="field">y (m)${numIn(`data-ld="${k}" data-k="ay"`, l.at[1], 0.1)}</label>`
+        : `<label class="field">Edge${edgeSel(`data-ld="${k}" data-k="edge"`, l.edge)}</label>${kind === "edge" ? `<label class="field">from / to<span style="display:flex;gap:3px">${numIn(`data-ld="${k}" data-k="from"`, l.from, 0.1, 'placeholder="start" aria-label="from"')}${numIn(`data-ld="${k}" data-k="to"`, l.to, 0.1, 'placeholder="end" aria-label="to"')}</span></label>` : "<span></span>"}`;
+      const vals = kind === "point" ? `<label class="field"><span>F<sub>x</sub> kN</span>${numIn(`data-ld="${k}" data-k="fx"`, l.fx ?? 0, 1)}</label><label class="field"><span>F<sub>y</sub> kN</span>${numIn(`data-ld="${k}" data-k="fy"`, l.fy ?? 0, 1)}</label>`
+        : kind === "parabolic" ? `<label class="field">P kN, ${l.dir === "x" ? "x" : "y"}${numIn(`data-ld="${k}" data-k="P"`, l.P, 1)}</label><span></span>`
+        : kind === "pressure" ? `<label class="field"><span>p kN/m (normal)</span>${numIn(`data-ld="${k}" data-k="p"`, l.p ?? 0, 1)}</label><span></span>`
+        : `<label class="field"><span>q<sub>x</sub> kN/m</span>${numIn(`data-ld="${k}" data-k="qx"`, l.qx ?? 0, 1)}</label><label class="field"><span>q<sub>y</sub> kN/m</span>${numIn(`data-ld="${k}" data-k="qy"`, l.qy ?? 0, 1)}</label>`;
+      return `<div class="frow ld"><label class="field">Kind<select data-ld="${k}" data-k="kind">${opt("edge", "Edge, uniform", kind)}${opt("pressure", "Edge, pressure", kind)}${opt("parabolic", "Edge, parabolic shear", kind)}${opt("point", "Point", kind)}</select></label>${where}<label class="field">Case<select data-ld="${k}" data-k="case">${opt("G", "G permanent", l.case || "G")}${opt("Q", "Q variable", l.case || "G")}</select></label><button class="icon-btn" data-delld="${k}" aria-label="Remove load ${k + 1}">×</button></div>
+        <div class="frow ld" style="border-top:0;padding-top:0"><span></span>${vals}<span></span><span></span></div>`;
+    }).join("");
+    const d = m.design || {};
+    return `<div class="tabpanel">
+      <div class="group"><div class="group-hd"><h3>Supports</h3><span class="hint">edges named by side; from/to in m along the edge</span></div>
+        <div class="rows">${sup || `<p class="hint">No supports yet.</p>`}</div>
+        <div><button class="btn sm" id="f-addsup">Add support</button></div>
+        <p class="hint">Fixing every node of an edge is a clamped boundary. A support on a short length (a column or bearing) concentrates the reaction: in linear elasticity the stress at its end is singular and grows as the mesh is refined. The Design tab averages it over a patch of radius t, and the nonlinear concrete model redistributes it by cracking and crushing, as the real structure does.</p></div>
+      <div class="group"><div class="group-hd"><h3>Loads</h3><span class="hint">kN/m along an edge (through the thickness), kN at a point</span></div>
+        <div class="rows">${lds || `<p class="hint">No loads yet.</p>`}</div>
+        <div class="actions"><button class="btn sm" id="f-addld">Add edge load</button><button class="btn sm" id="f-addpt">Add point load</button></div>
+        <label class="hint" style="display:flex;gap:6px;align-items:center;color:var(--ink-2)"><input type="checkbox" id="f-sw" ${m.self_weight ? "checked" : ""}> Self weight (γ in the Material tab, case G)</label></div>
+      <div class="group"><h3>Combinations <span class="hint">EN 1990</span></h3>
+        <div class="grid3"><label class="field">γ<sub>G</sub>${numIn('data-dsg="gamma_G"', d.gamma_G ?? 1.35, 0.05, 'min="0"')}</label><label class="field">γ<sub>Q</sub>${numIn('data-dsg="gamma_Q"', d.gamma_Q ?? 1.5, 0.05, 'min="0"')}</label><label class="field">ψ<sub>2</sub>${numIn('data-dsg="psi2"', d.psi2 ?? 0.3, 0.1, 'min="0" max="1"')}</label></div>
+        <label class="field">Linear results for<select id="f-combo">${opt("char", "Characteristic: G + Q", S.combo)}${opt("uls", "ULS: γ_G G + γ_Q Q (6.10)", S.combo)}${opt("qp", "Quasi-permanent: G + ψ₂ Q", S.combo)}</select></label></div>
+    </div>`;
+  }
+  function editMaterial() {
+    const m = S.model, mt = m.material, kind = matKind();
+    const common = `<div class="grid2"><label class="field">E (MPa)${numIn('data-mt="E_MPa"', mt.E_MPa, 1000, 'min="1"')}</label><label class="field">ν${numIn('data-mt="nu"', mt.nu, 0.05, 'min="0" max="0.49"')}</label>
+        <label class="field">Thickness t (m)${numIn('data-mt="thickness_m"', mt.thickness_m, 0.01, 'min="0.001"')}</label><label class="field">γ (kN/m³)${numIn('data-mt="density_kNm3"', mt.density_kNm3, 1, 'min="0"')}</label></div>`;
+    let model = "";
+    if (kind === "j2") model = `<div class="grid2"><label class="field">f<sub>y</sub> (MPa)${numIn('data-mt="fy_MPa"', mt.fy_MPa ?? 355, 5, 'min="1"')}</label><label class="field">Hardening H (MPa)${numIn('data-mt="H_MPa"', mt.H_MPa ?? 0, 100, 'min="0"')}</label></div>
+      <div class="eq"><div>f(σ, α) = ‖s‖ − √(2/3) (f<sub>y</sub> + H α) ≤ 0 <span class="c">von Mises, linear isotropic hardening</span></div>
+        <div>trial s<sub>tr</sub> = 2G(e − ε<sub>p</sub>);  Δγ = f<sub>tr</sub>/(2G + 2H/3);  n = s<sub>tr</sub>/‖s<sub>tr</sub>‖ <span class="c">radial return, backward Euler</span></div>
+        <div>D<sub>ep</sub> = K 1⊗1 + 2Gθ (I − ⅓ 1⊗1) − 2G θ̄ n⊗n,  θ = 1 − 2GΔγ/‖s<sub>tr</sub>‖ <span class="c">consistent tangent</span></div>
+        <div class="c">plane stress: σ<sub>zz</sub> = 0 enforced at every Gauss point by Newton on ε<sub>zz</sub>, then static condensation</div></div>`;
+    else if (kind === "rc") {
+      const cp = FE.concreteProps(mt.fck_MPa ?? 30);
+      model = `<div class="grid2"><label class="field">Concrete f<sub>ck</sub> (MPa)<select data-mtc="fck_MPa">${[20, 25, 30, 35, 40, 45, 50, 60].map((v) => opt(v, `C${v}/${{ 20: 25, 25: 30, 30: 37, 35: 45, 40: 50, 45: 55, 50: 60, 60: 75 }[v]}`, mt.fck_MPa ?? 30)).join("")}</select></label>
+          <label class="field">Strengths<select data-mtc="values">${opt("mean", "Mean (f_cm, f_ctm, 1.1 f_yk): realistic", mt.values ?? "design")}${opt("design", "Design (f_cd, f_ctd, f_yd): ULS check", mt.values ?? "design")}</select></label>
+          <label class="field">Compression softening<select data-mtc="softening">${opt("mcft", "MCFT: β = 1/(0.8 + 170 ε₁)", mt.softening ?? "mcft")}${opt("ec2", "EN 1992: ν = 0.6(1 − f_ck/250)", mt.softening ?? "mcft")}</select></label>
+          <label class="field">Concrete tension<select data-mtc="tension">${opt("stiffening", "Tension stiffening (MCFT)", mt.tension ?? "stiffening")}${opt("none", "None after cracking (plasticity)", mt.tension ?? "stiffening")}</select></label></div>
+        <p class="hint">C${mt.fck_MPa ?? 30}: f<sub>cm</sub> = ${fx(cp.fcm, 1)}, f<sub>ctm</sub> = ${fx(cp.fctm, 2)} MPa, E<sub>cm</sub> = ${fx(cp.Ecm, 0)} MPa (EN 1992-1-1 Table 3.1) <button class="link-btn" id="f-useEcm">use E<sub>cm</sub></button>. Plain zones (no bars) soften over the crack band with G<sub>f</sub> = 0.073 f<sub>cm</sub><sup>0.18</sup> N/mm (fib MC 2010).</p>
+        <div class="eq"><div>ε → principal strains ε₁, ε₂ at angle θ; cracks rotate with θ <span class="c">total-strain rotating smeared crack</span></div>
+          <div>σ<sub>c2</sub> = −β f<sub>c</sub> (2η − η²), η = −ε₂/ε<sub>c0</sub> <span class="c">Hognestad parabola, softened by cracking</span></div>
+          <div>σ<sub>c1</sub> = f<sub>ct</sub>/(1 + √(500 ε₁)) ≤ ρ<sub>x</sub>(f<sub>y</sub> − σ<sub>sx</sub>)cos²θ + ρ<sub>y</sub>(f<sub>y</sub> − σ<sub>sy</sub>)sin²θ <span class="c">tension stiffening, MCFT crack check</span></div>
+          <div>σ = Tᵀ [σ<sub>c1</sub>, σ<sub>c2</sub>, 0] + [ρ<sub>x</sub> σ<sub>sx</sub>, ρ<sub>y</sub> σ<sub>sy</sub>, 0] <span class="c">smeared bars, bilinear, kinematic hardening</span></div>
+          <div>w = s<sub>r,max,θ</sub> (ε₁ − σ<sub>c1</sub>/E<sub>c</sub>) <span class="c">crack width, EN 1992-1-1 7.3.4</span></div></div>`;
+    } else model = `<div class="eq" id="f-ceq"></div><p class="hint">Linear elastic, isotropic. Plane strain: σ<sub>zz</sub> = ν(σ<sub>xx</sub> + σ<sub>yy</sub>) is included in the von Mises stress. Geometric nonlinearity (large rotations) is in the Analysis tab.</p>`;
+    return `<div class="tabpanel">
+      <div class="group"><h3>Idealisation</h3>
+        <label class="field">Theory<select id="f-an">${opt("plane_stress", "Plane stress (thin: walls, deep beams, plates)", m.analysis)}${opt("plane_strain", "Plane strain (long: dams, tunnels, cylinders)", m.analysis)}</select></label></div>
+      <div class="group"><h3>Material model</h3>
+        <div class="seg3" role="group" aria-label="Material model">
+          <button data-mmodel="elastic" aria-pressed="${kind === "elastic"}">Linear elastic</button>
+          <button data-mmodel="j2" aria-pressed="${kind === "j2"}">Steel: von Mises plasticity</button>
+          <button data-mmodel="rc" aria-pressed="${kind === "rc"}" ${m.analysis !== "plane_stress" ? "disabled title=\"a membrane (plane stress) model\"" : ""}>Reinforced concrete</button></div>
+        ${common}${model}
+        <div class="actions"><button class="btn sm" data-matp="concrete">Concrete C30/37</button><button class="btn sm" data-matp="steel">Steel S355</button><button class="btn sm" data-matp="masonry">Masonry</button></div></div>
+    </div>`;
+  }
+  function editReinforcement() {
+    const m = S.model, r = m.reinforcement || (m.reinforcement = { layers: [] }), d = m.design || (m.design = {});
+    const rows = (r.layers || []).map((L, k) => {
+      const tie = "n" in L, reg = L.region || null;
+      return `<div class="frow rb"><label class="field">Dir<select data-rb="${k}" data-k="dir">${opt("x", "x (horizontal)", L.dir)}${opt("y", "y (vertical)", L.dir)}</select></label>
+        <label class="field">Ø mm<select data-rb="${k}" data-k="dia_mm">${[6, 8, 10, 12, 14, 16, 20, 25, 28, 32].map((v) => opt(v, `Ø${v}`, L.dia_mm)).join("")}</select></label>
+        ${tie ? `<label class="field">n bars${numIn(`data-rb="${k}" data-k="n"`, L.n, 1, 'min="1"')}</label>` : `<label class="field">spacing mm${numIn(`data-rb="${k}" data-k="spacing_mm"`, L.spacing_mm, 25, 'min="25"')}</label>`}
+        ${tie ? `<span class="hint">tie in a band</span>` : `<label class="field">faces<select data-rb="${k}" data-k="faces">${opt(2, "both", L.faces ?? 2)}${opt(1, "one", L.faces ?? 2)}</select></label>`}
+        <button class="icon-btn" data-delrb="${k}" aria-label="Remove layer ${k + 1}">×</button></div>
+        <div class="frow rb2">${reg ? ["x0", "x1", "y0", "y1"].map((q) => `<label class="field">${q}${numIn(`data-rbr="${k}" data-k="${q}"`, reg[q], 0.1)}</label>`).join("") : `<span class="hint" style="grid-column:1/5">whole region${L.label ? ` · ${esc(L.label)}` : ""} <button class="link-btn" data-rbzone="${k}">limit to a zone</button></span>`}<span></span></div>`;
+    }).join("");
+    const p = S.des && S.des.proposal;
+    return `<div class="tabpanel">
+      <div class="group"><h3>Member and durability <span class="hint">EN 1992-1-1</span></h3>
+        <div class="grid3"><label class="field">Member<select data-dsg="member">${opt("wall", "Wall (9.6)", d.member ?? "wall")}${opt("deep_beam", "Deep beam (9.7)", d.member ?? "wall")}${opt("none", "No minimum", d.member ?? "wall")}</select></label>
+          <label class="field">Cover c mm${numIn('data-rf="cover_mm"', r.cover_mm ?? 30, 5, 'min="0"')}</label><label class="field">w<sub>max</sub> mm${numIn('data-dsg="w_max_mm"', d.w_max_mm ?? 0.3, 0.05, 'min="0.05"')}</label></div>
+        <div class="grid4"><label class="field">f<sub>yk</sub> MPa${numIn('data-rf="fyk_MPa"', r.fyk_MPa ?? 500, 50, 'min="100"')}</label><label class="field">k = f<sub>t</sub>/f<sub>y</sub>${numIn('data-rf="k"', r.k ?? 1.08, 0.01, 'min="1" max="1.5"')}</label>
+          <label class="field">ε<sub>uk</sub>${numIn('data-rf="euk"', r.euk ?? 0.05, 0.005, 'min="0.01"')}</label><label class="field">γ<sub>s</sub>${numIn('data-dsg="gamma_s"', d.gamma_s ?? 1.15, 0.05, 'min="1"')}</label></div></div>
+      <div class="group"><div class="group-hd"><h3>Bar layers</h3><span class="hint">A<sub>s</sub> per metre, smeared over the zone</span></div>
+        <div class="rows">${rows || `<p class="hint">No reinforcement: concrete is plain (crack band softening).</p>`}</div>
+        <div class="actions"><button class="btn sm" id="f-addmesh">Add mesh layer</button><button class="btn sm" id="f-addtie">Add tie (n bars in a band)</button></div></div>
+      <div class="group"><h3>Design from the FE stresses <span class="hint">Annex F</span></h3>
+        <p class="hint">Linear ULS stresses averaged over a patch of radius t, then EN 1992-1-1 Annex F: f'<sub>td</sub> = |τ| − σ (F.2–F.7), A<sub>s</sub> = f'<sub>td</sub> t / f<sub>yd</sub>, the concrete stress σ<sub>cd</sub> ≤ ν f<sub>cd</sub>, minimum reinforcement 9.6/9.7. The proposal is a base mesh plus strips of one bar size, run on by l<sub>bd</sub> (8.4).</p>
+        <div class="actions"><button class="btn sm primary" id="f-design">Design reinforcement</button>${p ? `<button class="btn sm" id="f-apply">Use the proposed ${p.layers.length} layers</button>` : ""}</div>
+        ${p ? `<div class="hint">${p.layers.map((L) => `${L.dir}: Ø${L.dia_mm} @ ${L.spacing_mm}${L.region ? ` in x ${fx(L.region.x0, 2)}–${fx(L.region.x1, 2)}, y ${fx(L.region.y0, 2)}–${fx(L.region.y1, 2)}` : " everywhere"}`).join("<br>")}</div>` : ""}</div>
+    </div>`;
+  }
+  function editAnalysis() {
+    const a = S.an, kind = matKind(), running = S.nlRun || S.dyn.run;
+    const ctrl = (v, l) => `<button data-anc="${v}" aria-pressed="${a.control === v}">${l}</button>`;
+    const nlPanel = `<div class="group"><h3>Nonlinear static <span class="hint">MFE II: solution methods</span></h3>
+        <div class="grid2"><label class="field">Load<select data-an="combination">${opt("uls", "ULS combination γ_G G + γ_Q Q", a.combination)}${opt("char", "Characteristic G + Q", a.combination)}${opt("qp", "Quasi-permanent G + ψ₂ Q", a.combination)}</select></label>
+          <label class="field">λ multiplies<select data-an="load_pattern">${opt("all", "all loads (proportional)", a.load_pattern)}${opt("variable", "variable loads Q, after G (pushover)", a.load_pattern)}</select></label></div>
+        <div class="subhd">Path following</div>
+        <div class="seg3" role="group" aria-label="Control">${ctrl("load", "Load control")}${ctrl("displacement", "Displacement control")}${ctrl("arc", "Arc-length (Crisfield)")}</div>
+        <div class="grid3"><label class="field">Iterations<select data-an="iteration">${opt("newton", "Newton–Raphson", a.iteration)}${opt("modified", "Modified Newton", a.iteration)}${opt("secant", "Secant (+ Anderson)", a.iteration)}</select></label>
+          <label class="field">First Δλ = λ<sub>max</sub>/n, n${numIn('data-an="steps"', a.steps, 1, 'min="1" max="200"')}</label><label class="field">λ<sub>max</sub>${numIn('data-an="lam_max"', a.lam_max, 0.1, 'min="0.01"')}</label></div>
+        <div class="grid3"><label class="field">Tolerance${numIn('data-an="tol"', a.tol ?? "", "any", `placeholder="${kind === "rc" ? "1e-3" : "1e-6"}"`)}</label><label class="field">Max steps${numIn('data-an="max_steps"', a.max_steps, 10, 'min="1" max="1000"')}</label>
+          <label class="chk" style="height:auto;align-self:center"><input type="checkbox" data-anb="to_failure" ${a.to_failure ? "checked" : ""}> to failure</label></div>
+        <label class="chk" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" data-anb="geometric" ${a.geometric ? "checked" : ""} ${kind !== "elastic" ? "disabled" : ""}> Geometric nonlinearity (total Lagrangian, large rotations)${kind !== "elastic" ? " – elastic material only" : ""}</label>
+        <div class="eq"><div>R(u, λ) = λ f<sub>ext</sub> − f<sub>int</sub>(u) = 0,  K<sub>T</sub> Δu = R <span class="c">incremental–iterative</span></div>
+          ${a.control === "arc" ? `<div>‖Δu‖² = Δl², δλ from the quadratic of the constraint <span class="c">cylindrical arc-length; passes limit points, snap-through, snap-back</span></div>`
+            : a.control === "displacement" ? `<div>u<sub>mon</sub> prescribed, δλ = −δu<sub>R,mon</sub>/δu<sub>f,mon</sub> <span class="c">passes load maxima (snap-through)</span></div>` : `<div>λ prescribed; a step that does not converge is halved <span class="c">stops at a limit point</span></div>`}
+          ${a.geometric ? `<div>F = I + ∂u/∂X,  E = ½(FᵀF − I),  S = C E,  K<sub>T</sub> = ∫B<sub>L</sub>ᵀ C B<sub>L</sub> + ∫Gᵀ Ŝ G <span class="c">material + geometric stiffness</span></div>` : ""}</div>
+        <div class="run"><button class="btn primary" id="f-runnl" ${running ? "disabled" : ""}>Run nonlinear analysis</button>${S.nlRun ? `<button class="btn" id="f-stop">Stop</button><div class="prog"><i style="width:${Math.min(100, 100 * (S.nlRun.lam || 0) / Math.max(S.nlRun.target || 1, 1e-9))}%"></i></div><span class="hint">λ = ${fmt(S.nlRun.lam || 0, 4)}</span>` : ""}</div></div>`;
+    const ds = S.dyn.spec, sd = S.dyn.sdof;
+    const dynPanel = `<div class="group"><h3>Ground motion <span class="hint">EN 1998-1 3.2.3.1.2</span></h3>
+        <div class="seg3" role="group" aria-label="Record"><button data-rtype="synthetic" aria-pressed="${ds.type === "synthetic"}">Synthetic, spectrum-compatible</button><button data-rtype="values" aria-pressed="${ds.type === "values"}">Pasted record</button></div>
+        ${ds.type === "synthetic" ? `<div class="grid3"><label class="field">a<sub>g</sub> (g)${numIn('data-ds="ag_g"', ds.ag_g, 0.05, 'min="0.01" max="2"')}</label><label class="field">Ground<select data-dss="soil">${["A", "B", "C", "D", "E"].map((v) => opt(v, v, ds.soil)).join("")}</select></label>
+            <label class="field">Spectrum<select data-dss="spectrum_type">${opt(1, "Type 1", ds.spectrum_type)}${opt(2, "Type 2", ds.spectrum_type)}</select></label>
+            <label class="field">Duration s${numIn('data-ds="duration_s"', ds.duration_s, 1, 'min="4" max="60"')}</label><label class="field">Δt s${numIn('data-ds="dt_s"', ds.dt_s, 0.005, 'min="0.002" max="0.05"')}</label><label class="field">Seed${numIn('data-ds="seed"', ds.seed, 1, 'min="1"')}</label></div>
+            <p class="hint">Sum of sinusoids with random phases under a trapezoidal envelope, amplitudes iterated until the 5 % spectrum matches S<sub>e</sub>(T) (SIMQKE); baseline corrected. Three seeds give the EN 1998 minimum set.</p>`
+          : `<label class="field">Accelerations in g, one per Δt (spaces, commas or lines)<textarea class="vals" id="f-recvals">${esc(S.dyn.values)}</textarea></label><label class="field">Δt s${numIn('data-ds="dt_s"', ds.dt_s, 0.005, 'min="0.0005" max="0.1"')}</label>`}
+        <div class="actions"><button class="btn sm" id="f-mkrec" ${running ? "disabled" : ""}>Generate and plot</button></div></div>
+      <div class="group"><h3>Hysteretic oscillator <span class="hint">Bouc–Wen SDOF</span></h3>
+        <div class="grid3"><label class="field">m (t)${numIn('data-bw="m"', sd.m, 10, 'min="0.1"')}</label><label class="field">k (kN/m)${numIn('data-bw="k"', sd.k, 1000, 'min="1"')}</label><label class="field">u<sub>y</sub> (m)${numIn('data-bw="uy"', sd.uy, 0.001, 'min="0.0001"')}</label>
+          <label class="field">α post-yield${numIn('data-bw="alpha"', sd.alpha, 0.01, 'min="0" max="1"')}</label><label class="field">n smoothness${numIn('data-bw="n"', sd.n, 0.5, 'min="0.5" max="20"')}</label><label class="field">ξ${numIn('data-bw="xi"', sd.xi, 0.01, 'min="0" max="0.3"')}</label></div>
+        <div class="eq"><div>m ü + c u̇ + α k u + (1 − α) k u<sub>y</sub> z = −m a<sub>g</sub></div><div>dz/du = [1 − |z|ⁿ (β sgn(du·z) + γ)]/u<sub>y</sub>, β = γ = ½ <span class="c">Wen (1976)</span></div>
+          <div class="c">Newmark average acceleration (γ = ½, β = ¼) with Newton iterations; T = ${fx(2 * Math.PI * Math.sqrt(sd.m / sd.k), 3)} s, F<sub>y</sub> = ${fmt(sd.k * sd.uy, 3)} kN</div></div>
+        <div class="actions"><button class="btn sm" id="f-runbw" ${running ? "disabled" : ""}>Run SDOF</button></div></div>
+      <div class="group"><h3>FE time history <span class="hint">implicit Newmark, Newton</span></h3>
+        <div class="grid2"><label class="field">Gravity and mass<select id="f-dyncombo">${opt("qp", "G + ψ₂ Q (EN 1998 seismic situation)", S.dyn.combination)}${opt("char", "G + Q", S.dyn.combination)}</select></label><label class="field">Rayleigh ξ (modes 1, 2)${numIn('data-dyx="xi"', S.dyn.xi, 0.01, 'min="0" max="0.3"')}</label></div>
+        <p class="hint">Gravity first (static, nonlinear), then the record in x. Mass: ρ t ∫NᵀN dA (γ/g) plus the gravity loads as lumped mass. Steps that do not converge are subdivided down to Δt/8. ${matKind() === "elastic" ? "Elastic material: one factorisation for the whole record." : "Nonlinear material: every step iterates."}</p>
+        <div class="run"><button class="btn primary" id="f-rundyn" ${running ? "disabled" : ""}>Run time history</button>${S.dyn.run ? `<button class="btn" id="f-stop">Stop</button><div class="prog"><i style="width:${Math.round(100 * (S.dyn.run.i || 0) / Math.max(S.dyn.run.nT || 1, 1))}%"></i></div><span class="hint">${Math.round(100 * (S.dyn.run.i || 0) / Math.max(S.dyn.run.nT || 1, 1))} %</span>` : ""}</div></div>`;
+    return `<div class="tabpanel">
+      <div class="group"><h3>Analysis</h3>
+        <div class="seg3" role="group" aria-label="Analysis type"><button data-atype="lin" aria-pressed="${a.type === "lin"}">Linear</button><button data-atype="nl" aria-pressed="${a.type === "nl"}">Nonlinear static</button><button data-atype="dyn" aria-pressed="${a.type === "dyn"}">Earthquake time history</button></div>
+        ${a.type === "lin" ? `<p class="hint">Linear elastic analysis runs on every edit (Results tab). The combination is chosen in the Loads tab.</p>` : ""}</div>
+      ${a.type === "nl" ? nlPanel : a.type === "dyn" ? dynPanel : ""}
+    </div>`;
   }
   function renderEditorHints() {
     const ms = $("#f-meshsum");
@@ -290,64 +740,237 @@
     const ed = $("#f-editor"), m = S.model, g = m.geometry;
     const on = (sel, ev, fn) => { const el = $(sel, ed); if (el) el.addEventListener(ev, fn); };
     const numv = (el) => (el.value === "" ? null : Number(el.value));
+    const changed = (delay) => { staleResults(); schedule(delay); };
     on("#f-gtype", "change", (e) => {
-      m.geometry = e.target.value === "rectangle" ? clone(PRESETS.wall.model.geometry) : clone(PRESETS.kirsch.model.geometry);
-      m.supports = e.target.value === "rectangle" ? clone(PRESETS.wall.model.supports) : clone(PRESETS.kirsch.model.supports);
-      m.loads = e.target.value === "rectangle" ? clone(PRESETS.wall.model.loads) : clone(PRESETS.kirsch.model.loads);
-      renderEditor(); schedule(30); P.fitSoon();
+      const t = e.target.value;
+      const src = t === "rectangle" ? PRESETS.wall.model : t === "plate_hole" ? PRESETS.kirsch.model : PRESETS.hill.model;
+      m.geometry = clone(src.geometry); m.supports = clone(src.supports); m.loads = clone(src.loads);
+      if (t === "ring" && m.analysis !== "plane_strain") m.analysis = "plane_strain";
+      if (matKind() === "rc" && m.analysis !== "plane_stress") m.material.model = "elastic";
+      renderEditor(); changed(30); P.fitSoon();
     });
-    $$("[data-g]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; g[inp.dataset.g] = inp.dataset.g === "n_theta" || inp.dataset.g === "n_r" ? Math.round(v) : v; schedule(); P.fitSoon(); }));
-    $$("[data-hstep]", ed).forEach((b) => b.onclick = () => { g.h = +(g.h * Number(b.dataset.hstep)).toPrecision(4); $('[data-g="h"]', ed).value = g.h; schedule(60); });
+    $$("[data-g]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; g[inp.dataset.g] = inp.dataset.g === "n_theta" || inp.dataset.g === "n_r" ? Math.round(v) : v; changed(); P.fitSoon(); }));
+    $$("[data-hstep]", ed).forEach((b) => b.onclick = () => { g.h = +(g.h * Number(b.dataset.hstep)).toPrecision(4); $('[data-g="h"]', ed).value = g.h; changed(60); });
     $$("[data-nstep]", ed).forEach((b) => b.onclick = () => {
       const f = Number(b.dataset.nstep);
       g.n_theta = Math.max(1, Math.min(60, Math.round(g.n_theta * f))); g.n_r = Math.max(1, Math.min(60, Math.round(g.n_r * f)));
-      $('[data-g="n_theta"]', ed).value = g.n_theta; $('[data-g="n_r"]', ed).value = g.n_r; schedule(60);
+      $('[data-g="n_theta"]', ed).value = g.n_theta; $('[data-g="n_r"]', ed).value = g.n_r; changed(60);
     });
-    $$("[data-op]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; g.openings[+inp.dataset.op][inp.dataset.k] = v; schedule(); }));
-    $$("[data-delop]", ed).forEach((b) => b.onclick = () => { g.openings.splice(+b.dataset.delop, 1); renderEditor(); schedule(30); });
-    on("#f-addop", "click", () => { (g.openings = g.openings || []).push({ x0: +(g.Lx * 0.4).toFixed(2), y0: +(g.Ly * 0.35).toFixed(2), x1: +(g.Lx * 0.6).toFixed(2), y1: +(g.Ly * 0.65).toFixed(2) }); renderEditor(); schedule(30); });
-    $$("[data-et]", ed).forEach((b) => b.onclick = () => { m.element = b.dataset.et; S.sel = null; S.gsel = 0; renderEditor(); schedule(30); });
+    $$("[data-op]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; g.openings[+inp.dataset.op][inp.dataset.k] = v; changed(); }));
+    $$("[data-delop]", ed).forEach((b) => b.onclick = () => { g.openings.splice(+b.dataset.delop, 1); renderEditor(); changed(30); });
+    on("#f-addop", "click", () => { (g.openings = g.openings || []).push({ x0: +(g.Lx * 0.4).toFixed(2), y0: +(g.Ly * 0.35).toFixed(2), x1: +(g.Lx * 0.6).toFixed(2), y1: +(g.Ly * 0.65).toFixed(2) }); renderEditor(); changed(30); });
+    $$("[data-et]", ed).forEach((b) => b.onclick = () => { m.element = b.dataset.et; S.sel = null; S.gsel = 0; renderEditor(); changed(30); });
     // supports
     $$("[data-sup]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
       const s = m.supports[+el.dataset.sup], k = el.dataset.k;
       if (el.type === "checkbox") s[k] = el.checked;
       else if (k === "edge") { s.edge = el.value; delete s.from; delete s.to; renderEditor(); }
       else { const v = numv(el); if (v == null) delete s[k]; else if (isFinite(v)) s[k] = v; }
-      schedule();
+      changed();
     }));
-    $$("[data-delsup]", ed).forEach((b) => b.onclick = () => { m.supports.splice(+b.dataset.delsup, 1); renderEditor(); schedule(30); });
-    on("#f-addsup", "click", () => { m.supports.push({ edge: "bottom", ux: true, uy: true }); renderEditor(); schedule(30); });
+    $$("[data-delsup]", ed).forEach((b) => b.onclick = () => { m.supports.splice(+b.dataset.delsup, 1); renderEditor(); changed(30); });
+    on("#f-addsup", "click", () => { m.supports.push({ edge: edgesFor()[2] || "bottom", ux: true, uy: true }); renderEditor(); changed(30); });
     // loads
     $$("[data-ld]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
       const i = +el.dataset.ld, l = m.loads[i], k = el.dataset.k;
       if (k === "kind") {
-        m.loads[i] = el.value === "point" ? { at: [g.Lx ?? g.W, g.Ly ?? g.W], fx: 0, fy: -100 } : el.value === "parabolic" ? { edge: l.edge || "right", profile: "parabolic", P: -100, dir: "y" } : { edge: l.edge || "top", qx: 0, qy: -50 };
-        renderEditor(); schedule(30); return;
+        const cs = l.case;
+        m.loads[i] = el.value === "point" ? { at: [g.Lx ?? g.W ?? g.b, g.Ly ?? g.W ?? 0], fx: 0, fy: -100 } : el.value === "parabolic" ? { edge: l.edge || "right", profile: "parabolic", P: -100, dir: "y" }
+          : el.value === "pressure" ? { edge: l.edge || edgesFor()[0], p: 100 } : { edge: l.edge || "top", qx: 0, qy: -50 };
+        if (cs) m.loads[i].case = cs;
+        renderEditor(); changed(30); return;
       }
-      if (k === "edge") { l.edge = el.value; delete l.from; delete l.to; if (l.profile === "parabolic") l.dir = el.value === "left" || el.value === "right" ? "y" : "x"; renderEditor(); schedule(30); return; }
+      if (k === "case") { if (el.value === "G") delete l.case; else l.case = el.value; changed(30); return; }
+      if (k === "edge") { l.edge = el.value; delete l.from; delete l.to; if (l.profile === "parabolic") l.dir = el.value === "left" || el.value === "right" ? "y" : "x"; renderEditor(); changed(30); return; }
       const v = numv(el);
       if (k === "ax" || k === "ay") { if (v != null && isFinite(v)) l.at[k === "ax" ? 0 : 1] = v; }
       else if (v == null) { if (k === "from" || k === "to") delete l[k]; }
       else if (isFinite(v)) l[k] = v;
-      schedule();
+      changed();
     }));
-    $$("[data-delld]", ed).forEach((b) => b.onclick = () => { m.loads.splice(+b.dataset.delld, 1); renderEditor(); schedule(30); });
-    on("#f-addld", "click", () => { m.loads.push({ edge: "top", qx: 0, qy: -50 }); renderEditor(); schedule(30); });
-    on("#f-addpt", "click", () => { m.loads.push({ at: [g.type === "rectangle" ? g.Lx / 2 : g.W, g.type === "rectangle" ? g.Ly : g.W], fx: 0, fy: -100 }); renderEditor(); schedule(30); });
-    on("#f-sw", "change", (e) => { m.self_weight = e.target.checked; schedule(30); });
+    $$("[data-delld]", ed).forEach((b) => b.onclick = () => { m.loads.splice(+b.dataset.delld, 1); renderEditor(); changed(30); });
+    on("#f-addld", "click", () => { m.loads.push({ edge: edgesFor().includes("top") ? "top" : edgesFor()[0], qx: 0, qy: -50 }); renderEditor(); changed(30); });
+    on("#f-addpt", "click", () => { m.loads.push({ at: [g.type === "rectangle" ? g.Lx / 2 : g.W ?? g.b, g.type === "rectangle" ? g.Ly : g.W ?? 0], fx: 0, fy: -100 }); renderEditor(); changed(30); });
+    on("#f-sw", "change", (e) => { m.self_weight = e.target.checked; changed(30); });
+    on("#f-combo", "change", (e) => { S.combo = e.target.value; schedule(30); });
+    $$("[data-dsg]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+      m.design = m.design || {};
+      if (el.tagName === "SELECT") m.design[el.dataset.dsg] = el.value; else { const v = numv(el); if (v == null || !isFinite(v)) return; m.design[el.dataset.dsg] = v; }
+      changed();
+    }));
     // material
-    on("#f-an", "change", (e) => { m.analysis = e.target.value; renderEditorHints(); schedule(30); });
-    $$("[data-mt]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; m.material[inp.dataset.mt] = v; schedule(); }));
+    on("#f-an", "change", (e) => { m.analysis = e.target.value; if (matKind() === "rc" && m.analysis !== "plane_stress") m.material.model = "elastic"; renderEditor(); changed(30); });
+    $$("[data-mt]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; m.material[inp.dataset.mt] = v; changed(); }));
+    $$("[data-mtc]", ed).forEach((el) => el.addEventListener("change", () => { const k = el.dataset.mtc; m.material[k] = k === "fck_MPa" ? Number(el.value) : el.value; renderEditor(); changed(30); }));
+    $$("[data-mmodel]", ed).forEach((b) => b.onclick = () => {
+      const k = b.dataset.mmodel, mt = m.material;
+      mt.model = k;
+      if (k === "j2") { mt.fy_MPa = mt.fy_MPa ?? 355; mt.H_MPa = mt.H_MPa ?? 1000; if (m.element === "Q8" && m.analysis === "plane_strain") m.element = "Q8R"; }
+      if (k === "rc") { Object.assign(mt, { fck_MPa: mt.fck_MPa ?? 30, values: mt.values ?? "mean", softening: mt.softening ?? "mcft", tension: mt.tension ?? "stiffening" }); if (S.an.geometric) S.an.geometric = false; }
+      if (k !== "elastic") S.an.geometric = false;
+      renderEditor(); changed(30);
+    });
+    on("#f-useEcm", "click", () => { m.material.E_MPa = Math.round(FE.concreteProps(m.material.fck_MPa ?? 30).Ecm); renderEditor(); changed(30); });
     $$("[data-matp]", ed).forEach((b) => b.onclick = () => {
       Object.assign(m.material, { concrete: { E_MPa: 33000, nu: 0.2, density_kNm3: 25 }, steel: { E_MPa: 210000, nu: 0.3, density_kNm3: 78.5 }, masonry: { E_MPa: 5000, nu: 0.2, density_kNm3: 18 } }[b.dataset.matp]);
-      renderEditor(); schedule(30);
+      renderEditor(); changed(30);
     });
+    // reinforcement
+    const R = () => (m.reinforcement = m.reinforcement || { layers: [] });
+    $$("[data-rf]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; R()[inp.dataset.rf] = v; changed(); }));
+    $$("[data-rb]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+      const L = R().layers[+el.dataset.rb], k = el.dataset.k;
+      if (k === "dir") L.dir = el.value; else { const v = Number(el.value); if (!isFinite(v)) return; L[k] = v; }
+      changed();
+    }));
+    $$("[data-rbr]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; R().layers[+inp.dataset.rbr].region[inp.dataset.k] = v; changed(); }));
+    $$("[data-rbzone]", ed).forEach((b) => b.onclick = () => { const L = R().layers[+b.dataset.rbzone], gx = g.Lx ?? 1, gy = g.Ly ?? 1; L.region = { x0: 0, x1: +(gx / 2).toFixed(2), y0: 0, y1: +(gy).toFixed(2) }; renderEditor(); changed(30); });
+    $$("[data-delrb]", ed).forEach((b) => b.onclick = () => { R().layers.splice(+b.dataset.delrb, 1); renderEditor(); changed(30); });
+    on("#f-addmesh", "click", () => { R().layers.push({ dir: "x", dia_mm: 10, spacing_mm: 200, faces: 2 }); renderEditor(); changed(30); });
+    on("#f-addtie", "click", () => { const gx = g.Lx ?? 1; R().layers.push({ dir: "x", dia_mm: 16, n: 4, region: { x0: 0, x1: gx, y0: 0, y1: 0.3 }, label: "tie" }); renderEditor(); changed(30); });
+    on("#f-design", "click", () => { computeDesign(); S.frtab = "des"; setSource("des"); renderEditor(); renderResults(); });
+    on("#f-apply", "click", () => { if (!S.des) return; R().layers = clone(S.des.proposal.layers); S.layers.rebar = true; $('[data-layer="rebar"]').checked = true; renderEditor(); staleResults(); solve(); computeDesign(); setSource("des"); renderEditor(); renderResults(); });
+    // analysis
+    $$("[data-atype]", ed).forEach((b) => b.onclick = () => { S.an.type = b.dataset.atype; renderEditor(); });
+    $$("[data-anc]", ed).forEach((b) => b.onclick = () => { S.an.control = b.dataset.anc; renderEditor(); });
+    $$("[data-an]", ed).forEach((el) => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+      const k = el.dataset.an;
+      if (el.tagName === "SELECT") S.an[k] = el.value; else { const v = numv(el); if (v == null) { if (k === "tol") S.an.tol = null; return; } if (isFinite(v)) S.an[k] = v; }
+    }));
+    $$("[data-anb]", ed).forEach((el) => el.addEventListener("change", () => { S.an[el.dataset.anb] = el.checked; renderEditor(); }));
+    on("#f-runnl", "click", runNonlinear);
+    on("#f-stop", "click", () => { cancelJobs(); S.nlRun = null; S.dyn.run = null; renderEditor(); renderResults(); });
+    $$("[data-rtype]", ed).forEach((b) => b.onclick = () => { S.dyn.spec.type = b.dataset.rtype; renderEditor(); });
+    $$("[data-ds]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; S.dyn.spec[inp.dataset.ds] = inp.dataset.ds === "seed" ? Math.round(v) : v; }));
+    $$("[data-dss]", ed).forEach((el) => el.addEventListener("change", () => { S.dyn.spec[el.dataset.dss] = el.dataset.dss === "spectrum_type" ? Number(el.value) : el.value; }));
+    on("#f-recvals", "input", (e) => { S.dyn.values = e.target.value; });
+    $$("[data-bw]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; S.dyn.sdof[inp.dataset.bw] = v; }));
+    $$("[data-dyx]", ed).forEach((inp) => inp.addEventListener("input", () => { const v = numv(inp); if (v == null || !isFinite(v)) return; S.dyn.xi = v; }));
+    on("#f-dyncombo", "change", (e) => { S.dyn.combination = e.target.value; });
+    on("#f-mkrec", "click", () => makeRecord().then(() => { S.frtab = "dyn"; renderResults(); }, () => {}));
+    on("#f-runbw", "click", () => runSdof());
+    on("#f-rundyn", "click", () => runDynamic());
+  }
+
+  // ------------------------------------------------------------ nonlinear run
+  function nlOptions() {
+    const a = S.an, o = { geometric: !!a.geometric && matKind() === "elastic", combination: a.combination, load_pattern: a.load_pattern || "all", control: a.control, iteration: a.iteration, steps: Math.max(1, Math.round(a.steps)),
+      lam_max: a.lam_max, to_failure: !!a.to_failure, max_steps: Math.max(1, Math.round(a.max_steps)) };
+    if (a.max_bisections) o.max_bisections = a.max_bisections;
+    if (a.tol != null && isFinite(a.tol) && a.tol > 0) o.tol = a.tol;
+    return o;
+  }
+  function runNonlinear() {
+    let m;
+    try { m = FE.parseFE(S.model); } catch (e) { S.err = e.message; renderResults(); return; }
+    const opts = nlOptions(), model = clone(S.model);
+    S.nlRun = { lam: 0, target: opts.to_failure ? Math.max(opts.lam_max, 1) : opts.lam_max, curve: [[0, 0]], t0: now() };
+    S.frtab = "nl"; renderEditor(); renderResults();
+    runJob("nl", { model, opts }, (p) => {
+      if (!S.nlRun) return;
+      S.nlRun.lam = p.lam; S.nlRun.curve.push([p.lam, p.monitor]); S.nlRun.it = p.iterations;
+      if (S.ftab === "an") { const pr = $(".prog i"); if (pr) pr.style.width = `${Math.min(100, 100 * p.lam / Math.max(S.nlRun.target, 1e-9))}%`; const h = $(".run .hint"); if (h) h.textContent = `λ = ${fmt(p.lam, 4)}`; }
+      if (S.frtab === "nl") { const c = $("#f-nlchart"); if (c) c.innerHTML = nlChart(S.nlRun.curve, null, null); }
+    }).then((res) => {
+      const full = res.steps.map((s, k) => (s.full ? k : -1)).filter((k) => k >= 0);
+      const lp = res.steps.reduce((v, s) => Math.max(v, s.lam), -Infinity);
+      let kPeak = Math.max(0, res.steps.findIndex((s) => s.lam >= lp - 1e-4 * Math.abs(lp)));
+      if (full.indexOf(kPeak) < 0) kPeak = full.reduce((b, k) => (Math.abs(k - kPeak) < Math.abs(b - kPeak) ? k : b), full[full.length - 1]);
+      S.nl = Object.assign(res, { model: m, kernel: NL.makeKernel(m), full, options: opts, stale: false, peakFull: full.indexOf(kPeak) >= 0 ? full.indexOf(kPeak) : full.length - 1, kind: matKind() });
+      S.nlRun = null;
+      viewCache.clear();
+      S.frtab = "nl";
+      if (S.prefField && SRC_FIELDS.lin.indexOf(S.prefField) < 0) S.field = S.prefField;
+      renderEditor(); setSource("nl"); renderResults(); renderHeader();
+    }, (e) => { S.nlRun = null; if (e.message !== "stopped") S.err = e.message; renderEditor(); renderResults(); });
+  }
+
+  // ------------------------------------------------------------ dynamics
+  function recordSpec() {
+    const ds = S.dyn.spec;
+    if (ds.type === "values") return { type: "values", dt_s: ds.dt_s, values_g: (S.dyn.values || "").split(/[\s,;]+/).filter((x) => x !== "").map(Number), name: "pasted record" };
+    return clone(ds);
+  }
+  function makeRecord() {
+    S.dyn.run = { i: 0, nT: 1, what: "record" }; renderEditor();
+    return runJob("record", { record: recordSpec() }).then((r) => { S.dyn.rec = r; S.dyn.run = null; renderEditor(); return r; }, (e) => { S.dyn.run = null; S.dyn.err = e.message; renderEditor(); renderResults(); throw e; });
+  }
+  function runSdof() {
+    const go = () => { try { S.dyn.sdofRes = DY.boucWenSdof(S.dyn.sdof, S.dyn.rec); S.dyn.err = null; } catch (e) { S.dyn.err = e.message; } S.frtab = "dyn"; renderResults(); };
+    if (S.dyn.rec) go(); else makeRecord().then(go, () => {});
+  }
+  function runDynamic() {
+    let m;
+    try { m = FE.parseFE(S.model); } catch (e) { S.err = e.message; renderResults(); return; }
+    const model = clone(S.model), record = recordSpec(), opts = { combination: S.dyn.combination, xi: S.dyn.xi, snapshots: 120 };
+    S.dyn.run = { i: 0, nT: 1, u: [], V: [] }; S.frtab = "dyn"; renderEditor(); renderResults();
+    runJob("dyn", { model, record, opts }, (p) => {
+      if (!S.dyn.run) return;
+      Object.assign(S.dyn.run, p);
+      if (S.ftab === "an") { const pr = $(".prog i"); if (pr) pr.style.width = `${Math.round(100 * p.i / Math.max(p.nT, 1))}%`; const h = $(".run .hint"); if (h) h.textContent = `${Math.round(100 * p.i / Math.max(p.nT, 1))} %`; }
+      if (S.frtab === "dyn") { const c = $("#f-dynlive"); if (c) c.innerHTML = lineChart([{ pts: Array.from(p.u, (v, i) => [i * (S.dyn.rec ? S.dyn.rec.dt : record.dt_s || 0.01), 1000 * v]), color: "var(--ink)" }], { xlabel: "t (s)", ylabel: "u (mm)", height: 150 }); }
+    }).then((r) => {
+      S.dyn.fe = Object.assign(r, { model: m, kernel: NL.makeKernel(m), stale: false });
+      S.dyn.rec = r.record; S.dyn.run = null;
+      viewCache.clear();
+      if (S.prefField && SRC_FIELDS.lin.indexOf(S.prefField) < 0) S.field = S.prefField;
+      renderEditor(); setSource("dyn"); renderResults();
+    }, (e) => { S.dyn.run = null; if (e.message !== "stopped") S.dyn.err = e.message; renderEditor(); renderResults(); });
+  }
+
+  // ------------------------------------------------------------ charts (SVG)
+  function niceTicks(lo, hi, n = 5) {
+    if (!(hi > lo)) { hi = lo + 1; }
+    const raw = (hi - lo) / n, p = 10 ** Math.floor(Math.log10(raw)), st = [1, 2, 2.5, 5, 10].find((q) => q * p >= raw) * p;
+    const out = []; for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9 * st; v += st) out.push(+v.toPrecision(12));
+    return out;
+  }
+  function lineChart(series, o = {}) {
+    const Wd = 360, H = o.height || 190, l = 46, r = 12, t = 10, b = 30;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const s of series) for (const [x, y] of s.pts) { if (!isFinite(x) || !isFinite(y)) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    if (o.y0 != null) y0 = Math.min(y0, o.y0);
+    if (o.x0 != null) x0 = Math.min(x0, o.x0);
+    if (!isFinite(x0)) return "";
+    if (!(x1 > x0)) x1 = x0 + 1;
+    if (!(y1 > y0)) { y1 = y0 + Math.max(Math.abs(y0) * 0.1, 1e-9); }
+    const pad = (y1 - y0) * 0.06; y1 += pad; if (o.y0 == null) y0 -= pad;
+    const X = (v) => l + (v - x0) / (x1 - x0) * (Wd - l - r), Y = (v) => t + (1 - (v - y0) / (y1 - y0)) * (H - t - b);
+    const xt = o.logx ? [] : niceTicks(x0, x1, 5), yt = niceTicks(y0, y1, 4);
+    const grid = yt.map((v) => `<line x1="${l}" x2="${Wd - r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--rule-2)"/><text x="${l - 4}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${fmt(v, 2)}</text>`).join("")
+      + xt.map((v) => `<text x="${X(v).toFixed(1)}" y="${H - b + 13}" text-anchor="middle">${fmt(v, 2)}</text>`).join("")
+      + (y0 < 0 && y1 > 0 ? `<line x1="${l}" x2="${Wd - r}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--ink-3)" stroke-width="0.8"/>` : "");
+    const lines = series.map((s) => {
+      const pts = s.pts.filter(([x, y]) => isFinite(x) && isFinite(y));
+      if (!pts.length) return "";
+      const step = Math.max(1, Math.floor(pts.length / 1500));
+      const d = pts.filter((_, i) => i % step === 0 || i === pts.length - 1).map(([x, y], i) => `${i ? "L" : "M"}${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join("");
+      return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 1.6}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ""}/>${s.dots ? pts.map(([x, y]) => `<circle cx="${X(x).toFixed(1)}" cy="${Y(y).toFixed(1)}" r="1.8" fill="${s.color}"/>`).join("") : ""}`;
+    }).join("");
+    const mk = o.marker ? `<circle cx="${X(o.marker[0]).toFixed(1)}" cy="${Y(o.marker[1]).toFixed(1)}" r="4.5" fill="var(--mark)" stroke="var(--ink)" stroke-width="1.2"/>` : "";
+    let lx = l + 6, ly = t + 10;                    // legend entries flow left to right and wrap
+    const legend = series.filter((s) => s.label).map((s) => {
+      const w = 6.2 * s.label.length + 14;
+      if (lx > l + 6 && lx + w > Wd - r) { lx = l + 6; ly += 13; }
+      const out = `<text x="${lx}" y="${ly}" class="lab" style="fill:${s.color}">${esc(s.label)}</text>`;
+      lx += w;
+      return out;
+    }).join("");
+    return `<svg class="chart" viewBox="0 0 ${Wd} ${H}" role="img" aria-label="${esc(o.aria || o.ylabel || "chart")}">${grid}<line x1="${l}" x2="${Wd - r}" y1="${H - b}" y2="${H - b}" stroke="var(--ink-3)"/>
+      <text x="${(l + Wd - r) / 2}" y="${H - 3}" text-anchor="middle" class="lab">${esc(o.xlabel || "")}</text><text x="10" y="${t + (H - t - b) / 2}" text-anchor="middle" class="lab" transform="rotate(-90 10 ${t + (H - t - b) / 2})">${esc(o.ylabel || "")}</text>
+      ${lines}${mk}${legend}</svg>`;
+  }
+  function nlChart(curve, marker, nl) {
+    const sign = curve.length > 1 && curve.reduce((s, p) => s + p[1], 0) < 0 ? -1 : 1;
+    const pts = curve.map(([lam, u]) => [1000 * sign * u, lam]);
+    return lineChart([{ pts, color: "var(--ink)", dots: curve.length < 80 }], { xlabel: `${sign < 0 ? "−" : ""}u_mon (mm)${nl ? `, dof ${nl.monitor_dof} (node ${(nl.monitor_dof >> 1) + 1}, ${nl.monitor_dof & 1 ? "y" : "x"})` : ""}`, ylabel: "load factor λ",
+      marker: marker ? [1000 * sign * marker[1], marker[0]] : null, y0: 0, x0: 0, aria: "Load–displacement curve" });
   }
 
   // ------------------------------------------------------------ results pane
   function sumEdge(r, ids) { let x = 0, y = 0; for (const i of ids) { x += r.reactions[i][0]; y += r.reactions[i][1]; } return [x, y]; }
   function referencePanel(r) {
-    const m = r.model, g = m.geometry, mat = S.model.material;
+    const m = r.model, g = m.geometry;
     if (S.preset === "cantilever" && g.type === "rectangle" && !(g.openings || []).length) {
       const L = g.Lx, D = g.Ly, t = m.t, E = m.E, nu = m.nu, ld = (S.model.loads || []).find((l) => l.profile === "parabolic" && l.edge === "right");
       if (!ld || (S.model.loads || []).length !== 1 || S.model.self_weight) return "";
@@ -365,7 +988,7 @@
           <span class="h" style="margin-top:4px">σ<sub>xx</sub> top fibre at L/2</span><span class="h" style="margin-top:4px">MPa</span><span></span>
           <span>FE, nodal average</span><span class="v">${fx(r.nodal[kr][0], 3)}</span><span class="v">${fx(r.nodal[kr][0] / sb, 4)}</span>
           <span>Beam theory, M·(D/2)/I</span><span class="v">${fx(sb, 3)}</span><span></span></div>
-        <p class="hint">The elasticity solution includes shear deformation, (4 + 5ν)PLD²/(24EI); it assumes a particular restraint at the root, which a fully clamped edge stiffens slightly. Q4 and T3 lock in bending: refine, or switch to Q8, and watch the ratio approach 1. The Convergence tab runs the benchmark with the exact boundary values.</p></div>`;
+        <p class="hint">The elasticity solution includes shear deformation, (4 + 5ν)PLD²/(24EI). Q4 and T3 lock in bending: refine, or switch to Q8, and watch the ratio approach 1. The Mesh tab runs the benchmark with the exact boundary values.</p></div>`;
     }
     if (g.type === "plate_hole") {
       const ld = (S.model.loads || []).find((l) => l.edge === "right" && !l.profile);
@@ -387,8 +1010,11 @@
   function renderResults() {
     $$("[data-frtab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.frtab === S.frtab)));
     const out = $("#f-results"), r = S.res;
-    if (!r) { out.innerHTML = `<div class="empty"><b>The model cannot be solved.</b><br>${esc(S.err || "")}</div>`; return; }
-    if (S.frtab === "res") out.innerHTML = resultsPanel(r);
+    if (S.frtab === "nl") out.innerHTML = nlPanel();
+    else if (S.frtab === "dyn") out.innerHTML = dynPanel();
+    else if (!r) out.innerHTML = `<div class="empty"><b>The model cannot be solved.</b><br>${esc(S.err || "")}</div>`;
+    else if (S.frtab === "res") out.innerHTML = resultsPanel(r);
+    else if (S.frtab === "des") out.innerHTML = designPanel();
     else if (S.frtab === "elem") out.innerHTML = elementPanel(r);
     else out.innerHTML = convPanel();
     bindResults();
@@ -399,7 +1025,7 @@
     const kU = arg(um, (a, b) => a > b), kV = arg(vm, (a, b) => a > b), k1 = arg(s1, (a, b) => a > b), k2 = arg(s2, (a, b) => a < b);
     const at = (k) => `(${fx(m.nodes[k][0], 2)}, ${fx(m.nodes[k][1], 2)})`;
     let fxs = 0, fys = 0; for (let i = 0; i < r.f.length; i += 2) { fxs += r.f[i]; fys += r.f[i + 1]; }
-    const supRows = (S.model.supports || []).map((s, k) => {
+    const supRows = (S.model.supports || []).map((s) => {
       let ids;
       if ("at" in s) ids = [m.nodes.reduce((b, p, i) => (Math.hypot(p[0] - s.at[0], p[1] - s.at[1]) < Math.hypot(m.nodes[b][0] - s.at[0], m.nodes[b][1] - s.at[1]) ? i : b), 0)];
       else {
@@ -410,12 +1036,13 @@
       return `<tr><td style="text-align:left">${"at" in s ? `point` : esc(s.edge)}${s.from != null || s.to != null ? ` ${fx(s.from ?? 0, 2)}–${s.to != null ? fx(s.to, 2) : "end"}` : ""}</td><td>${fx(Rx, 2)}</td><td>${fx(Ry, 2)}</td></tr>`;
     }).join("");
     let Rx = 0, Ry = 0; r.reactions.forEach(([a, b]) => { Rx += a; Ry += b; });
-    return `<div class="sec"><h3>Extremes <span>${m.etype}, ${m.analysis.replace("_", " ")}</span></h3>
+    const comboName = { char: "G + Q", uls: "γ_G G + γ_Q Q", qp: "G + ψ₂ Q" }[S.combo];
+    return `<div class="sec"><h3>Extremes <span>${m.etype}, ${m.analysis.replace("_", " ")}, linear, ${esc(comboName)}</span></h3>
         <dl class="kv"><dt>max |u|</dt><dd>${fx(um[kU] * 1000, 4)} mm at ${at(kU)}</dd><dt>max σ<sub>vM</sub></dt><dd>${fx(vm[kV], 3)} MPa at ${at(kV)}</dd>
           <dt>max σ<sub>1</sub></dt><dd>${fx(s1[k1], 3)} MPa at ${at(k1)}</dd><dt>min σ<sub>2</sub></dt><dd>${fx(s2[k2], 3)} MPa at ${at(k2)}</dd>
           <dt>Strain energy</dt><dd>${fmt(r.energy * 1000, 4)} J (½uᵀKu)</dd><dt>Model</dt><dd>${m.elements.length} elements, ${m.nodes.length} nodes, ${r.dofs} DOFs</dd>
           <dt>Solved in</dt><dd>${(r.solve_ms).toFixed(0)} ms (profile Cholesky), ${(r.total_ms).toFixed(0)} ms in all</dd></dl>
-        <p class="hint">Re-entrant corners (opening corners) and the ends of short supports or loads are stress singularities in linear elasticity: the peak there grows as the mesh is refined, so read the stresses a little away from them, or design the region with a strut-and-tie model.</p></div>
+        <div class="note">Re-entrant corners and the ends of short supports or loads are singular in linear elasticity: the peak stress there grows as the mesh is refined. Two ways past it are built in: the <b>Design</b> tab averages the stresses over a patch of radius t and designs the reinforcement (EN 1992-1-1 Annex F), and the <b>Nonlinear</b> analysis lets the concrete crack, the bars yield and the stresses redistribute, giving the load-carrying capacity λ<sub>u</sub>, which stays bounded as the mesh is refined. Where cracks localise it still depends somewhat on the mesh: the Nonlinear tab reruns the analysis at 2h or h/2 to show by how much.</div></div>
       ${referencePanel(r)}
       <div class="sec"><h3>Equilibrium <span>kN</span></h3>
         <table class="data"><thead><tr><th style="text-align:left">Support</th><th>R<sub>x</sub></th><th>R<sub>y</sub></th></tr></thead><tbody>${supRows}
@@ -423,13 +1050,130 @@
           <tr><td style="text-align:left">Σ applied loads${S.model.self_weight ? ", incl. self weight" : ""}</td><td>${fx(fxs, 2)}</td><td>${fx(fys, 2)}</td></tr>
           <tr><td style="text-align:left">Residual</td><td>${(Rx + fxs).toExponential(1)}</td><td>${(Ry + fys).toExponential(1)}</td></tr></tbody></table></div>`;
   }
+  function designPanel() {
+    if (!S.des && S.res) computeDesign();
+    if (!S.des) return `<div class="empty"><b>No design.</b><br>${esc(S.desErr || "")}</div>`;
+    const { m, d, proposal } = S.des, ne = m.elements.length;
+    let mx = 0, my = 0, ucm = 0, usm = 0, nOver = 0, caseF5 = 0, nMin = 0;
+    for (let q = 0; q < ne; q++) {
+      mx = Math.max(mx, d.As_req[q][0]); my = Math.max(my, d.As_req[q][1]); ucm = Math.max(ucm, d.util_concrete[q]);
+      const u = Math.max(...d.util_steel[q]); usm = Math.max(usm, u); if (u > 1 + 1e-9) nOver++;
+      if (d.cases[q] === "F.5–F.7") caseF5++;
+      if (d.As_req[q][0] <= d.As_min_x[q] + 1e-9 && d.As_req[q][1] <= d.As_min[1] + 1e-9) nMin++;
+    }
+    const prov = (S.model.reinforcement && S.model.reinforcement.layers || []).length;
+    const sec = `<div class="sec"><h3>Reinforcement from the FE stresses <span>ULS, EN 1992-1-1 Annex F</span></h3>
+        <div class="stat"><div><b>${fx(mx, 0)}</b><span>max A<sub>s,x</sub> mm²/m</span></div><div><b>${fx(my, 0)}</b><span>max A<sub>s,y</sub> mm²/m</span></div><div><b>${fx(ucm, 2)}</b><span>concrete η = σ<sub>cd</sub>/νf<sub>cd</sub></span></div></div>
+        <dl class="kv"><dt>f<sub>yd</sub>, f<sub>cd</sub>, ν</dt><dd>${fx(d.fyd, 1)} MPa, ${fx(d.fcd, 2)} MPa, ${fx(d.nu, 3)}</dd><dt>Averaging radius</dt><dd>r = ${fx(d.r_avg, 3)} m (the wall thickness)</dd>
+          <dt>Minimum</dt><dd>${d.notes.map(esc).join("<br>")}</dd><dt>Governed by the minimum</dt><dd>${nMin} of ${ne} elements; ${caseF5} in the F.5–F.7 regime (σ<sub>Edx</sub> > |τ|)</dd>
+          <dt>Provided</dt><dd>${prov ? `${prov} layers: steel η max ${usm > 9 ? "> 9" : fx(usm, 2)}${nOver ? `, <b style="color:var(--bad)">${nOver} elements short</b>` : ", every element sufficient"}` : "no reinforcement yet"}</dd></dl>
+        ${ucm > 1 ? `<div class="note bad">The concrete is overstressed (η = ${fx(ucm, 2)} > 1): thicken the member or lengthen the bearings; reinforcement cannot fix a crushing strut.</div>` : ""}
+        <div class="actions"><button class="btn sm primary" id="f-apply2">Use the proposed ${proposal.layers.length} layers</button><button class="btn sm" id="f-verify">Verify nonlinearly to failure</button></div>
+        <p class="hint">Stresses at singular points (opening corners, ends of bearings) are averaged over a patch of radius t, so the reinforcement does not chase a mesh-dependent peak; the nonlinear analysis then checks that the design carries the load with design strengths (λ<sub>u</sub> ≥ 1, lower-bound theorem).</p></div>`;
+    const lay = `<div class="sec"><h3>Proposed layout <span>${proposal.layers.length} layers</span></h3>
+        <table class="data"><thead><tr><th style="text-align:left">Bars</th><th style="text-align:left">Zone</th><th>A<sub>s</sub> mm²/m</th></tr></thead><tbody>
+        ${proposal.layers.map((L) => `<tr><td style="text-align:left">${L.dir}: Ø${L.dia_mm} @ ${L.spacing_mm}, ${L.faces === 1 ? "one face" : "both faces"}</td><td style="text-align:left">${L.region ? `x ${fx(L.region.x0, 2)}–${fx(L.region.x1, 2)}, y ${fx(L.region.y0, 2)}–${fx(L.region.y1, 2)}` : "everywhere"}</td><td>${fx(2 * Math.PI * L.dia_mm ** 2 / 4 * 1000 / L.spacing_mm * (L.faces === 1 ? 0.5 : 1), 0)}</td></tr>`).join("")}</tbody></table>
+        ${proposal.warns.map((w) => `<p class="hint">${esc(w)}</p>`).join("")}</div>`;
+    return sec + lay;
+  }
+  function nlPanel() {
+    const nl = S.nl, run = S.nlRun;
+    if (run) return `<div class="sec"><h3>Running <span>${Math.round((now() - run.t0) / 1000)} s</span></h3><div id="f-nlchart">${nlChart(run.curve, null, null)}</div><div class="run"><button class="btn" id="f-stop2">Stop</button></div></div>`;
+    if (!nl) return `<div class="empty"><b>No nonlinear analysis yet.</b><br>Set it up in the Analysis tab and run it: plasticity, cracking and crushing of reinforced concrete, large rotations, to the limit load and beyond.<br><button class="link-btn" id="f-goan">Open the Analysis tab</button></div>`;
+    const s = nl.summary, k = nl.full[Math.min(S.step, nl.full.length - 1)], st = nl.steps[k];
+    const stat = `<div class="stat"><div><b>${fx(s.lam_peak, 3)}</b><span>peak load factor λ<sub>u</sub></span></div><div><b>${s.steps}</b><span>steps, ${s.iterations.reduce((a, b) => a + b, 0)} iterations</span></div><div><b>${fx(nl.elapsed_ms / 1000, 1)} s</b><span>${esc(nl.options.control)} control${nl.options.geometric ? ", geometric NL" : ""}</span></div></div>`;
+    const verdict = s.status === "complete" ? `<div class="note ok">The full load (λ = ${fmt(nl.options.lam_max, 3)}) is carried.</div>` : `<div class="note${s.status === "failed" ? " bad" : ""}"><b>${esc(statusText(s.status))}.</b> ${esc(s.message || "")}</div>`;
+    let lower = "";
+    if (nl.kind === "rc" && nl.options.combination === "uls" && (S.model.material.values || "design") === "design")
+      lower = s.lam_peak >= 1 ? `<div class="note ok">With design strengths under the ULS loads: λ<sub>u</sub> = ${fx(s.lam_peak, 3)} ≥ 1, the reinforcement is sufficient (lower-bound check of the design).</div>` : `<div class="note bad">With design strengths under the ULS loads: λ<sub>u</sub> = ${fx(s.lam_peak, 3)} < 1, the structure does not carry the design load.</div>`;
+    let rc = "";
+    if (s.rc) {
+      const ex = st.extra || {}, cnt = (a) => { let n = 0; if (a) for (const v of a) if (v) n++; return n; };
+      const wmax = st.extra && st.extra.e1 ? amax(gpCrack(nl.model, nl.kernel, st.extra)) : 0, wlim = (S.model.design && S.model.design.w_max_mm) || 0.3;
+      rc = `<div class="sec"><h3>Concrete and reinforcement at step ${k} <span>λ = ${fmt(st.lam, 4)}</span></h3>
+        <dl class="kv"><dt>Cracked points</dt><dd>${cnt(ex.cracked)} of ${nl.kernel.N} (open now: ${cnt(ex.open)})</dd><dt>Bars yielded</dt><dd>${cnt(ex.yield_x)} in x, ${cnt(ex.yield_y)} in y</dd>
+          <dt>Concrete crushed</dt><dd>${cnt(ex.crushed)} points (ε₂ beyond ε<sub>c0</sub>)</dd><dt>Max crack width</dt><dd>${fx(wmax, 3)} mm ${wmax > wlim ? `<b style="color:var(--bad)">> w<sub>max</sub> = ${wlim}</b>` : `≤ w<sub>max</sub> = ${wlim}`} (at this load level)</dd>
+          <dt>Rupture</dt><dd>${cnt(ex.rupture) ? "<b>steel strain above ε<sub>ud</sub></b>" : "no"}</dd></dl></div>`;
+    }
+    let j2 = "";
+    if (s.j2) j2 = `<div class="sec"><h3>Plasticity <span>step ${k}</span></h3><dl class="kv"><dt>Max ε̄<sub>p</sub></dt><dd>${fx(1000 * amax(st.extra.alpha || [0]), 3)} ‰</dd><dt>Yielded points</dt><dd>${(st.extra.alpha || []).filter((v) => v > 0).length} of ${nl.kernel.N}</dd></dl></div>`;
+    const log = `<div class="sec"><h3>Convergence log <span>‖R‖/‖λf‖ per iteration</span></h3><div class="log"><table class="data"><thead><tr><th>step</th><th>λ</th><th>u<sub>mon</sub> mm</th><th>iter.</th><th>last residual</th><th>matrix</th></tr></thead><tbody>
+        ${nl.steps.slice(1).map((q, i) => `<tr class="pick${i + 1 === k ? " on" : ""}" data-nlstep="${i + 1}"><td>${i + 1}</td><td>${fx(q.lam, 4)}</td><td>${fx(1000 * q.monitor, 3)}</td><td>${q.iterations}</td><td>${q.residuals && q.residuals.length ? Math.min(...q.residuals.slice(1)).toExponential(1) : "–"}</td><td>${q.matrix || ""}${q.converged === false ? " <b title='accepted below 1 %, above the tolerance'>≈</b>" : ""}</td></tr>`).join("")}</tbody></table></div>
+        <p class="hint">Newton–Raphson converges quadratically (residuals 10⁻², 10⁻⁴, 10⁻⁸ …), with an energy line search for concrete; "secant" marks increments retried with secant matrices and Anderson mixing after the tangent iteration did not converge (spreading cracks); ≈ marks ${s.unconverged || 0} increment(s) accepted with a residual below 1 % (the force-norm criterion of the Dutch NLFEA guidelines, RTD 1016) after both iterations stalled.</p></div>`;
+    const mc = S.nlMesh && S.nlMesh.key === nl ? S.nlMesh : null, mrows = mc ? mc.rows.slice().sort((a, b) => a.ne - b.ne) : [];
+    let spread = "";
+    if (mrows.length > 1) {
+      const ls = mrows.map((r) => r.lam), d = (amax(ls) - amin(ls)) / Math.max(amax(ls), 1e-12);
+      spread = d <= 0.05 ? `<div class="note ok">The meshes agree: λ<sub>u</sub> differs by ${fx(100 * d, 1)} %.</div>`
+        : d <= 0.15 ? `<div class="note"><b>λ<sub>u</sub> differs by ${fx(100 * d, 1)} % between the meshes.</b> Some mesh dependence from localised cracking or crushing: use the lower value.</div>`
+        : `<div class="note bad"><b>λ<sub>u</sub> differs by ${fx(100 * d, 1)} % between the meshes.</b> The capacity is governed by localised cracking or crushing, which smeared cracks capture only approximately (often at a short load or support): refine further, introduce loads as they act, and design with the lower value.</div>`;
+    }
+    const busy = mc && mc.running;
+    const meshSec = (nl.kind === "rc" || nl.kind === "j2") ? `<div class="sec"><h3>Mesh check <span>λ<sub>u</sub> on other meshes</span></h3>
+        ${mrows.length ? `<table class="data"><thead><tr><th style="text-align:left">Mesh</th><th>elements</th><th>λ<sub>u</sub></th><th style="text-align:left">end</th></tr></thead><tbody>${mrows.map((r) => `<tr><td style="text-align:left">${esc(r.label)}</td><td>${r.ne}</td><td>${fx(r.lam, 3)}</td><td style="text-align:left">${esc(statusText(r.status))}</td></tr>`).join("")}</tbody></table>` : ""}
+        ${spread}${mc && mc.err ? `<div class="note bad">${esc(mc.err)}</div>` : ""}
+        <div class="run" style="gap:8px;flex-wrap:wrap"><button class="btn" id="f-mesh2" ${busy || nl.stale ? "disabled" : ""}>${busy === 2 ? "Running 2h…" : "Rerun at 2h"}</button><button class="btn" id="f-mesh05" ${busy || nl.stale ? "disabled" : ""}>${busy === 0.5 ? "Running h/2…" : "Rerun at h/2 (4–8× longer)"}</button></div>
+        <p class="hint">An elastic peak at a corner grows without bound as the mesh is refined; λ<sub>u</sub> does not, because cracking and yielding cap the stresses. Smeared cracks still leave some mesh dependence where cracks localise (strains, crack widths and, less, λ<sub>u</sub>): trust a capacity when two meshes agree.</p></div>` : "";
+    return `<div class="sec"><h3>Load–displacement path <span>${nl.stale ? "<b style='color:var(--bad)'>model changed since this run</b>" : esc(nl.options.combination.toUpperCase())}</span></h3>${stat}${verdict}${lower}<div id="f-nlchart">${nlChart(nl.steps.map((q) => [q.lam, q.monitor]), [st.lam, st.monitor], nl)}</div></div>${rc}${j2}${meshSec}${log}`;
+  }
+  function dynPanel() {
+    const D = S.dyn, out = [];
+    if (D.err) out.push(`<div class="sec"><div class="note bad">${esc(D.err)}</div></div>`);
+    if (D.run && D.run.u) out.push(`<div class="sec"><h3>Time history running <span>${Math.round(100 * (D.run.i || 0) / Math.max(D.run.nT || 1, 1))} %</span></h3><div id="f-dynlive"></div><div class="run"><button class="btn" id="f-stop2">Stop</button></div></div>`);
+    const rec = D.rec;
+    if (!rec && !D.fe && !D.run) return `<div class="empty"><b>No ground motion yet.</b><br>Generate an EN 1998 spectrum-compatible record in the Analysis tab, run the Bouc–Wen oscillator, or the full nonlinear FE time history.<br><button class="link-btn" id="f-goan2">Open the Analysis tab</button></div>`;
+    if (rec) {
+      const ag = Array.from(rec.a, (v, i) => [i * rec.dt, v / 9.81]);
+      out.push(`<div class="sec"><h3>Ground motion <span>${esc(rec.name)}</span></h3>${lineChart([{ pts: ag, color: "var(--ink)", width: 1 }], { xlabel: "t (s)", ylabel: "a_g (g)", height: 150 })}
+        <dl class="kv"><dt>PGA</dt><dd>${fx(rec.pga / 9.81, 3)} g</dd><dt>Duration</dt><dd>${fx((rec.a.length - 1) * rec.dt, 1)} s, Δt = ${rec.dt} s, ${rec.a.length} values</dd></dl></div>`);
+      if (rec.match) {
+        const T = rec.match.T, tg = rec.match.target, ach = rec.match.achieved;
+        const ratio = ach.map((v, i) => v / tg[i]), rmin = amin(ratio);
+        out.push(`<div class="sec"><h3>Response spectrum, ξ = 5 % <span>EN 1998-1 3.2.2.2</span></h3>${lineChart([{ pts: T.map((t, i) => [t, tg[i] / 9.81]), color: "var(--ink-3)", label: "target S_e", dash: "4 3" },
+            { pts: T.map((t, i) => [t, 0.9 * tg[i] / 9.81]), color: "var(--ink-3)", width: 0.8, dash: "1 3" }, { pts: T.map((t, i) => [t, ach[i] / 9.81]), color: "var(--ink)", label: "record" }], { xlabel: "T (s)", ylabel: "S_a (g)", height: 180, y0: 0, x0: 0 })}
+          <p class="hint">Ratio record/target between ${fx(T[0], 2)} and ${fx(T[T.length - 1], 1)} s: ${fx(rmin, 2)} … ${fx(amax(ratio), 2)}. EN 1998 asks the <i>mean</i> of at least three records not to fall below 0.9 S<sub>e</sub> (dotted); with three or more records the design value is the most unfavourable response, with seven the mean (4.3.3.4.3).</p></div>`);
+      }
+    }
+    const sr = D.sdofRes;
+    if (sr) {
+      const p = Object.assign({}, DY.BW_DEFAULTS, D.sdof);
+      out.push(`<div class="sec"><h3>Bouc–Wen oscillator <span>T = ${fx(sr.period, 3)} s, F<sub>y</sub> = ${fmt(p.k * p.uy, 3)} kN</span></h3>
+        <div class="stat"><div><b>${fx(1000 * sr.u_max, 1)}</b><span>max u mm</span></div><div><b>${fx(sr.ductility, 2)}</b><span>ductility μ = u<sub>max</sub>/u<sub>y</sub></span></div><div><b>${fmt(sr.E_hyst[sr.E_hyst.length - 1], 3)}</b><span>hysteretic energy kNm</span></div></div>
+        ${lineChart([{ pts: Array.from(sr.u, (v, i) => [1000 * v, sr.fs[i]]), color: "var(--ink)", width: 1.1 }], { xlabel: "u (mm)", ylabel: "f_s (kN)", height: 200, aria: "Hysteresis loop" })}
+        ${lineChart([{ pts: Array.from(sr.u, (v, i) => [i * rec.dt, 1000 * v]), color: "var(--ink)", width: 1 }], { xlabel: "t (s)", ylabel: "u (mm)", height: 140 })}
+        ${lineChart([{ pts: Array.from(sr.E_in, (v, i) => [i * rec.dt, v]), color: "var(--ink)", label: "input" }, { pts: Array.from(sr.E_hyst, (v, i) => [i * rec.dt, v]), color: "#c4541c", label: "hysteretic" },
+          { pts: Array.from(sr.E_damp, (v, i) => [i * rec.dt, v]), color: "#1f5fa8", label: "damping" }], { xlabel: "t (s)", ylabel: "energy (kNm)", height: 150, y0: 0 })}
+        <p class="hint">Energy balance E<sub>in</sub> = E<sub>kin</sub> + E<sub>damp</sub> + ∫f<sub>s</sub>du holds to ${sr.energy_error.toExponential(1)} (the average acceleration method conserves energy exactly; the residual is the Newton tolerance).</p></div>`);
+    }
+    const fe = D.fe;
+    const top = out.length;
+    if (fe) {
+      const f = fe.frames[Math.min(S.step, fe.frames.length - 1)], ti = fe.t[Math.min(f.i, fe.t.length - 1)], mi = Math.min(f.i, fe.u_mon.length - 1);
+      const umax = amax(Array.from(fe.u_mon, Math.abs)), vmax = amax(Array.from(fe.base_shear, Math.abs));
+      out.push(`<div class="sec"><h3>FE time history <span>${fe.stale ? "<b style='color:var(--bad)'>model changed since this run</b>" : `${fe.frames.length} frames`}</span></h3>
+        <div class="stat"><div><b>${fx(1000 * umax, 1)}</b><span>max u<sub>mon</sub> mm (relative)</span></div><div><b>${fmt(vmax, 3)}</b><span>max base shear kN</span></div><div><b>${fx(fe.periods[0], 3)} s</b><span>T₁ (T₂ = ${fx(fe.periods[1], 3)} s)</span></div></div>
+        ${fe.status !== "complete" ? `<div class="note bad"><b>Stopped.</b> ${esc(fe.message)}</div>` : ""}
+        ${lineChart([{ pts: Array.from(fe.u_mon, (v, i) => [fe.t[i], 1000 * v]), color: "var(--ink)", width: 1 }], { xlabel: "t (s)", ylabel: "u_mon (mm)", height: 150, marker: [ti, 1000 * fe.u_mon[mi]] })}
+        ${lineChart([{ pts: Array.from(fe.u_mon, (v, i) => [1000 * v, fe.base_shear[i]]), color: "var(--ink)", width: 1 }], { xlabel: "u_mon (mm)", ylabel: "base shear (kN)", height: 200, marker: [1000 * fe.u_mon[mi], fe.base_shear[mi]], aria: "Base shear hysteresis" })}
+        ${lineChart([{ pts: Array.from(fe.energy.E_in, (v, i) => [fe.t[i], v]), color: "var(--ink)", label: "input" }, { pts: Array.from(fe.energy.E_internal, (v, i) => [fe.t[i], v]), color: "#c4541c", label: "internal: strain + dissipated" },
+          { pts: Array.from(fe.energy.E_damp, (v, i) => [fe.t[i], v]), color: "#1f5fa8", label: "damping" }], { xlabel: "t (s)", ylabel: "energy (kNm)", height: 150 })}
+        <dl class="kv"><dt>Monitor</dt><dd>node ${(fe.monitor_dof >> 1) + 1}, ${fe.monitor_dof & 1 ? "y" : "x"} (largest first-mode displacement)</dd><dt>Mass</dt><dd>${fx(fe.mass_total, 2)} t</dd>
+          <dt>Rayleigh</dt><dd>C = ${fmt(fe.rayleigh[0], 3)} M + ${fmt(fe.rayleigh[1], 3)} K₀ (ξ = ${fx(S.dyn.xi * 100, 1)} % in modes 1 and 2)</dd>
+          <dt>Iterations</dt><dd>${fe.iterations.reduce((a, b) => a + b, 0)} over ${fe.iterations.length} steps${fe.substeps.some((v) => v > 1) ? `, ${fe.substeps.filter((v) => v > 1).length} steps subdivided` : ""}, ${fx(fe.elapsed_ms / 1000, 1)} s</dd>
+          <dt>Energy balance</dt><dd>${fe.energy.error.toExponential(1)} of the input</dd></dl></div>`);
+      out.splice(D.err ? 1 : 0, 0, out.pop());       // the structure's response first, the ground motion after it
+    }
+    void top;
+    return out.join("");
+  }
   const SHAPES = {
     T3: ["N₁ = L₁ = 1 − ξ − η,  N₂ = L₂ = ξ,  N₃ = L₃ = η"],
     T6: ["corners: N<sub>i</sub> = L<sub>i</sub>(2L<sub>i</sub> − 1)", "midsides: N₄ = 4L₁L₂,  N₅ = 4L₂L₃,  N₆ = 4L₃L₁"],
     Q4: ["N<sub>i</sub> = ¼ (1 + ξξ<sub>i</sub>)(1 + ηη<sub>i</sub>),  (ξ<sub>i</sub>, η<sub>i</sub>) = (±1, ±1)"],
     Q8: ["corners: N<sub>i</sub> = ¼ (1 + ξξ<sub>i</sub>)(1 + ηη<sub>i</sub>)(ξξ<sub>i</sub> + ηη<sub>i</sub> − 1)", "midsides ξ<sub>i</sub> = 0: N<sub>i</sub> = ½ (1 − ξ²)(1 + ηη<sub>i</sub>);  η<sub>i</sub> = 0: N<sub>i</sub> = ½ (1 + ξξ<sub>i</sub>)(1 − η²)"],
   };
-  const RULE = { T3: "1 point (⅓, ⅓), w = ½", T6: "3 points (⅙, ⅙), (⅔, ⅙), (⅙, ⅔), w = ⅙", Q4: "2 × 2 points ±1/√3, w = 1", Q8: "3 × 3 points 0, ±√0.6, w = 8/9, 5/9" };
+  SHAPES.Q8R = SHAPES.Q8;
+  const RULE = { T3: "1 point (⅓, ⅓), w = ½", T6: "3 points (⅙, ⅙), (⅔, ⅙), (⅙, ⅔), w = ⅙", Q4: "2 × 2 points ±1/√3, w = 1", Q8: "3 × 3 points 0, ±√0.6, w = 8/9, 5/9", Q8R: "2 × 2 points ±1/√3 (reduced), w = 1" };
   function matTable(A, opts = {}) {
     const rows = A.length, cols = A[0].length;
     let mx = 0; A.forEach((r) => r.forEach((v) => { mx = Math.max(mx, Math.abs(v)); }));
@@ -439,49 +1183,59 @@
   }
   function elementPanel(r) {
     const m = r.model;
-    if (S.sel == null) return `<div class="empty"><b>Click an element in the plot</b> to see its isoparametric mapping, Jacobian, strain-displacement matrix B, stiffness matrix k<sub>e</sub> and stresses at the Gauss points.</div>`;
+    if (S.sel == null) return `<div class="empty"><b>Click an element in the plot</b> to see its isoparametric mapping, Jacobian, strain-displacement matrix B, stiffness matrix k<sub>e</sub>, stresses at the Gauss points and – after a nonlinear analysis – the state of the material there.</div>`;
     const e = m.elements[S.sel], d = FE.elementDetails(m, S.sel, r.u), n = e.length, g = d.gauss[Math.min(S.gsel, d.gauss.length - 1)];
     const dofl = e.flatMap((_, i) => [`u${i + 1}`, `v${i + 1}`]);
     const lam = FE.symEig(d.k), lmax = lam[lam.length - 1], zero = lam.filter((v) => Math.abs(v) < 1e-9 * lmax).length;
     let area = 0; for (const [xi, eta, w] of FE.gauss(m.etype, "mass")) area += w * FE.gaussPoint(m.etype, d.xy, xi, eta).detJ;
     let msum = 0; d.m.forEach((row, i) => { if (i % 2 === 0) row.forEach((v, j) => { if (j % 2 === 0) msum += v; }); });
-    return `<div class="sec"><h3>Element ${S.sel + 1} <span>${m.etype}, ${n} nodes, ${2 * n} DOFs</span></h3>
+    let nlsec = "";
+    const cv = current();
+    if ((S.src === "nl" || S.src === "dyn") && cv && cv.gp && cv.kernel && cv.model.elements.length === m.elements.length) {
+      const ng = cv.kernel.ng, ex = cv.extra || {}, rows = [];
+      for (let q = 0; q < ng; q++) {
+        const i = S.sel * ng + q, sg = [cv.gp[3 * i], cv.gp[3 * i + 1], cv.gp[3 * i + 2]];
+        rows.push(`<tr><td>${q + 1}</td><td>${fx(sg[0], 2)}</td><td>${fx(sg[1], 2)}</td><td>${fx(sg[2], 2)}</td>${ex.e1 ? `<td>${fx(1000 * ex.e1[i], 3)}</td><td>${fx(ex.theta[i] * 180 / Math.PI, 1)}°</td><td>${fx(ex.ssx[i] / 1000, 0)}</td><td>${fx(ex.ssy[i] / 1000, 0)}</td><td>${[ex.cracked[i] ? "cracked" : "", ex.yield_x[i] || ex.yield_y[i] ? "yield" : "", ex.crushed[i] ? "crushed" : ""].filter(Boolean).join(", ")}</td>` : ex.alpha ? `<td>${fx(1000 * ex.alpha[i], 3)}</td>` : ""}</tr>`);
+      }
+      nlsec = `<div class="sec"><h3>Material state <span>${esc(cv.label)}</span></h3><div class="scroll-x"><table class="data"><thead><tr><th>g</th><th>σ<sub>xx</sub></th><th>σ<sub>yy</sub></th><th>τ<sub>xy</sub></th>${ex.e1 ? "<th>ε₁ ‰</th><th>θ</th><th>σ<sub>sx</sub></th><th>σ<sub>sy</sub></th><th>state</th>" : ex.alpha ? "<th>ε̄<sub>p</sub> ‰</th>" : ""}</tr></thead><tbody>${rows.join("")}</tbody></table></div></div>`;
+    }
+    return `${nlsec}<div class="sec"><h3>Element ${S.sel + 1} <span>${m.etype}, ${n} nodes, ${2 * n} DOFs</span></h3>
         <div class="eq"><div>x(ξ, η) = Σ N<sub>i</sub>(ξ, η) x<sub>i</sub>,  u(ξ, η) = Σ N<sub>i</sub> u<sub>i</sub> <span class="c">isoparametric</span></div>
-          ${SHAPES[m.etype].map((s) => `<div>${s}</div>`).join("")}
+          ${(SHAPES[m.etype] || []).map((s) => `<div>${s}</div>`).join("")}
           <div>J = ∂(x, y)/∂(ξ, η),  [∂N/∂x; ∂N/∂y] = J⁻¹ [∂N/∂ξ; ∂N/∂η]</div>
           <div>ε = [ε<sub>xx</sub>, ε<sub>yy</sub>, γ<sub>xy</sub>]ᵀ = B u<sub>e</sub>,  σ = C ε</div>
-          <div>k<sub>e</sub> = ∫∫ Bᵀ C B t det J dξ dη ≈ Σ<sub>g</sub> w<sub>g</sub> B<sub>g</sub>ᵀ C B<sub>g</sub> t det J<sub>g</sub> <span class="c">${RULE[m.etype]}</span></div></div>
+          <div>k<sub>e</sub> = ∫∫ Bᵀ C B t det J dξ dη ≈ Σ<sub>g</sub> w<sub>g</sub> B<sub>g</sub>ᵀ C B<sub>g</sub> t det J<sub>g</sub> <span class="c">${RULE[m.etype] || ""}</span></div></div>
         <table class="data"><thead><tr><th>i</th><th>node</th><th>x m</th><th>y m</th><th>u<sub>x</sub> mm</th><th>u<sub>y</sub> mm</th></tr></thead><tbody>${e.map((nid, i) => `<tr><td>${i + 1}</td><td>${nid + 1}</td><td>${fx(d.xy[i][0], 3)}</td><td>${fx(d.xy[i][1], 3)}</td><td>${fx(1000 * d.u_e[2 * i], 4)}</td><td>${fx(1000 * d.u_e[2 * i + 1], 4)}</td></tr>`).join("")}</tbody></table></div>
-      <div class="sec"><h3>Gauss points <span>stresses in MPa</span></h3>
+      <div class="sec"><h3>Gauss points <span>linear stresses in MPa</span></h3>
         <div class="scroll-x"><table class="data"><thead><tr><th>g</th><th>ξ</th><th>η</th><th>w</th><th>det J</th><th>σ<sub>xx</sub></th><th>σ<sub>yy</sub></th><th>τ<sub>xy</sub></th></tr></thead><tbody>${d.gauss.map((q, k) => `<tr class="pick${k === S.gsel ? " on" : ""}" data-g="${k}" tabindex="0"><td>${k + 1}</td><td>${fx(q.xi, 3)}</td><td>${fx(q.eta, 3)}</td><td>${fx(q.w, 3)}</td><td>${fmt(q.detJ, 4)}</td><td>${fx(q.stress_MPa[0], 3)}</td><td>${fx(q.stress_MPa[1], 3)}</td><td>${fx(q.stress_MPa[2], 3)}</td></tr>`).join("")}</tbody></table></div>
-        <p class="hint">Click a row to show J and B at that point. Nodal stresses are extrapolated from ${m.etype === "T3" ? "the single Gauss point (constant)" : m.etype === "T6" ? "the 3 Gauss points (linear)" : "the 2 × 2 Gauss points (bilinear)"}${m.etype === "Q8" || m.etype === "T6" ? ", midside nodes take the mean of their corners" : ""}, then averaged over the elements at each node.</p></div>
+        <p class="hint">Click a row to show J and B at that point. Nodal stresses are extrapolated from the Gauss points${m.etype === "Q8" || m.etype === "T6" || m.etype === "Q8R" ? ", midside nodes take the mean of their corners" : ""}, then averaged over the elements at each node.</p></div>
       <div class="sec"><h3>Jacobian at g = ${S.gsel + 1} <span>det J = ${fmt(g.detJ, 5)} m² per unit parent area</span></h3>${matTable(g.J, { rows: ["∂/∂ξ", "∂/∂η"], cols: ["x", "y"] })}</div>
       <div class="sec"><h3>B at g = ${S.gsel + 1} <span>1/m, 3 × ${2 * n}</span></h3>${matTable(g.B, { rows: ["ε<sub>xx</sub>", "ε<sub>yy</sub>", "γ<sub>xy</sub>"], cols: dofl })}</div>
       <div class="sec"><h3>C <span>kN/m², ${m.analysis.replace("_", " ")}</span></h3>${matTable(m.C, { rows: ["σ<sub>xx</sub>", "σ<sub>yy</sub>", "τ<sub>xy</sub>"], cols: ["ε<sub>xx</sub>", "ε<sub>yy</sub>", "γ<sub>xy</sub>"] })}</div>
       <div class="sec"><h3><b>Stiffness k<sub>e</sub></b> <span>kN/m, ${2 * n} × ${2 * n} <button class="link-btn" id="f-copyk">Copy</button></span></h3>${matTable(d.k, { rows: dofl, cols: dofl })}
-        <p class="hint">Eigenvalues of k<sub>e</sub>: ${zero} zero (two translations and one rotation: the rigid-body modes), ${2 * n - zero} positive, largest ${fmt(lmax, 3)} kN/m. Symmetric to ${fmt(Math.max(...d.k.flatMap((row, i) => row.map((v, j) => Math.abs(v - d.k[j][i])))) / lmax, 2)} relative.</p></div>
+        <p class="hint">Eigenvalues of k<sub>e</sub>: ${zero} zero (${zero === 3 ? "two translations and one rotation: the rigid-body modes" : zero === 4 ? "three rigid-body modes and the spurious hourglass mode of reduced integration" : "rigid-body modes"}), ${2 * n - zero} positive, largest ${fmt(lmax, 3)} kN/m.</p></div>
       <div class="sec"><h3><b>Element forces f<sub>e</sub> = k<sub>e</sub> u<sub>e</sub></b> <span>kN</span></h3>${matTable([d.f_e], { rows: ["f"], cols: dofl })}</div>
       <div class="sec"><h3><b>Consistent mass m<sub>e</sub></b> <span>t, ρ = γ/g</span></h3>${matTable(d.m, { rows: dofl, cols: dofl })}
         <p class="hint">m<sub>e</sub> = ∫∫ ρ t Nᵀ N dA; its entries in one direction add up to ρ t A = ${fmt(msum, 4)} t (A = ${fmt(area, 4)} m²).</p></div>`;
   }
-  // ------------------------------------------------------------ convergence study
-  const CONV_COL = { T3: "#c4541c", T6: "#6b46c1", Q4: "#1f8a70", Q8: "#1f5fa8" };
+  // ------------------------------------------------------------ mesh convergence study
+  const CONV_COL = { T3: "#c4541c", T6: "#6b46c1", Q4: "#1f8a70", Q8: "#1f5fa8", Q8R: "#8a6d1f" };
   function convPanel() {
     const c = S.conv, exact = S.preset === "cantilever";
     const head = `<div class="sec"><h3>Mesh convergence <span>${exact ? "tip deflection error vs exact elasticity" : "peak values vs mesh density"}</span></h3>
-      <p class="hint">${exact ? "Runs the cantilever with the exact Timoshenko &amp; Goodier displacements on the clamped edge, for all four element types on three meshes, and plots the error of the tip deflection against the number of degrees of freedom. Slopes on the log–log plot are the convergence rates: displacement errors fall like h² for T3 and Q4 and like h³ or faster for T6 and Q8."
-        : "Solves this model with all four element types on three meshes (2h, h and h/2, or halved and doubled divisions) and plots max |u| and max von Mises against the degrees of freedom. Displacements converge; a stress at a singular point (re-entrant corner, point support) keeps growing."}</p>
+      <p class="hint">${exact ? "Runs the cantilever with the exact Timoshenko &amp; Goodier displacements on the clamped edge, for every element type on three meshes, and plots the error of the tip deflection against the number of degrees of freedom. Slopes on the log–log plot are the convergence rates."
+        : "Solves this model (linear) with every element type on three meshes (2h, h and h/2) and plots max |u| and max von Mises against the degrees of freedom. Displacements converge; a stress at a singular point (re-entrant corner, short support) keeps growing – the reason the Design tab averages and the nonlinear analysis redistributes."}</p>
       <div><button class="btn sm" id="f-conv-run"${c && c.running ? " disabled" : ""}>${c && c.running ? `Running ${c.done}/${c.total}…` : "Run study"}</button></div></div>`;
     if (!c || !c.rows.length) return head;
     const plot = (key, label, logy) => {
       const rows = c.rows.filter((r) => isFinite(r[key]) && r[key] > 0);
       if (!rows.length) return "";
-      const W = 340, H = 200, l = 44, rgt = 10, t = 10, b = 30;
+      const Wd = 340, H = 200, l = 44, rgt = 10, t = 10, b = 30;
       const xs = rows.map((r) => Math.log10(r.dofs)), ys = rows.map((r) => (logy ? Math.log10(r[key]) : r[key]));
       const x0 = Math.floor(Math.min(...xs) * 2) / 2, x1 = Math.ceil(Math.max(...xs) * 2) / 2;
       let y0 = Math.min(...ys), y1 = Math.max(...ys);
       if (logy) { y0 = Math.floor(y0); y1 = Math.ceil(y1); } else { const pad = (y1 - y0) * 0.08 || Math.abs(y1) * 0.05 || 1; y0 -= pad; y1 += pad; }
-      const X = (v) => l + (v - x0) / (x1 - x0 || 1) * (W - l - rgt), Y = (v) => t + (1 - (v - y0) / (y1 - y0 || 1)) * (H - t - b);
+      const X = (v) => l + (v - x0) / (x1 - x0 || 1) * (Wd - l - rgt), Y = (v) => t + (1 - (v - y0) / (y1 - y0 || 1)) * (H - t - b);
       const xt = []; for (let v = Math.ceil(x0); v <= x1 + 1e-9; v++) xt.push(v);
       const yt = []; if (logy) for (let v = y0; v <= y1 + 1e-9; v++) yt.push(v); else for (let k = 0; k <= 4; k++) yt.push(y0 + (y1 - y0) * k / 4);
       const series = FE.TYPES.map((et) => {
@@ -490,10 +1244,10 @@
         return `<polyline points="${pts.map((p) => p.map((q) => q.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="${CONV_COL[et]}" stroke-width="1.8"/>${pts.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${CONV_COL[et]}"/>`).join("")}
           <text x="${(pts[pts.length - 1][0] + 5).toFixed(1)}" y="${(pts[pts.length - 1][1] + 3).toFixed(1)}" style="fill:${CONV_COL[et]};font-weight:600">${et}</text>`;
       }).join("");
-      return `<div class="sec conv"><h3>${label}</h3><svg viewBox="0 0 ${W + 18} ${H}" role="img" aria-label="${esc(label)} against degrees of freedom">
-        ${yt.map((v) => `<line x1="${l}" x2="${W - rgt}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--rule-2)"/><text x="${l - 4}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${logy ? `1e${v}` : fmt(v, 2)}</text>`).join("")}
+      return `<div class="sec conv"><h3>${label}</h3><svg viewBox="0 0 ${Wd + 22} ${H}" role="img" aria-label="${esc(label)} against degrees of freedom">
+        ${yt.map((v) => `<line x1="${l}" x2="${Wd - rgt}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--rule-2)"/><text x="${l - 4}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${logy ? `1e${v}` : fmt(v, 2)}</text>`).join("")}
         ${xt.map((v) => `<text x="${X(v).toFixed(1)}" y="${H - b + 14}" text-anchor="middle">${10 ** v >= 1000 ? `${10 ** (v - 3)}k` : 10 ** v}</text>`).join("")}
-        <line x1="${l}" x2="${W - rgt}" y1="${H - b}" y2="${H - b}" stroke="var(--ink-3)"/><text x="${(l + W - rgt) / 2}" y="${H - 3}" text-anchor="middle">degrees of freedom (log)</text>
+        <line x1="${l}" x2="${Wd - rgt}" y1="${H - b}" y2="${H - b}" stroke="var(--ink-3)"/><text x="${(l + Wd - rgt) / 2}" y="${H - 3}" text-anchor="middle">degrees of freedom (log)</text>
         ${series}</svg></div>`;
     };
     const table = `<div class="sec"><div class="scroll-x"><table class="data"><thead><tr><th>Type</th><th>DOFs</th>${exact ? "<th>tip mm</th><th>error</th>" : "<th>max |u| mm</th><th>max σ<sub>vM</sub></th>"}<th>ms</th></tr></thead><tbody>
@@ -503,7 +1257,8 @@
   }
   function runConvergence() {
     const exact = S.preset === "cantilever", base = clone(S.model), jobs = [];
-    for (const et of FE.TYPES) for (const f of [2, 1, 0.5]) {        // coarser, as modelled, finer
+    base.material = Object.assign({}, base.material, { model: "elastic" });
+    for (const et of FE.TYPES) for (const f of [2, 1, 0.5]) {
       const d = clone(base); d.element = et;
       if (d.geometry.type === "rectangle") d.geometry.h = base.geometry.h * f;
       else { d.geometry.n_theta = Math.max(1, Math.round(base.geometry.n_theta / f)); d.geometry.n_r = Math.max(1, Math.round(base.geometry.n_r / f)); }
@@ -515,22 +1270,22 @@
       const d = jobs[S.conv.done];
       if (!d) return;
       try {
-        const t0 = performance.now(), m = FE.parseFE(d);
+        const t0 = now(), m = FE.parseFE(d);
         if (m.nodes.length > 16000) throw new Error("skip");
         let r;
         if (exact) {
-          const g = d.geometry, P = d.loads[0].P, mat = m, Ep = m.analysis === "plane_strain" ? m.E / (1 - m.nu * m.nu) : m.E, nup = m.analysis === "plane_strain" ? m.nu / (1 - m.nu) : m.nu;
+          const g = d.geometry, P = d.loads[0].P, Ep = m.analysis === "plane_strain" ? m.E / (1 - m.nu * m.nu) : m.E, nup = m.analysis === "plane_strain" ? m.nu / (1 - m.nu) : m.nu;
           const pres = new Map();
           m.fixed = new Map();
-          m.nodes.forEach(([x, y], i) => { if (Math.abs(x) < 1e-12) { const v = FE.timoshenkoCantilever(x, y - g.Ly / 2, P, g.Lx, g.Ly, Ep, nup, mat.t); pres.set(2 * i, v[0]); pres.set(2 * i + 1, v[1]); } });
+          m.nodes.forEach(([x, y], i) => { if (Math.abs(x) < 1e-12) { const v = FE.timoshenkoCantilever(x, y - g.Ly / 2, P, g.Lx, g.Ly, Ep, nup, m.t); pres.set(2 * i, v[0]); pres.set(2 * i + 1, v[1]); } });
           r = FE.solveFE(m, pres);
           let k = 0, bd = Infinity; m.nodes.forEach(([x, y], i) => { const dd = Math.hypot(x - g.Lx, y - g.Ly / 2); if (dd < bd) { bd = dd; k = i; } });
-          const ex = FE.timoshenkoCantilever(g.Lx, 0, P, g.Lx, g.Ly, Ep, nup, mat.t)[1];
+          const ex = FE.timoshenkoCantilever(g.Lx, 0, P, g.Lx, g.Ly, Ep, nup, m.t)[1];
           S.conv.exact = ex;
-          S.conv.rows.push({ et: d.element, dofs: r.dofs, tip: r.u[k][1], err: Math.abs(r.u[k][1] / ex - 1), ms: performance.now() - t0 });
+          S.conv.rows.push({ et: d.element, dofs: r.dofs, tip: r.u[k][1], err: Math.abs(r.u[k][1] / ex - 1), ms: now() - t0 });
         } else {
-          r = FE.solveFE(m);
-          S.conv.rows.push({ et: d.element, dofs: r.dofs, umax: Math.max(...r.field("umag")), vmax: Math.max(...r.field("mises")), ms: performance.now() - t0 });
+          r = FE.solveFE(m, null, S.combo);
+          S.conv.rows.push({ et: d.element, dofs: r.dofs, umax: amax(r.field("umag")), vmax: amax(r.field("mises")), ms: now() - t0 });
         }
       } catch (e) { /* too large or failed: skip this level */ }
       S.conv.done += 1;
@@ -543,7 +1298,27 @@
   function bindResults() {
     const out = $("#f-results");
     out.querySelectorAll("[data-g]").forEach((row) => { const go = () => { S.gsel = +row.dataset.g; renderResults(); P.draw(); }; row.onclick = go; row.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }; });
+    out.querySelectorAll("[data-nlstep]").forEach((row) => row.onclick = () => {
+      const k = +row.dataset.nlstep, nl = S.nl;
+      let best = 0; nl.full.forEach((f, i) => { if (Math.abs(f - k) < Math.abs(nl.full[best] - k)) best = i; });
+      if (S.src !== "nl") setSource("nl");
+      S.step = best; renderTimeline(); P.rebuild(); renderResults();
+    });
     const cr = $("#f-conv-run", out); if (cr) cr.onclick = runConvergence;
+    const ga = $("#f-goan", out) || $("#f-goan2", out); if (ga) ga.onclick = () => { S.ftab = "an"; S.an.type = S.frtab === "dyn" ? "dyn" : "nl"; renderEditor(); };
+    const st = $("#f-stop2", out); if (st) st.onclick = () => { cancelJobs(); S.nlRun = null; S.dyn.run = null; renderEditor(); renderResults(); };
+    const m2 = $("#f-mesh2", out); if (m2) m2.onclick = () => runMeshCheck(2);
+    const m05 = $("#f-mesh05", out); if (m05) m05.onclick = () => runMeshCheck(0.5);
+    const ap = $("#f-apply2", out);
+    if (ap) ap.onclick = () => { const R = S.model.reinforcement = S.model.reinforcement || { layers: [] }; R.layers = clone(S.des.proposal.layers); S.layers.rebar = true; $('[data-layer="rebar"]').checked = true; staleResults(); solve(); computeDesign(); setSource("des"); renderEditor(); renderResults(); };
+    const vf = $("#f-verify", out);
+    if (vf) vf.onclick = () => {
+      const mt = S.model.material;
+      if (mt.model !== "rc") { mt.model = "rc"; Object.assign(mt, { fck_MPa: mt.fck_MPa ?? 30, softening: "mcft", tension: "stiffening" }); }
+      mt.values = "design";
+      Object.assign(S.an, { type: "nl", combination: "uls", control: "arc", to_failure: true, steps: 10, max_steps: 100, geometric: false });
+      S.ftab = "an"; renderEditor(); solve(); runNonlinear();
+    };
     const ck = $("#f-copyk", out);
     if (ck) ck.onclick = () => {
       const d = FE.elementDetails(S.res.model, S.sel, S.res.u), txt = d.k.map((r) => r.map((v) => v.toPrecision(10)).join("\t")).join("\n");
@@ -551,10 +1326,53 @@
     };
   }
 
+  // ------------------------------------------------------------ chips, source bar, timeline
+  function renderChips() {
+    const list = fieldsFor();
+    if (!list.includes(S.field)) S.field = list.includes("mises") ? "mises" : list[0];
+    $("#f-fields").innerHTML = list.map((k) => `<button class="chip" data-field="${k}" aria-pressed="${k === S.field}">${FIELDS[k].chip}</button>`).join("");
+    $$("[data-field]").forEach((b) => b.onclick = () => { S.field = b.dataset.field; $$("[data-field]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); P.rebuild(); });
+    $$("[data-src]").forEach((b) => {
+      const s = b.dataset.src, ok = s === "lin" ? !!S.res : s === "des" ? !!S.res : s === "nl" ? !!S.nl : !!S.dyn.fe;
+      b.disabled = !ok; b.setAttribute("aria-pressed", String(s === S.src));
+    });
+    const hint = S.src === "nl" && S.nl ? `${S.nl.kind === "rc" ? "reinforced concrete" : S.nl.kind === "j2" ? "von Mises plasticity" : S.nl.options.geometric ? "large deflection" : "elastic"}${S.nl.stale ? " · model changed" : ""}`
+      : S.src === "dyn" && S.dyn.fe ? `time history${S.dyn.fe.stale ? " · model changed" : ""}` : S.src === "des" ? "ULS design, Annex F" : "";
+    $("#f-srchint").textContent = hint;
+    $("#f-layers").hidden = !(S.src === "nl" || S.src === "dyn" || S.src === "des" || (S.model.reinforcement && (S.model.reinforcement.layers || []).length));
+  }
+  function renderTimeline() {
+    const tl = $("#f-timeline"), on = (S.src === "nl" && S.nl && S.nl.full.length > 1) || (S.src === "dyn" && S.dyn.fe && S.dyn.fe.frames.length > 1);
+    tl.hidden = !on;
+    if (!on) return;
+    const n = S.src === "nl" ? S.nl.full.length : S.dyn.fe.frames.length, inp = $("#f-step");
+    inp.max = String(n - 1); inp.value = String(Math.min(S.step, n - 1));
+    const cv = current();
+    $("#f-steplab").textContent = cv ? cv.label : "";
+    $("#f-play").textContent = S.playing ? "❚❚" : "▶";
+  }
+  let playTimer = null;
+  function stopPlay() { S.playing = false; clearInterval(playTimer); playTimer = null; const b = $("#f-play"); if (b) b.textContent = "▶"; }
+  function togglePlay() {
+    if (S.playing) { stopPlay(); return; }
+    const n = S.src === "nl" ? S.nl.full.length : S.dyn.fe.frames.length;
+    if (S.step >= n - 1) S.step = 0;
+    S.playing = true;
+    playTimer = setInterval(() => {
+      const nn = S.src === "nl" && S.nl ? S.nl.full.length : S.src === "dyn" && S.dyn.fe ? S.dyn.fe.frames.length : 0;
+      if (!nn || S.step >= nn - 1) { stopPlay(); renderResults(); return; }
+      S.step += 1; renderTimeline(); P.rebuild(true);
+      if (S.frtab === "nl" || S.frtab === "dyn") renderResultsThrottled();
+    }, S.src === "dyn" ? 70 : 140);
+    renderTimeline();
+  }
+  let rrT = 0;
+  function renderResultsThrottled() { const t = now(); if (t - rrT > 400) { rrT = t; renderResults(); } }
+
   // ------------------------------------------------------------ plot
   const P = (function () {
     const canvas = () => $("canvas.fe"), box = () => $("#f-canvas");
-    let tris = null, view = null, dpr = 1, colors = {};
+    let tris = null, view = null, dpr = 1, colors = {}, R = null;
     const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888";
     function readColors() { colors = { bg: css("--sheet"), ink: css("--ink"), ink2: css("--ink-2"), ink3: css("--ink-3"), rule: css("--rule"), pos: css("--plot-pos"), neg: css("--plot-neg"), mark: css("--mark"), def: css("--plot-def"), dark: css("--sheet").toLowerCase() !== "#ffffff" }; }
     function turbo(t) {
@@ -564,23 +1382,31 @@
       const b = 0.1066733 + t * (12.64194608 + t * (-60.58204836 + t * (110.36276771 + t * (-89.90310912 + t * 27.34824973))));
       return `rgb(${Math.round(255 * Math.max(0, Math.min(1, r)))},${Math.round(255 * Math.max(0, Math.min(1, g)))},${Math.round(255 * Math.max(0, Math.min(1, b)))})`;
     }
-    function diverging(t) {          // t in [−1, 1]
+    function diverging(t) {
       const stops = [[-1, [33, 102, 172]], [-0.5, [103, 169, 207]], [0, [247, 247, 247]], [0.5, [239, 138, 98]], [1, [178, 24, 43]]];
       for (let k = 1; k < stops.length; k++) if (t <= stops[k][0]) { const [a, ca] = stops[k - 1], [b, cb] = stops[k], s = (t - a) / (b - a); return `rgb(${ca.map((c, i) => Math.round(c + s * (cb[i] - c))).join(",")})`; }
       return "rgb(178,24,43)";
     }
+    function utilColor(v) { return v <= 0.5 ? "rgb(214,236,224)" : v <= 0.8 ? "rgb(150,205,170)" : v <= 1.0 ? "rgb(244,201,93)" : v <= 1.2 ? "rgb(239,138,98)" : "rgb(178,24,43)"; }
     function bandSetup(vals, fieldKey) {
       let lo = Infinity, hi = -Infinity;
-      for (const v of vals) { if (v < lo) lo = v; if (v > hi) hi = v; }
+      for (const v of vals) { if (!isFinite(v)) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
       const f = FIELDS[fieldKey];
       if (!(hi > lo)) { hi = lo + Math.max(Math.abs(lo) * 1e-6, 1e-12); }
       let levels, color;
       const NB = 12;
+      if (f.util) {
+        const top = Math.max(1.2, Math.min(hi, 3));
+        levels = Array.from({ length: NB + 1 }, (_, k) => top * k / NB);
+        color = (k) => utilColor((levels[k] + levels[k + 1]) / 2);
+        return { levels, color, lo, hi, NB };
+      }
       if (!f.seq && lo < 0 && hi > 0) {
         const a = Math.max(-lo, hi);
         levels = Array.from({ length: NB + 1 }, (_, k) => -a + 2 * a * k / NB);
         color = (k) => diverging((levels[k] + levels[k + 1]) / 2 / a);
       } else {
+        if (f.seq && lo > 0 && (fieldKey === "crack" || fieldKey === "alpha" || fieldKey === "asx" || fieldKey === "asy" || fieldKey === "e1")) lo = 0;
         levels = Array.from({ length: NB + 1 }, (_, k) => lo + (hi - lo) * k / NB);
         if (f.seq) color = (k) => turbo(0.04 + 0.92 * (k + 0.5) / NB);
         else if (hi <= 0) color = (k) => diverging(-1 + (k + 0.5) / NB);
@@ -588,7 +1414,6 @@
       }
       return { levels, color, lo, hi, NB };
     }
-    // sub-triangles of every element in world coordinates, with the field value at each vertex
     function subdivide(r, vals, avg, scale) {
       const m = r.model, et = m.etype, ne = m.elements.length, tri = et[0] === "T";
       const nsub = et === "T3" ? 1 : et === "Q4" ? (ne > 4000 ? 1 : 2) : (ne > 4000 ? 2 : 4);
@@ -596,7 +1421,7 @@
       m.elements.forEach((e, q) => {
         const xy = e.map((i) => m.nodes[i]), ue = e.map((i) => r.u[i]);
         const ve = avg ? e.map((i) => vals[i]) : vals[q];
-        const P = (xi, eta) => {
+        const Pp = (xi, eta) => {
           const { N } = FE.shape(et, xi, eta);
           let x = 0, y = 0, v = 0;
           for (let i = 0; i < N.length; i++) { x += N[i] * (xy[i][0] + scale * ue[i][0]); y += N[i] * (xy[i][1] + scale * ue[i][1]); v += N[i] * ve[i]; }
@@ -604,7 +1429,7 @@
         };
         if (tri) {
           const pts = [];
-          for (let j = 0; j <= nsub; j++) for (let i = 0; i <= nsub - j; i++) pts.push(P(i / nsub, j / nsub));
+          for (let j = 0; j <= nsub; j++) for (let i = 0; i <= nsub - j; i++) pts.push(Pp(i / nsub, j / nsub));
           const id = (i, j) => { let k = 0; for (let jj = 0; jj < j; jj++) k += nsub - jj + 1; return k + i; };
           for (let j = 0; j < nsub; j++) for (let i = 0; i < nsub - j; i++) {
             out.push([pts[id(i, j)], pts[id(i + 1, j)], pts[id(i, j + 1)], q]);
@@ -612,16 +1437,17 @@
           }
         } else {
           const g = [];
-          for (let j = 0; j <= nsub; j++) { g.push([]); for (let i = 0; i <= nsub; i++) g[j].push(P(-1 + 2 * i / nsub, -1 + 2 * j / nsub)); }
+          for (let j = 0; j <= nsub; j++) { g.push([]); for (let i = 0; i <= nsub; i++) g[j].push(Pp(-1 + 2 * i / nsub, -1 + 2 * j / nsub)); }
           for (let j = 0; j < nsub; j++) for (let i = 0; i < nsub; i++) { out.push([g[j][i], g[j][i + 1], g[j + 1][i + 1], q]); out.push([g[j][i], g[j + 1][i + 1], g[j + 1][i], q]); }
         }
       });
       return out;
     }
-    function edgeCurves(r, scale) {              // element boundary curves, sampled
-      const m = r.model, et = m.etype, quad = et === "T6" || et === "Q8", ns = quad ? 6 : 1, out = [];
-      const corners = { T3: [[0, 0], [1, 0], [0, 1]], T6: [[0, 0], [1, 0], [0, 1]], Q4: [[-1, -1], [1, -1], [1, 1], [-1, 1]], Q8: [[-1, -1], [1, -1], [1, 1], [-1, 1]] }[et];
-      const seen = new Set();
+    const CORNERS = { T3: [[0, 0], [1, 0], [0, 1]], T6: [[0, 0], [1, 0], [0, 1]], Q4: [[-1, -1], [1, -1], [1, 1], [-1, 1]], Q8: [[-1, -1], [1, -1], [1, 1], [-1, 1]] };
+    CORNERS.Q8R = CORNERS.Q8;
+    function edgeCurves(r, scale) {
+      const m = r.model, et = m.etype, quad = FE.QUADRATIC.includes(et), ns = quad ? 6 : 1, out = [];
+      const corners = CORNERS[et], seen = new Set();
       m.elements.forEach((e) => {
         const xy = e.map((i) => m.nodes[i]), ue = e.map((i) => r.u[i]);
         FE.EDGES[et].forEach((ed, k) => {
@@ -638,7 +1464,7 @@
       });
       return out;
     }
-    function boundaryCurves(r, scale) {        // element edges used by one element only: outline, openings, hole
+    function boundaryCurves(r, scale) {
       const m = r.model, et = m.etype, cnt = new Map();
       m.elements.forEach((e) => FE.EDGES[et].forEach((ed) => {
         const ids = ed.map((k) => e[k]), key = ids[0] < ids[ids.length - 1] ? `${ids[0]},${ids[ids.length - 1]}` : `${ids[ids.length - 1]},${ids[0]}`;
@@ -666,7 +1492,7 @@
       if (!view) fit(); else requestDraw();
     }
     function bounds() {
-      const r = S.res;
+      const r = R || S.res;
       if (!r) return null;
       let lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
       for (const [x, y] of r.model.nodes) { lo = [Math.min(lo[0], x), Math.min(lo[1], y)]; hi = [Math.max(hi[0], x), Math.max(hi[1], y)]; }
@@ -675,14 +1501,13 @@
     function fit() {
       const bb = bounds(), b = box();
       if (!bb) return;
-      const W = b.clientWidth, H = b.clientHeight, padT = 92, padL = 34;
-      if (W < 40 || H < 40) { view = null; return; }
-      // keep clear of the title block: either above it or to its left, whichever leaves the larger drawing
+      const Wd = b.clientWidth, H = b.clientHeight, padT = 92, padL = 34, padBt = $("#f-timeline").hidden ? 56 : 64;
+      if (Wd < 40 || H < 40) { view = null; return; }
       const tb = $("#f-title"), tbW = (tb.offsetWidth || 0) + 20, tbH = (tb.offsetHeight || 0) + 20;
       const dx = Math.max(bb.hi[0] - bb.lo[0], 1e-9), dy = Math.max(bb.hi[1] - bb.lo[1], 1e-9);
-      const sA = Math.min((W - padL - 34) / dx, (H - padT - Math.max(tbH, 56)) / dy), sB = Math.min((W - padL - tbW) / dx, (H - padT - 56) / dy);
-      const useB = sB > sA, s = Math.max(useB ? sB : sA, 1e-9), padR = useB ? tbW : 34, padB = useB ? 56 : Math.max(tbH, 56);
-      view = { s, ox: padL + (W - padL - padR - s * (bb.hi[0] - bb.lo[0])) / 2 - s * bb.lo[0], oy: H - padB - (H - padT - padB - s * (bb.hi[1] - bb.lo[1])) / 2 + s * bb.lo[1] };
+      const sA = Math.min((Wd - padL - 34) / dx, (H - padT - Math.max(tbH, padBt)) / dy), sB = Math.min((Wd - padL - tbW) / dx, (H - padT - padBt) / dy);
+      const useB = sB > sA, s = Math.max(useB ? sB : sA, 1e-9), padR = useB ? tbW : 34, padB = useB ? padBt : Math.max(tbH, padBt);
+      view = { s, ox: padL + (Wd - padL - padR - s * (bb.hi[0] - bb.lo[0])) / 2 - s * bb.lo[0], oy: H - padB - (H - padT - padB - s * (bb.hi[1] - bb.lo[1])) / 2 + s * bb.lo[1] };
       S.view = view;
       draw();
     }
@@ -690,28 +1515,40 @@
     function fitSoon() { fitPending = true; }
     const toS = (p) => [view.ox + view.s * p[0], view.oy - view.s * p[1]];
     const toW = (x, y) => [(x - view.ox) / view.s, (view.oy - y) / view.s];
-    function rebuild() {
+    let lockedScale = null;
+    function rebuild(keepScale) {
       readColors();
-      const r = S.res;
+      R = current();
+      const r = R;
       tris = null;
       if (r) {
-        if (S.scale == null) { S.scale = autoScale(r); $("#f-scale").value = S.scale; }
+        if (!keepScale || lockedScale == null) {
+          if (S.scale == null) {
+            // a path: scale for the largest displacement of the whole path so that the replay does not jump
+            let ref = r;
+            if (S.src === "nl" && S.nl) { const k = S.nl.full[S.nl.full.length - 1]; ref = { model: r.model, u: Array.from({ length: r.model.nodes.length }, (_, i) => [S.nl.steps[k].u[2 * i], S.nl.steps[k].u[2 * i + 1]]) }; }
+            S.scale = S.src === "nl" && S.nl && S.nl.options.geometric ? 1 : autoScale(ref);
+            $("#f-scale").value = S.scale;
+          }
+          lockedScale = S.scale;
+        }
         const fkey = S.field === "mesh" ? null : S.field;
         let vals = null;
         if (fkey) {
-          const k = FIELDS[fkey].k || 1, raw = r.field(fkey, S.avg || fkey[0] === "u");
-          vals = Array.isArray(raw[0]) ? raw.map((a) => a.map((v) => v * k)) : raw.map((v) => v * k);
+          const f = FIELDS[fkey], k = f.k || 1, avg = (S.avg || fkey[0] === "u") && !f.elem;
+          const raw = r.field(fkey, avg);
+          if (raw) vals = Array.isArray(raw[0]) ? raw.map((a) => a.map((v) => v * k)) : Array.from(raw, (v) => v * k);
         }
         const sc = S.def ? S.scale : 0;
-        tris = { list: subdivide(r, vals || r.model.nodes.map(() => 0), !vals || !Array.isArray(vals[0]), sc), vals, edges: edgeCurves(r, sc), bnd: boundaryCurves(r, sc), und: S.def ? boundaryCurves(r, 0) : null };
-        if (vals) tris.band = bandSetup(vals.flat(), fkey);
+        const nested = vals && Array.isArray(vals[0]);
+        tris = { list: subdivide(r, vals || r.model.nodes.map(() => 0), !nested, sc), vals, edges: edgeCurves(r, sc), bnd: boundaryCurves(r, sc), und: S.def ? boundaryCurves(r, 0) : null };
+        if (vals) tris.band = bandSetup(nested ? vals.flat() : vals, fkey);
         index(tris);
       }
       if (fitPending || !view) { fitPending = false; fit(); } else draw();
       renderLegend(); renderTitle();
     }
-    function fillBand(ctx, a, b, c, lo, hi) {
-      // polygon of the triangle where lo <= v <= hi (v linear), Sutherland–Hodgman against two half-planes
+    function fillBand(a, b, c, lo, hi) {
       let poly = [a, b, c];
       for (const [lim, keepAbove] of [[lo, true], [hi, false]]) {
         const out = [];
@@ -730,18 +1567,17 @@
       const c = canvas(), ctx = c.getContext("2d");
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = colors.bg; ctx.fillRect(0, 0, c.width / dpr, c.height / dpr);
-      if (!tris || !view) return;
-      const r = S.res;
-      // contour bands
+      if (!tris || !view || !R) return;
+      const r = R;
       if (tris.vals && tris.band) {
         const { levels, color, NB } = tris.band;
         for (const [a, b, cc] of tris.list) {
           const A = toS(a), B = toS(b), C = toS(cc), vmin = Math.min(a[2], b[2], cc[2]), vmax = Math.max(a[2], b[2], cc[2]);
           let k0 = 0; while (k0 < NB - 1 && levels[k0 + 1] <= vmin) k0++;
           for (let k = k0; k < NB; k++) {
-            if (levels[k] > vmax) break;
+            if (k > 0 && levels[k] > vmax) break;            // the first band extends to −∞ (values may undershoot a clamped minimum)
             const lo = k === 0 ? -Infinity : levels[k], hi = k === NB - 1 ? Infinity : levels[k + 1];
-            const poly = fillBand(ctx, [A[0], A[1], a[2]], [B[0], B[1], b[2]], [C[0], C[1], cc[2]], lo, hi);
+            const poly = fillBand([A[0], A[1], a[2]], [B[0], B[1], b[2]], [C[0], C[1], cc[2]], lo, hi);
             if (!poly) continue;
             ctx.beginPath(); ctx.moveTo(poly[0][0], poly[0][1]); for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]); ctx.closePath();
             ctx.fillStyle = color(k); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 0.6; ctx.fill(); ctx.stroke();
@@ -755,12 +1591,14 @@
       if (tris.und) for (const e of tris.und) poly(e, colors.ink3, 1, [4, 3]);
       if (S.meshOn || S.field === "mesh") { ctx.globalAlpha = S.field === "mesh" ? 0.7 : 0.3; for (const e of tris.edges) poly(e, tris.band ? "#000" : colors.ink, 0.7); ctx.globalAlpha = 1; }
       for (const e of tris.bnd) poly(e, colors.ink, 1.4);
-      if (S.field === "mesh" && view.s > 30) {        // nodes
+      if (S.field === "mesh" && view.s > 30) {
         ctx.fillStyle = colors.ink;
         const sc = S.def ? S.scale : 0;
         r.model.nodes.forEach(([x, y], i) => { const q = toS([x + sc * r.u[i][0], y + sc * r.u[i][1]]); ctx.fillRect(q[0] - 1.5, q[1] - 1.5, 3, 3); });
       }
+      if (S.layers.rebar) drawRebar(ctx);
       if (S.princ) drawPrincipal(ctx);
+      if (r.extra && r.gp) drawState(ctx, r);
       drawBC(ctx);
       if (S.sel != null && S.sel < r.model.elements.length) {
         const sc = S.def ? S.scale : 0, mine = tris.list.filter((t) => t[3] === S.sel);
@@ -770,9 +1608,7 @@
         const e = r.model.elements[S.sel], et = r.model.etype, xy = e.map((i) => r.model.nodes[i]);
         const ed = edgeCurves({ model: { etype: et, elements: [e.map((_, k) => k)], nodes: xy }, u: e.map((i) => r.u[i]) }, sc);
         for (const c2 of ed) poly(c2, colors.ink, 2.2);
-        // gauss points of the selected element
-        const d = FE.gauss(et);
-        d.forEach(([xi, eta], k) => {
+        FE.gauss(et).forEach(([xi, eta], k) => {
           const g = FE.gaussPoint(et, xy, xi, eta), { N } = FE.shape(et, xi, eta);
           let ux = 0, uy = 0; N.forEach((Ni, i) => { ux += Ni * r.u[e[i]][0]; uy += Ni * r.u[e[i]][1]; });
           const q = toS([g.x + sc * ux, g.y + sc * uy]);
@@ -780,13 +1616,99 @@
         });
       }
     }
+    // Gauss-point position (with the deformed shape) of point i of element q
+    function gpPos(r, q, g) {
+      const m = r.model, et = m.etype, e = m.elements[q], [xi, eta] = FE.gauss(et)[g], { N } = FE.shape(et, xi, eta), sc = S.def ? S.scale : 0;
+      let x = 0, y = 0;
+      for (let i = 0; i < N.length; i++) { x += N[i] * (m.nodes[e[i]][0] + sc * r.u[e[i]][0]); y += N[i] * (m.nodes[e[i]][1] + sc * r.u[e[i]][1]); }
+      return [x, y];
+    }
+    function drawState(ctx, r) {
+      const ex = r.extra, k = r.kernel, m = r.model;
+      if (!k) return;
+      const ng = k.ng, size = (q) => Math.sqrt(k.area[q]) * view.s;
+      if (ex.e1 && S.layers.cracks) {
+        const w = gpCrack(m, k, ex), wl = (S.model.design && S.model.design.w_max_mm) || 0.3;
+        let wmx = 0; for (const v of w) wmx = Math.max(wmx, v);
+        for (let q = 0; q < m.elements.length; q++) {
+          const L = Math.min(size(q) / Math.sqrt(ng) * 0.85, 26);
+          if (L < 2) continue;
+          for (let g = 0; g < ng; g++) {
+            const i = q * ng + g;
+            if (!ex.cracked[i]) continue;
+            const p = toS(gpPos(r, q, g)), th = ex.theta[i] + Math.PI / 2, dx = Math.cos(th) * L / 2, dy = -Math.sin(th) * L / 2;
+            const open = ex.open[i], wi = w[i];
+            ctx.beginPath(); ctx.moveTo(p[0] - dx, p[1] - dy); ctx.lineTo(p[0] + dx, p[1] + dy);
+            ctx.strokeStyle = !open ? (colors.dark ? "#7d8792" : "#9aa3ad") : wi > wl ? "#d0021b" : colors.dark ? "#ff9b6a" : "#c4541c";
+            ctx.lineWidth = open ? 0.7 + 2.6 * Math.sqrt(Math.min(wi / Math.max(wmx, 1e-9), 1)) : 0.6;
+            ctx.stroke();
+          }
+        }
+      }
+      if (S.layers.yield) {
+        for (let q = 0; q < m.elements.length; q++) for (let g = 0; g < ng; g++) {
+          const i = q * ng + g;
+          const yx = ex.yield_x && ex.yield_x[i], yy = ex.yield_y && ex.yield_y[i], cr = ex.crushed && ex.crushed[i], pl = ex.alpha && ex.alpha[i] > 0 && ex.yield && ex.yield[i];
+          if (!(yx || yy || cr || pl)) continue;
+          const p = toS(gpPos(r, q, g));
+          if (cr) { ctx.strokeStyle = colors.dark ? "#fff" : "#111"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(p[0] - 3.5, p[1] - 3.5); ctx.lineTo(p[0] + 3.5, p[1] + 3.5); ctx.moveTo(p[0] + 3.5, p[1] - 3.5); ctx.lineTo(p[0] - 3.5, p[1] + 3.5); ctx.stroke(); }
+          if (yx || yy) { ctx.fillStyle = "#7b2cbf"; ctx.fillRect(p[0] - 2.5, p[1] - 2.5, 5, 5); }
+          if (pl) { ctx.fillStyle = "#7b2cbf"; ctx.beginPath(); ctx.arc(p[0], p[1], 2.2, 0, 2 * Math.PI); ctx.fill(); }
+        }
+      }
+    }
+    function drawRebar(ctx) {
+      const layers = (S.model.reinforcement && S.model.reinforcement.layers) || [], bb = bounds();
+      if (!layers.length || !bb) return;
+      const g = S.model.geometry;
+      ctx.save();
+      layers.forEach((L, k) => {
+        const reg = L.region || {}, x0 = Math.max(reg.x0 ?? bb.lo[0], bb.lo[0]), x1 = Math.min(reg.x1 ?? bb.hi[0], bb.hi[0]), y0 = Math.max(reg.y0 ?? bb.lo[1], bb.lo[1]), y1 = Math.min(reg.y1 ?? bb.hi[1], bb.hi[1]);
+        if (!(x1 > x0 && y1 > y0)) return;
+        const col = L.dir === "x" ? (colors.dark ? "#7fb2ff" : "#1f5fa8") : (colors.dark ? "#ffb36b" : "#b4520f");
+        ctx.strokeStyle = col; ctx.globalAlpha = L.region ? 0.95 : 0.55;
+        ctx.lineWidth = Math.max(0.8, Math.min(3, L.dia_mm / 1000 * view.s));
+        let pos = [];
+        const span = L.dir === "x" ? [y0, y1] : [x0, x1];
+        if ("n" in L) { const n = Math.max(1, L.n); for (let i = 0; i < n; i++) pos.push(span[0] + (span[1] - span[0]) * (i + 0.5) / n); }
+        else { const s = L.spacing_mm / 1000; const first = span[0] + (((span[1] - span[0]) % s) / 2 || s / 2); for (let v = first; v < span[1] + 1e-9; v += s) pos.push(v); }
+        if (pos.length * 3 > (span[1] - span[0]) * view.s) {          // too dense to draw bar by bar: a hatched band
+          ctx.globalAlpha = 0.12; ctx.fillStyle = col;
+          const A = toS([x0, y1]), B = toS([x1, y0]); ctx.fillRect(A[0], A[1], B[0] - A[0], B[1] - A[1]);
+          ctx.globalAlpha = 0.6; pos = pos.filter((_, i) => i % Math.ceil(pos.length * 3 / ((span[1] - span[0]) * view.s)) === 0);
+        }
+        for (const v of pos) {
+          if (g.type === "rectangle" && (g.openings || []).length) {
+            // bars stop at openings: split the line
+            const segs = [[L.dir === "x" ? x0 : y0, L.dir === "x" ? x1 : y1]];
+            for (const o of g.openings) {
+              const inBand = L.dir === "x" ? v > o.y0 && v < o.y1 : v > o.x0 && v < o.x1;
+              if (!inBand) continue;
+              const a = L.dir === "x" ? o.x0 : o.y0, b = L.dir === "x" ? o.x1 : o.y1;
+              for (let si = segs.length - 1; si >= 0; si--) { const [s0, s1] = segs[si]; if (b <= s0 || a >= s1) continue; segs.splice(si, 1, ...[[s0, a], [b, s1]].filter(([p, q]) => q > p + 1e-9)); }
+            }
+            for (const [s0, s1] of segs) { const A = toS(L.dir === "x" ? [s0, v] : [v, s0]), B = toS(L.dir === "x" ? [s1, v] : [v, s1]); ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke(); }
+          } else {
+            const A = toS(L.dir === "x" ? [x0, v] : [v, y0]), B = toS(L.dir === "x" ? [x1, v] : [v, y1]);
+            ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+          }
+        }
+        void k;
+      });
+      ctx.restore();
+    }
     function drawPrincipal(ctx) {
-      const r = S.res, m = r.model, et = m.etype;
+      const r = R, m = r.model, et = m.etype;
       let smax = 0;
       const pts = m.elements.map((e, q) => {
         const xy = e.map((i) => m.nodes[i]), c = et[0] === "T" ? [1 / 3, 1 / 3] : [0, 0], g = FE.gaussPoint(et, xy, c[0], c[1]);
-        const ue = []; e.forEach((i) => ue.push(r.u[i][0], r.u[i][1]));
-        const eps = [0, 1, 2].map((k) => g.B[k].reduce((s, b, j) => s + b * ue[j], 0)), C = m.C, s = [0, 1, 2].map((k) => (C[k][0] * eps[0] + C[k][1] * eps[1] + C[k][2] * eps[2]) / 1000);
+        let s;
+        if (r.gp && r.kernel) { const ng = r.kernel.ng; s = [0, 0, 0]; for (let k = 0; k < ng; k++) for (let j = 0; j < 3; j++) s[j] += r.gp[3 * (q * ng + k) + j] / ng; }
+        else {
+          const ue = []; e.forEach((i) => ue.push(r.u[i][0], r.u[i][1]));
+          const eps = [0, 1, 2].map((k) => g.B[k].reduce((acc, b, j) => acc + b * ue[j], 0)), C = m.C;
+          s = [0, 1, 2].map((k) => (C[k][0] * eps[0] + C[k][1] * eps[1] + C[k][2] * eps[2]) / 1000);
+        }
         const cen = (s[0] + s[1]) / 2, rad = Math.hypot((s[0] - s[1]) / 2, s[2]), th = 0.5 * Math.atan2(2 * s[2], s[0] - s[1]);
         const s1 = cen + rad, s2 = cen - rad;
         smax = Math.max(smax, Math.abs(s1), Math.abs(s2));
@@ -794,7 +1716,6 @@
         return { x: g.x, y: g.y, s1, s2, th, size };
       });
       if (!(smax > 0)) return;
-      const sc = S.def ? S.scale : 0;
       for (const p of pts) {
         const q = toS([p.x, p.y]), Lpx = Math.max(p.size * view.s * 0.9, 4);
         for (const [sv, ang] of [[p.s1, p.th], [p.s2, p.th + Math.PI / 2]]) {
@@ -805,10 +1726,9 @@
           ctx.strokeStyle = sv >= 0 ? "#c62f22" : "#1f5fa8"; ctx.lineWidth = 1.4; ctx.stroke();
         }
       }
-      void sc;
     }
     function drawBC(ctx) {
-      const r = S.res, m = r.model, sc = S.def ? S.scale : 0;
+      const r = R, m = r.model, sc = S.def ? S.scale : 0;
       const sz = 7;
       for (const [d] of m.fixed) {
         const i = d >> 1, comp = d & 1, q = toS([m.nodes[i][0] + sc * r.u[i][0], m.nodes[i][1] + sc * r.u[i][1]]);
@@ -817,14 +1737,14 @@
         else { ctx.moveTo(q[0], q[1]); ctx.lineTo(q[0] - sz, q[1] - sz * 0.6); ctx.lineTo(q[0] - sz, q[1] + sz * 0.6); }
         ctx.closePath(); ctx.fillStyle = colors.ink2; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
       }
-      // load arrows from the nodal load vector (excluding self weight)
       const f = m.forces; let fmax = 0;
       for (let i = 0; i < f.length; i += 2) fmax = Math.max(fmax, Math.hypot(f[i], f[i + 1]));
       if (!(fmax > 0)) return;
-      ctx.strokeStyle = colors.dark ? "#f0a35c" : "#b4520f"; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 1.4;
       for (let i = 0; i < f.length; i += 2) {
         const mag = Math.hypot(f[i], f[i + 1]);
         if (mag < 1e-9 * fmax) continue;
+        const isQ = m.forcesQ && Math.hypot(m.forcesQ[i], m.forcesQ[i + 1]) > 0.5 * mag;
+        ctx.strokeStyle = isQ ? (colors.dark ? "#9ad0ff" : "#1f5fa8") : (colors.dark ? "#f0a35c" : "#b4520f"); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 1.4;
         const n = i >> 1, q = toS([m.nodes[n][0] + sc * r.u[n][0], m.nodes[n][1] + sc * r.u[n][1]]), L = 10 + 26 * mag / fmax;
         const ux = f[i] / mag, uy = -f[i + 1] / mag, tail = [q[0] - ux * L, q[1] - uy * L];
         ctx.beginPath(); ctx.moveTo(tail[0], tail[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
@@ -832,27 +1752,31 @@
       }
     }
     function renderLegend() {
-      const el = $("#f-legend"), r = S.res;
+      const el = $("#f-legend"), r = R;
       const ban = $("#f-banner");
-      ban.hidden = !S.err; ban.textContent = S.err || "";
+      const banner = S.err || (S.src === "nl" && S.nl && S.nl.stale ? "The model has changed since this nonlinear analysis: run it again." : "") || (S.src === "dyn" && S.dyn.fe && S.dyn.fe.stale ? "The model has changed since this time history: run it again." : "");
+      ban.hidden = !banner; ban.textContent = banner;
       if (!r) { el.innerHTML = ""; return; }
+      const state = r.extra && r.gp ? (r.extra.e1 ? `<br><i class="sw" style="background:#c4541c"></i>open crack (width ∝ w)<i class="sw" style="background:#d0021b"></i>w > w<sub>max</sub><i class="sw" style="background:#9aa3ad"></i>closed<i class="dot" style="background:#7b2cbf"></i>bar yielded<b style="margin-left:8px">×</b> crushed` : r.extra.alpha ? `<br><i class="dot" style="background:#7b2cbf;border-radius:50%"></i>yielding now` : "") : "";
+      const tag = r.label ? ` · <b>${esc(r.label)}</b>` : "";
       if (!tris || !tris.band) {
-        el.innerHTML = `<b>Mesh</b>: ${r.model.elements.length} ${r.model.etype} elements, ${r.model.nodes.length} nodes · triangles at supports, arrows are the consistent nodal loads${S.def ? ` · deformed ×${fmt(S.scale)}` : ""}<br>Drag to pan · scroll or pinch to zoom · click an element to inspect it`;
+        el.innerHTML = `<b>Mesh</b>: ${r.model.elements.length} ${r.model.etype} elements, ${r.model.nodes.length} nodes${tag}${S.def ? ` · deformed ×${fmt(S.scale)}` : ""}${state}<br>Drag to pan · scroll or pinch to zoom · click an element to inspect it`;
         return;
       }
       const { levels, color, NB, lo, hi } = tris.band, f = FIELDS[S.field];
       const tick = (v) => fmt(Math.abs(v) < 1e-9 * (Math.abs(lo) + Math.abs(hi)) ? 0 : v, 3);
       const ticks = [0, NB / 4, NB / 2, 3 * NB / 4, NB].map((k) => `<span style="left:${100 * k / NB}%">${tick(levels[k])}</span>`).join("");
-      el.innerHTML = `<b>${f.label}</b> ${f.unit}${S.field[0] !== "u" ? (S.avg ? ", averaged at nodes" : ", element by element (not averaged)") : ""} · min <b class="num">${fmt(lo, 4)}</b>, max <b class="num">${fmt(hi, 4)}</b>${S.def ? ` · deformed ×${fmt(S.scale)}` : ""}
+      el.innerHTML = `<b>${f.label}</b> ${f.unit}${!f.elem && S.field[0] !== "u" ? (S.avg ? ", averaged at nodes" : ", element by element") : f.elem ? ", per element" : ""}${tag} · min <b class="num">${fmt(lo, 4)}</b>, max <b class="num">${fmt(hi, 4)}</b>${S.def ? ` · deformed ×${fmt(S.scale)}` : ""}
         <div class="bands">${Array.from({ length: NB }, (_, k) => `<i style="background:${color(k)}"></i>`).join("")}</div><div class="bandticks">${ticks}</div>
-        ${S.princ ? `<span><i style="display:inline-block;width:14px;height:2px;background:#c62f22;vertical-align:middle"></i> tension <i style="display:inline-block;width:14px;height:2px;background:#1f5fa8;vertical-align:middle;margin-left:8px"></i> compression, principal directions</span>` : ""}`;
+        ${S.princ ? `<span><i style="display:inline-block;width:14px;height:2px;background:#c62f22;vertical-align:middle"></i> tension <i style="display:inline-block;width:14px;height:2px;background:#1f5fa8;vertical-align:middle;margin-left:8px"></i> compression, principal directions</span>` : ""}${state}`;
     }
     function renderTitle() {
-      const r = S.res, el = $("#f-title");
+      const r = R, el = $("#f-title");
       if (!r) { el.innerHTML = ""; return; }
-      const m = r.model, bb = bounds();
+      const m = r.model, bb = bounds(), kind = matKind();
+      const theory = (m.analysis === "plane_stress" ? "Plane stress" : "Plane strain") + ", " + (S.src === "nl" && S.nl ? (S.nl.kind === "rc" ? "RC, nonlinear" : S.nl.kind === "j2" ? "J2 plasticity" : S.nl.options.geometric ? "large deflection" : "nonlinear") : S.src === "dyn" ? "time history" : S.src === "des" ? "ULS design" : "linear elastic");
       el.innerHTML = `<div class="tb-name">${esc(S.model.name || "FE model")}</div><div>Size</div><div class="num">${fx(bb.hi[0] - bb.lo[0], 2)} × ${fx(bb.hi[1] - bb.lo[1], 2)} m, t ${fx(m.t, 3)}</div>
-        <div>Mesh</div><div class="num">${m.elements.length} ${m.etype} · ${r.dofs} DOFs</div><div>Theory</div><div>${m.analysis === "plane_stress" ? "Plane stress" : "Plane strain"}, linear elastic</div>`;
+        <div>Mesh</div><div class="num">${m.elements.length} ${m.etype} · ${2 * m.nodes.length} DOFs</div><div>Theory</div><div>${theory}</div>${kind === "rc" ? `<div>Concrete</div><div>C${S.model.material.fck_MPa ?? 30}, ${S.model.material.values === "mean" ? "mean" : "design"} strengths</div>` : ""}`;
     }
     function index(t) {
       let lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
@@ -928,25 +1852,37 @@
     function zoomAt(x, y, f) { if (!view) return; view.ox = x - (x - view.ox) * f; view.oy = y - (y - view.oy) * f; view.s *= f; requestDraw(); }
     let drawPending = false;
     function requestDraw() { if (drawPending) return; drawPending = true; requestAnimationFrame(() => { drawPending = false; draw(); }); }
-    return { rebuild, draw, fit, fitSoon, bind, theme: () => { readColors(); rebuild(); }, hit, toS: (p) => (view ? toS(p) : null) };
+    return { rebuild, draw, fit, fitSoon, bind, theme: () => { readColors(); rebuild(); }, hit, toS: (p) => (view ? toS(p) : null), unlock: () => { lockedScale = null; } };
   })();
 
   // ------------------------------------------------------------ wiring
   function init() {
     const exFE = window.TRAGWERK_EXAMPLES_FE || {};
-    $("#f-preset").innerHTML = `<optgroup label="Examples">${Object.entries(PRESETS).map(([k, p]) => opt(k, p.label, "wall")).join("")}</optgroup>
-      ${Object.keys(exFE).length ? `<optgroup label="Open a model file">${Object.keys(exFE).map((k) => `<option value="ex:${esc(k)}">${esc(exFE[k].name || k)} (JSON)</option>`).join("")}</optgroup>` : ""}`;
-    $("#f-preset").onchange = (e) => { const k = e.target.value; if (k.startsWith("ex:")) load("custom", exFE[k.slice(3)]); else load(k); };
+    const groups = { "Linear elasticity": ["wall", "cantilever", "kirsch"], "Reinforced concrete": ["deep", "rcwall", "panel"], "Nonlinear mechanics": ["hill", "elastica"], "Dynamics": ["quake"] };
+    $("#f-preset").innerHTML = Object.entries(groups).map(([g, ks]) => `<optgroup label="${esc(g)}">${ks.map((k) => opt(k, PRESETS[k].label, "wall")).join("")}</optgroup>`).join("")
+      + (Object.keys(exFE).length ? `<optgroup label="Open a model file">${Object.keys(exFE).map((k) => `<option value="ex:${esc(k)}">${esc(exFE[k].name || k)} (JSON)</option>`).join("")}</optgroup>` : "");
+    $("#f-preset").onchange = (e) => { const k = e.target.value; cancelJobs(); S.nlRun = null; S.dyn.run = null; if (k.startsWith("ex:")) load("custom", exFE[k.slice(3)]); else load(k); };
     $$("[data-ftab]").forEach((t) => t.onclick = () => { S.ftab = t.dataset.ftab; renderEditor(); });
-    $$("[data-frtab]").forEach((t) => t.onclick = () => { S.frtab = t.dataset.frtab; renderResults(); });
-    $$("[data-field]").forEach((b) => b.onclick = () => { S.field = b.dataset.field; $$("[data-field]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); P.rebuild(); });
+    $$("[data-frtab]").forEach((t) => t.onclick = () => {
+      S.frtab = t.dataset.frtab;
+      if (S.frtab === "des") setSource("des");
+      else if (S.frtab === "nl" && S.nl) setSource("nl");
+      else if (S.frtab === "dyn" && S.dyn.fe) setSource("dyn");
+      else if (S.frtab === "res") setSource("lin");
+      renderResults();
+    });
+    $$("[data-src]").forEach((b) => b.onclick = () => { if (b.disabled) return; S.scale = null; P.unlock(); setSource(b.dataset.src); S.frtab = { lin: S.frtab === "elem" ? "elem" : "res", des: "des", nl: "nl", dyn: "dyn" }[b.dataset.src]; renderResults(); });
+    $$("[data-layer]").forEach((c) => c.onchange = () => { S.layers[c.dataset.layer] = c.checked; P.draw(); });
     $("#f-def").onchange = (e) => { S.def = e.target.checked; P.rebuild(); };
-    $("#f-scale").oninput = (e) => { const v = Number(e.target.value); if (v >= 0 && isFinite(v)) { S.scale = v; if (S.def) P.rebuild(); } };
+    $("#f-scale").oninput = (e) => { const v = Number(e.target.value); if (v >= 0 && isFinite(v)) { S.scale = v; P.unlock(); if (S.def) P.rebuild(); } };
     $("#f-mesh").onchange = (e) => { S.meshOn = e.target.checked; P.draw(); };
     $("#f-avg").onchange = (e) => { S.avg = e.target.checked; P.rebuild(); };
     $("#f-princ").onchange = (e) => { S.princ = e.target.checked; P.rebuild(); };
     $("#f-fit").onclick = () => P.fit();
-    $("#f-name").addEventListener("input", (e) => { S.model.name = e.target.value; P.rebuild(); });
+    $("#f-step").oninput = (e) => { S.step = +e.target.value; stopPlay(); renderTimeline(); P.rebuild(true); if (S.frtab === "nl" || S.frtab === "dyn" || S.frtab === "elem") renderResultsThrottled(); };
+    $("#f-step").onchange = () => { if (S.frtab === "nl" || S.frtab === "dyn" || S.frtab === "elem") renderResults(); };
+    $("#f-play").onclick = togglePlay;
+    $("#f-name").addEventListener("input", (e) => { S.model.name = e.target.value; P.rebuild(true); });
     $("#f-json").onclick = () => { $("#f-json-text").value = JSON.stringify(S.model, null, 2); $("#f-json-msg").textContent = ""; $("#f-drawer").hidden = false; };
     $("#f-drawer-close").onclick = () => { $("#f-drawer").hidden = true; };
     $("#f-json-copy").onclick = () => { const t = $("#f-json-text"); navigator.clipboard.writeText(t.value).then(() => { $("#f-json-msg").textContent = "Copied."; }, () => { t.select(); $("#f-json-msg").textContent = "Select all and copy with your keyboard."; }); };
@@ -962,7 +1898,8 @@
     P.bind();
     $("#f-def").checked = S.def; $("#f-mesh").checked = S.meshOn; $("#f-avg").checked = S.avg;
     load("wall");
-    window.TragwerkFE = { S, P, load, solve, runConvergence, render: () => { renderEditor(); renderResults(); P.rebuild(); } };
+    window.TragwerkFE = { S, P, load, solve, runConvergence, runNonlinear, runMeshCheck, runDynamic, runSdof, makeRecord, setSource, computeDesign,
+      render: () => { renderEditor(); renderResults(); renderChips(); P.rebuild(); } };
   }
   init();
 })();

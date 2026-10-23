@@ -2,6 +2,10 @@
 
   tragwerk run MODEL.json [--report R.html] [--pdf R.pdf] [--json R.json]
                                  (frame models tragwerk/0.1 and tragwerk3d/0.1, or continuum FE models tragwerk-fe/0.1)
+      3D frames:  [--buckling]                     linear buckling, α_cr of every ULS combination
+      FE models:  [--design] [--nonlinear] [--time-history]
+                  reinforcement design (EN 1992-1-1 Annex F) with a bar proposal; nonlinear static analysis with the
+                  model's "nonlinear" options; time history with its "time_history": {"record": …, "options": …}
   tragwerk building [--spec SPEC.json] --out MODEL.json
   tragwerk bridge [--spec SPEC.json] --out MODEL.json
   tragwerk verify [--html V.html] [--crosscheck]
@@ -25,6 +29,8 @@ from .solver import StructureUnstable
 
 def _run_fe(args, data) -> int:
     from .fe2d import FEError, run_fe, to_dict_fe
+    if args.buckling:
+        print("note: --buckling applies to 3D frame models", file=sys.stderr)
     try:
         res = run_fe(data)
     except FEError as exc:
@@ -38,12 +44,84 @@ def _run_fe(args, data) -> int:
           f"at ({s['at'][0]:.3f}, {s['at'][1]:.3f}) m, strain energy {s['strain_energy_kNm']:.4g} kNm")
     print(f"  equilibrium: Σ loads ({s['load_sum_kN'][0]:.3f}, {s['load_sum_kN'][1]:.3f}) kN, "
           f"Σ reactions ({s['reaction_sum_kN'][0]:.3f}, {s['reaction_sum_kN'][1]:.3f}) kN")
+    try:
+        if args.design:
+            out["design"] = _fe_design(res.model)
+        if args.nonlinear:
+            out["nonlinear"] = _fe_nonlinear(res.model, data.get("nonlinear", {}))
+        if args.time_history:
+            out["time_history"] = _fe_time_history(res.model, data.get("time_history", {}))
+    except (FEError, TypeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 3
     if args.json:
         Path(args.json).write_text(json.dumps(out, indent=1, allow_nan=False))
         print(f"wrote {args.json}")
     if args.report or args.pdf:
         print("note: calculation reports are produced for frame models; FE results are exported with --json", file=sys.stderr)
     return 0
+
+
+def _fe_design(m) -> dict:
+    from .fe2d_design import design_reinforcement, propose_layers, to_dict_design
+    des = design_reinforcement(m)
+    out = to_dict_design(m, des)
+    layers, warns = propose_layers(m, des)
+    out["proposal"] = {"layers": layers, "notes": warns}
+    sm = out["summary"]
+    print(f"  design (Annex F, ULS): A_s,req up to {sm['max_As_req_x']:.0f} mm²/m in x, {sm['max_As_req_y']:.0f} mm²/m in y; "
+          f"concrete utilisation {sm['max_util_concrete']:.2f}; proposal: {len(layers)} layers")
+    for w in warns:
+        print(f"    {w}")
+    return out
+
+
+def _fe_nonlinear(m, opts: dict) -> dict:
+    from dataclasses import fields
+
+    from .fe2d_nl import NLOptions, run_nonlinear, summary
+    names = {f.name for f in fields(NLOptions)}
+    bad = sorted(set(opts) - names)
+    if bad:
+        raise ValueError(f"nonlinear: unknown option {bad[0]!r} (allowed: {', '.join(sorted(names))})")
+    if "monitor" in opts and opts["monitor"] is not None:
+        opts = dict(opts, monitor=tuple(opts["monitor"]))
+    res = run_nonlinear(m, NLOptions(**opts))
+    out = summary(res)
+    print(f"  nonlinear: {res.status}, λ_peak = {res.lam_peak:.4g} after {out['steps']} increments ({out['elapsed_s']:.1f} s)"
+          + (f", {res.unconverged} increments accepted below the acceptance tolerance" if res.unconverged else ""))
+    if res.message:
+        print(f"    {res.message}")
+    return out
+
+
+def _fe_time_history(m, spec: dict) -> dict:
+    from dataclasses import fields
+
+    from .dynamics_nl import DynOptions, fe_dynamic, parse_record, to_dict_dynamic
+    rec = parse_record(spec.get("record", {}))
+    names = {f.name for f in fields(DynOptions)}
+    o = spec.get("options", {})
+    bad = sorted(set(o) - names)
+    if bad:
+        raise ValueError(f"time_history.options: unknown option {bad[0]!r} (allowed: {', '.join(sorted(names))})")
+    r = fe_dynamic(m, rec, DynOptions(**{k: tuple(v) if isinstance(v, list) else v for k, v in o.items()}))
+    out = to_dict_dynamic(r, rec)
+    print(f"  time history: {r.status}, T1 = {r.periods[0]:.3f} s, max |u_mon| = {out['max_monitor_displacement_m'] * 1000:.2f} mm, "
+          f"max base shear {out['max_base_shear_kN']:.1f} kN, energy balance {out['energy_balance_error']:.1e}")
+    if r.message:
+        print(f"    {r.message}")
+    return out
+
+
+def _buckling(model, args) -> dict:
+    from .buckling import buckling, to_dict_buckling
+    br = buckling(model, modes=args.buckling_modes)
+    if br.governing:
+        print(f"buckling: α_cr = {br.alpha_cr:.3f} ({br.governing}); next modes " + ", ".join(f"{a:.3f}" for a in br.alpha[1:]))
+    for w in br.warnings:
+        print(f"warning: {w}")
+    return to_dict_buckling(br, model)
 
 
 def _run(args) -> int:
@@ -74,12 +152,23 @@ def _run(args) -> int:
         for c in lst:
             u = "" if c.utilisation is None else ("inf" if not math.isfinite(c.utilisation) else f"{c.utilisation:6.3f}")
             print(f"  {mid:<{width}}  {c.title:<46} {u:>7}  {c.status}")
+    buck = None
+    if args.buckling:
+        if is3d:
+            buck = _buckling(model, args)
+        else:
+            print("note: --buckling applies to 3D frame models", file=sys.stderr)
+    if args.design or args.nonlinear or args.time_history:
+        print("note: --design, --nonlinear and --time-history apply to FE models (tragwerk-fe/0.1)", file=sys.stderr)
     gov = res.governing()
     status = res.overall_status()
     print(f"result: {status.upper()}" + (f" (max utilisation {gov.utilisation:.3f}: {gov.member}, {gov.title})"
                                           if gov and gov.utilisation is not None and math.isfinite(gov.utilisation) else ""))
     if args.json:
-        Path(args.json).write_text(json.dumps(to_dict3d(res) if is3d else to_dict(res), indent=1, allow_nan=False))
+        out = to_dict3d(res) if is3d else to_dict(res)
+        if buck is not None:
+            out["buckling"] = buck
+        Path(args.json).write_text(json.dumps(out, indent=1, allow_nan=False))
         print(f"wrote {args.json}")
     if args.report or args.pdf:
         from .report.html import render
@@ -165,6 +254,11 @@ def main(argv=None) -> int:
     r.add_argument("--author")
     r.add_argument("--project")
     r.add_argument("--full", action="store_true", help="3D: detailed checks for every member")
+    r.add_argument("--buckling", action="store_true", help="3D: linear buckling analysis, α_cr of every ULS combination")
+    r.add_argument("--buckling-modes", type=int, default=4, help="buckling modes of the governing combination (default 4)")
+    r.add_argument("--design", action="store_true", help="FE: reinforcement design (EN 1992-1-1 Annex F) and a bar proposal")
+    r.add_argument("--nonlinear", action="store_true", help="FE: nonlinear static analysis with the model's \"nonlinear\" options")
+    r.add_argument("--time-history", action="store_true", help="FE: time history with the model's \"time_history\" record and options")
     r.set_defaults(fn=_run)
     b = sub.add_parser("building", help="generate a 3D building model from a spec")
     b.add_argument("--spec", help="JSON file with BuildingSpec fields (defaults for the rest)")

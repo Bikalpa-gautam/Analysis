@@ -1,0 +1,109 @@
+{
+ "schema": "tragwerk-fe/0.1",
+ "name": "RC deep beam on short supports, designed by EN 1992-1-1 Annex F",
+ "element": "Q8",
+ "analysis": "plane_stress",
+ "material": {
+  "E_MPa": 33000,
+  "nu": 0.2,
+  "thickness_m": 0.3,
+  "density_kNm3": 25,
+  "model": "rc",
+  "fck_MPa": 30,
+  "values": "design"
+ },
+ "design": {
+  "member": "deep_beam"
+ },
+ "reinforcement": {
+  "cover_mm": 35,
+  "layers": [
+   {
+    "dir": "x",
+    "dia_mm": 10,
+    "spacing_mm": 250,
+    "faces": 2,
+    "label": "base mesh, x bars"
+   },
+   {
+    "dir": "x",
+    "dia_mm": 12,
+    "spacing_mm": 100,
+    "faces": 2,
+    "label": "additional x bars",
+    "region": {
+     "x0": 0.0,
+     "x1": 6.0,
+     "y0": 0.0,
+     "y1": 0.5
+    }
+   },
+   {
+    "dir": "x",
+    "dia_mm": 12,
+    "spacing_mm": 300,
+    "faces": 2,
+    "label": "additional x bars",
+    "region": {
+     "x0": 0.0,
+     "x1": 6.0,
+     "y0": 0.5,
+     "y1": 1.5
+    }
+   },
+   {
+    "dir": "y",
+    "dia_mm": 10,
+    "spacing_mm": 250,
+    "faces": 2,
+    "label": "base mesh, y bars"
+   }
+  ]
+ },
+ "geometry": {
+  "type": "rectangle",
+  "Lx": 6.0,
+  "Ly": 3.0,
+  "h": 0.5
+ },
+ "supports": [
+  {
+   "edge": "bottom",
+   "from": 0.0,
+   "to": 0.5,
+   "uy": true
+  },
+  {
+   "edge": "bottom",
+   "from": 5.5,
+   "to": 6.0,
+   "uy": true
+  },
+  {
+   "at": [
+    0,
+    0
+   ],
+   "ux": true
+  }
+ ],
+ "loads": [
+  {
+   "edge": "top",
+   "qy": -250
+  },
+  {
+   "edge": "top",
+   "qy": -120,
+   "case": "Q"
+  }
+ ],
+ "self_weight": true,
+ "nonlinear": {
+  "control": "arc",
+  "combination": "uls",
+  "steps": 10,
+  "to_failure": true,
+  "max_steps": 80
+ }
+}

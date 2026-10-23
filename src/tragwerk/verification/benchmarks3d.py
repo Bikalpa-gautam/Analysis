@@ -276,3 +276,5 @@ def _s10():
 
 from . import benchmarks_dyn  # noqa: E402,F401  (registers the dynamics benchmarks)
 from . import benchmarks_fe  # noqa: E402,F401  (registers the continuum FE benchmarks)
+from . import benchmarks_fe_nl  # noqa: E402,F401  (registers the nonlinear FE and FE design benchmarks)
+from . import benchmarks_dyn_nl  # noqa: E402,F401  (registers the time-history benchmarks)

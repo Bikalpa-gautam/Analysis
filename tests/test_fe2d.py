@@ -30,7 +30,9 @@ def test_shape_functions(et):
     """Partition of unity, Kronecker property at the nodes, derivatives against finite differences."""
     nodes = {"T3": [(0, 0), (1, 0), (0, 1)], "T6": [(0, 0), (1, 0), (0, 1), (0.5, 0), (0.5, 0.5), (0, 0.5)],
              "Q4": [(-1, -1), (1, -1), (1, 1), (-1, 1)],
-             "Q8": [(-1, -1), (1, -1), (1, 1), (-1, 1), (0, -1), (1, 0), (0, 1), (-1, 0)]}[et]
+             "Q8": [(-1, -1), (1, -1), (1, 1), (-1, 1), (0, -1), (1, 0), (0, 1), (-1, 0)]}
+    nodes["Q8R"] = nodes["Q8"]
+    nodes = nodes[et]
     for i, (a, b) in enumerate(nodes):
         N, _ = shape(et, a, b)
         assert np.allclose(N, np.eye(len(nodes))[i], atol=1e-14)
@@ -49,11 +51,13 @@ def test_element_matrices(et):
     xy = {"T3": [[0, 0], [2, 0.3], [0.4, 1.5]], "Q4": [[0, 0], [2, 0.2], [2.2, 1.4], [-0.1, 1.2]]}
     xy["T6"] = xy["T3"] + [list((np.array(xy["T3"][a]) + xy["T3"][b]) / 2) for a, b in ((0, 1), (1, 2), (2, 0))]
     xy["Q8"] = xy["Q4"] + [list((np.array(xy["Q4"][a]) + xy["Q4"][b]) / 2) for a, b in ((0, 1), (1, 2), (2, 3), (3, 0))]
+    xy["Q8R"] = xy["Q8"]
     X = np.array(xy[et], dtype=float)
     k, _ = element_stiffness(et, X, constitutive(30e6, 0.2, "plane_stress"), 0.3)
     assert np.allclose(k, k.T, rtol=1e-12, atol=1e-6)
     lam = np.linalg.eigvalsh(k)
-    assert np.sum(np.abs(lam) < 1e-9 * lam.max()) == 3 and lam.min() > -1e-9 * lam.max()
+    # Q8 with reduced 2×2 integration has one spurious zero-energy mode on its own (not communicable in a mesh)
+    assert np.sum(np.abs(lam) < 1e-9 * lam.max()) == (4 if et == "Q8R" else 3) and lam.min() > -1e-9 * lam.max()
     for mode in (np.tile([1.0, 0.0], len(X)), np.tile([0.0, 1.0], len(X)), np.column_stack([-X[:, 1], X[:, 0]]).ravel()):
         assert np.max(np.abs(k @ mode)) < 1e-8 * lam.max()
     m = element_mass(et, X, 2.5, 0.3)

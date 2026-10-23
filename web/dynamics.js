@@ -518,6 +518,277 @@
     return { caseIds: ids, combos: base.concat(out) };
   }
 
+  // ================================================================ linear buckling (port of tragwerk.buckling)
+  function planeG(L) {
+    return [[6 / 5, L / 10, -6 / 5, L / 10], [L / 10, 2 * L * L / 15, -L / 10, -L * L / 30], [-6 / 5, -L / 10, 6 / 5, -L / 10], [L / 10, -L * L / 30, -L / 10, 2 * L * L / 15]]
+      .map((r) => r.map((v) => v / L));
+  }
+  function geometricStiffnessLocal(N, L, r2) {
+    const g = Array.from({ length: 12 }, () => zeros(12)), pg = planeG(L);
+    for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) { g[V_IDX[a]][V_IDX[b]] = N * pg[a][b]; g[W_IDX[a]][W_IDX[b]] = N * W_SIGN[a] * pg[a][b] * W_SIGN[b]; }
+    g[3][3] = g[9][9] = N * r2 / L; g[3][9] = g[9][3] = -N * r2 / L;
+    return g;
+  }
+  // Symmetric eigendecomposition: Householder tridiagonalisation and implicit QL (tred2/tql2 of EISPACK, as in JAMA).
+  // Returns ascending values and V with V[k][i] = component k of eigenvector i.
+  function symEig(A) {
+    const n = A.length, V = A.map((r) => Float64Array.from(r)), d = new Float64Array(n), e = new Float64Array(n);
+    if (!n) return { vals: [], V: [] };
+    for (let j = 0; j < n; j++) d[j] = V[n - 1][j];
+    for (let i = n - 1; i > 0; i--) {
+      let scale = 0, h = 0;
+      for (let k = 0; k < i; k++) scale += Math.abs(d[k]);
+      if (scale === 0) {
+        e[i] = d[i - 1];
+        for (let j = 0; j < i; j++) { d[j] = V[i - 1][j]; V[i][j] = 0; V[j][i] = 0; }
+      } else {
+        for (let k = 0; k < i; k++) { d[k] /= scale; h += d[k] * d[k]; }
+        let f = d[i - 1], g = Math.sqrt(h);
+        if (f > 0) g = -g;
+        e[i] = scale * g; h -= f * g; d[i - 1] = f - g;
+        for (let j = 0; j < i; j++) e[j] = 0;
+        for (let j = 0; j < i; j++) {
+          f = d[j]; V[j][i] = f; g = e[j] + V[j][j] * f;
+          for (let k = j + 1; k <= i - 1; k++) { g += V[k][j] * d[k]; e[k] += V[k][j] * f; }
+          e[j] = g;
+        }
+        f = 0;
+        for (let j = 0; j < i; j++) { e[j] /= h; f += e[j] * d[j]; }
+        const hh = f / (h + h);
+        for (let j = 0; j < i; j++) e[j] -= hh * d[j];
+        for (let j = 0; j < i; j++) {
+          f = d[j]; g = e[j];
+          for (let k = j; k <= i - 1; k++) V[k][j] -= f * e[k] + g * d[k];
+          d[j] = V[i - 1][j]; V[i][j] = 0;
+        }
+      }
+      d[i] = h;
+    }
+    for (let i = 0; i < n - 1; i++) {
+      V[n - 1][i] = V[i][i]; V[i][i] = 1;
+      const h = d[i + 1];
+      if (h !== 0) {
+        for (let k = 0; k <= i; k++) d[k] = V[k][i + 1] / h;
+        for (let j = 0; j <= i; j++) {
+          let g = 0;
+          for (let k = 0; k <= i; k++) g += V[k][i + 1] * V[k][j];
+          for (let k = 0; k <= i; k++) V[k][j] -= g * d[k];
+        }
+      }
+      for (let k = 0; k <= i; k++) V[k][i + 1] = 0;
+    }
+    for (let j = 0; j < n; j++) { d[j] = V[n - 1][j]; V[n - 1][j] = 0; }
+    V[n - 1][n - 1] = 1;
+    for (let i = 1; i < n; i++) e[i - 1] = e[i];
+    e[n - 1] = 0;
+    let f = 0, tst1 = 0;
+    const eps = 2 ** -52;
+    for (let l = 0; l < n; l++) {
+      tst1 = Math.max(tst1, Math.abs(d[l]) + Math.abs(e[l]));
+      let m = l;
+      while (m < n - 1 && Math.abs(e[m]) > eps * tst1) m++;
+      if (m > l) {
+        let iter = 0;
+        do {
+          if (++iter > 80) throw new Error("symmetric eigensolver did not converge");
+          let g = d[l], p = (d[l + 1] - g) / (2 * e[l]), r = Math.hypot(p, 1);
+          if (p < 0) r = -r;
+          d[l] = e[l] / (p + r); d[l + 1] = e[l] * (p + r);
+          const dl1 = d[l + 1];
+          let h = g - d[l];
+          for (let i = l + 2; i < n; i++) d[i] -= h;
+          f += h;
+          p = d[m];
+          let c = 1, c2 = c, c3 = c, s = 0, s2 = 0;
+          const el1 = e[l + 1];
+          for (let i = m - 1; i >= l; i--) {
+            c3 = c2; c2 = c; s2 = s;
+            g = c * e[i]; h = c * p; r = Math.hypot(p, e[i]);
+            e[i + 1] = s * r; s = e[i] / r; c = p / r;
+            p = c * d[i] - s * g;
+            d[i + 1] = h + s * (c * g + s * d[i]);
+            for (let k = 0; k < n; k++) { h = V[k][i + 1]; V[k][i + 1] = s * V[k][i] + c * h; V[k][i] = c * V[k][i] - s * h; }
+          }
+          p = -s * s2 * c3 * el1 * e[l] / dl1;
+          e[l] = s * p; d[l] = c * p;
+        } while (Math.abs(e[l]) > eps * tst1);
+      }
+      d[l] += f; e[l] = 0;
+    }
+    const order = [...Array(n).keys()].sort((a, b) => d[a] - d[b]);
+    return { vals: order.map((i) => d[i]), V: V.map((row) => Float64Array.from(order, (i) => row[i])) };
+  }
+  // Largest μ of G φ = μ K φ (K SPD, G = −K_G) by Rayleigh–Ritz with a K-orthonormal basis V, H = Vᵀ G V, expanded by
+  // w = K⁻¹ G x of the leading Ritz vectors x (a block Krylov space of K⁻¹G; classical Gram–Schmidt twice in the K inner
+  // product). K w is formed by a product with K, not taken as G x: the solve carries an error of about cond(K)·ε, and
+  // only an exact pair (w, K w) keeps the basis K-orthonormal, so that the Ritz values stay Rayleigh quotients (bounded
+  // by the eigenvalues). After the orthogonalisation, ‖w‖_K is the residual ‖K⁻¹G x − θ x‖_K of the Ritz pair (θ, x)
+  // up to that solve error: a pair is converged when
+  // it is below tol·|θ₁| (eigenvalue error ≤ residual²/gap, mode error ≤ residual/gap). start: K-orthonormal-ish warm-start vectors [{x, kx = K x}],
+  // e.g. the leading Ritz vectors of a similar load combination, which usually leaves one or two expansions to do.
+  function bucklingKrylov(nf, solveK, mulK, mulG, p, start, rnd, tol = 1e-6) {
+    const b = Math.min(nf, p), mmax = Math.min(nf, Math.max(96, 10 * b));
+    let Q = [], P = [], GQ = [], H = [];
+    const orth = (w, kw) => {
+      const n0 = Math.abs(dot(w, kw));
+      let nn = n0;
+      for (let pass = 0; pass < 2; pass++) {               // modified Gram–Schmidt; a second pass only if the norm dropped
+        const before = nn;                                  // below 1/√2 of its value ("twice is enough", Kahan–Parlett)
+        for (let i = 0; i < Q.length; i++) {
+          const c = dot(Q[i], kw), qi = Q[i], pi = P[i];
+          if (c) for (let j = 0; j < nf; j++) { w[j] -= c * qi[j]; kw[j] -= c * pi[j]; }
+        }
+        nn = dot(w, kw);
+        if (nn > 0.5 * before) break;
+      }
+      return nn > 1e-24 * n0 ? Math.sqrt(nn) : 0;
+    };
+    const push = (w, kw, nrm, g) => {
+      const sc = 1 / nrm;
+      for (let j = 0; j < nf; j++) { w[j] *= sc; kw[j] *= sc; }
+      if (g) for (let j = 0; j < nf; j++) g[j] *= sc; else g = mulG(w);
+      const row = [];
+      for (let i = 0; i < Q.length; i++) { const h = 0.5 * (dot(Q[i], g) + dot(w, GQ[i])); row.push(h); H[i].push(h); }
+      row.push(dot(w, g)); H.push(row); Q.push(w); P.push(kw); GQ.push(g);
+    };
+    const add = (w, kw) => { const nrm = orth(w, kw); if (nrm) push(w, kw, nrm); return nrm; };
+    for (const s0 of start || []) add(Float64Array.from(s0.x), Float64Array.from(s0.kx));
+    // random vectors: the start block when there is no warm start, and one more with a warm start, so that a mode
+    // K-orthogonal to all warm vectors (e.g. of the other symmetry) cannot be missed
+    for (let tries = 0; (Q.length < b || tries === 0) && tries < 3 * b + 1; tries++) { const z = new Float64Array(nf); for (let i = 0; i < nf; i++) z[i] = rnd(); const w = Float64Array.from(solveK(z)); add(w, mulK(w)); }
+    let vals = [], S = [], it, res = [], rprev = null;
+    const comb = (k, list) => { const x = new Float64Array(nf), sk = S[k]; for (let j = 0; j < list.length; j++) { const c = sk[j]; if (c) { const q = list[j]; for (let i = 0; i < nf; i++) x[i] += c * q[i]; } } return x; };
+    for (it = 0; it < 2000; it++) {
+      const m = Q.length, ev = symEig(H), ord = [...Array(m).keys()].reverse();
+      vals = ord.map((i) => ev.vals[i]);
+      S = ord.map((i) => ev.V.map((r) => r[i]));
+      if (m >= nf) break;
+      const ref = Math.max(Math.abs(vals[0]), 1e-300), nb = Math.min(b, m), cand = [];
+      res = [];
+      for (let k = 0; k < nb; k++) {                    // w = K⁻¹ G x for the leading Ritz vectors; ‖w⊥‖_K = residual
+        const w = Float64Array.from(solveK(comb(k, GQ))), r = orth(w, mulK(w));
+        res.push(r);
+        if (r > tol * ref) cand.push([w, null, r]);
+      }
+      const rmax = Math.max(...res.slice(0, Math.min(p, m)));
+      if (rmax <= tol * ref) break;
+      // solves carry an error of about cond(K)·ε, so residuals level off near 1e-8: stop when they stall below 1e-5
+      if (rprev != null && rmax > 0.5 * rprev && rmax < 1e-5 * ref) break;
+      rprev = rmax;
+      if (m + cand.length > mmax) {                    // thick restart from the leading Ritz vectors
+        const keep = Array.from({ length: Math.min(m, p + 2 * b) }, (_, k) => [comb(k, Q), comb(k, P), comb(k, GQ)]);
+        Q = []; P = []; GQ = []; H = [];
+        for (const [x, kx, gx] of keep) { const nrm = orth(x, kx); if (nrm) push(x, kx, nrm, nrm > 1 - 1e-6 && nrm < 1 + 1e-6 ? gx : null); }
+        continue;
+      }
+      for (const [w] of cand) add(w, mulK(w));          // re-orthogonalised against the vectors added before it
+    }
+    const np = Math.min(p, Q.length), nw = Math.min(Q.length, 2 * b);
+    return { mu: vals.slice(0, np), X: Array.from({ length: np }, (_, k) => comb(k, Q)), warm: Array.from({ length: nw }, (_, k) => comb(k, Q)),
+      residual: res.slice(0, np).map((r) => r / Math.max(Math.abs(vals[0]), 1e-300)), iterations: it + 1, size: Q.length };
+  }
+  // Incremental linear buckling: job.step() analyses one ULS combination (true when all are done), job.finish() the result.
+  function bucklingJob(model, opts = {}) {
+    const modes = opts.modes ?? 4, segments = opts.segments ?? 4;
+    const { ref, submap } = refine(model, segments), fa = new T.FrameAnalysis3D(ref);
+    const cs = opts.combos || I.generateCombinations(model), uls = cs.combos.filter((c) => c.kind === "ULS");
+    const eids = Object.keys(fa.members);
+    const Nc = cs.caseIds.map((cid) => { const cr = fa.solveCase(ref.load_cases[cid]); return eids.map((e) => { const N = cr.members[e].N; return N.reduce((s, v) => s + v, 0) / N.length; }); });
+    const free = fa.free, nf = free.length, pos = new Int32Array(fa.ndof).fill(-1);
+    free.forEach((d, k) => { pos[d] = k; });
+    const unit = {};
+    for (const e of eids) {
+      const md = fa.members[e], sec = ref.sections[ref.members[e].section], r2 = (sec.Iy_m4 + sec.Iz_m4) / sec.area_m2;
+      const Tr = releaseTransform(md), TT = matMul(Tr, blockT(md.lam)), g = geometricStiffnessLocal(1, md.L, r2);
+      unit[e] = { g: matMul(transpose(TT), matMul(g, TT)), d: dofsOf(md).map((x) => pos[x]) };
+    }
+    const Kff = free.map((d) => { const row = []; for (const [c, v] of fa.K[d]) if (pos[c] >= 0) row.push([pos[c], v]); return row; });
+    const krp = new Int32Array(nf + 1);
+    Kff.forEach((row, i) => { krp[i + 1] = krp[i] + row.length; });
+    const kci = new Int32Array(krp[nf]), kv = new Float64Array(krp[nf]);
+    Kff.forEach((row, i) => row.forEach(([c, v], t) => { kci[krp[i] + t] = c; kv[krp[i] + t] = v; }));
+    const mulK = (x) => { const y = new Float64Array(nf); for (let i = 0; i < nf; i++) { let s = 0; for (let t = krp[i]; t < krp[i + 1]; t++) s += kv[t] * x[kci[t]]; y[i] = s; } return y; };
+    const solveK = (rhs) => fa.solve(rhs);
+    // common sparsity pattern (CSR) of the element geometric stiffnesses, and where every element entry goes
+    const cols = Array.from({ length: nf }, () => new Set());
+    for (const e of eids) { const d = unit[e].d; for (let a = 0; a < 12; a++) if (d[a] >= 0) for (let c = 0; c < 12; c++) if (d[c] >= 0 && unit[e].g[a][c]) cols[d[a]].add(d[c]); }
+    const rp = new Int32Array(nf + 1), rowCols = cols.map((st) => [...st].sort((x, y) => x - y));
+    for (let i = 0; i < nf; i++) rp[i + 1] = rp[i] + rowCols[i].length;
+    const nnz = rp[nf], ci = new Int32Array(nnz), slot = rowCols.map((rc) => new Map(rc.map((c, t) => [c, t])));
+    for (let i = 0; i < nf; i++) ci.set(rowCols[i], rp[i]);
+    const scat = {};
+    for (const e of eids) {
+      const { g, d } = unit[e], at = [], val = [];
+      for (let a = 0; a < 12; a++) if (d[a] >= 0) for (let c = 0; c < 12; c++) if (d[c] >= 0 && g[a][c]) { at.push(rp[d[a]] + slot[d[a]].get(d[c])); val.push(g[a][c]); }
+      scat[e] = { at: Int32Array.from(at), val: Float64Array.from(val) };
+    }
+    let seed = 2468, warm = null;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648 * 2 - 1; };
+    const res = { model: ref, analysis: fa, submap, combos: [], governing: null, modes: [], alpha: [], axial: {}, warnings: [] };
+    let best = null, next = 0;
+    const k = Math.min(modes, nf - 1);
+    const assembleG = (Ne) => {
+      const gv = new Float64Array(nnz);               // −K_G of the combination on the common pattern
+      eids.forEach((e, j) => { const n = Ne[j]; if (n === 0) return; const { at, val } = scat[e]; for (let t = 0; t < at.length; t++) gv[at[t]] -= n * val[t]; });
+      return (x) => { const y = new Float64Array(nf); for (let i = 0; i < nf; i++) { let s = 0; for (let t = rp[i]; t < rp[i + 1]; t++) s += gv[t] * x[ci[t]]; y[i] = s; } return y; };
+    };
+    const positive = (sol) => {
+      const mmax = Math.max(...sol.mu.map(Math.abs), 1e-300);
+      return sol.mu.map((m, i) => i).filter((i) => sol.mu[i] > 1e-12 * mmax);
+    };
+    // visit the combinations in a chain of similar axial-force patterns (greedy nearest neighbour, cosine), so that every
+    // warm start comes from a similar combination; results are reported in the original order
+    const NeOf = (c) => eids.map((_, j) => c.factors.reduce((s, f, ci) => s + f * Nc[ci][j], 0));
+    const Nall = uls.map(NeOf), nrm = Nall.map((v) => Math.sqrt(dot(v, v)) || 1), order = [], seen = new Uint8Array(uls.length);
+    for (let cur = 0; order.length < uls.length;) {
+      order.push(cur); seen[cur] = 1;
+      let bestj = -1, bc = -Infinity;
+      for (let j = 0; j < uls.length; j++) if (!seen[j]) { const cs2 = dot(Nall[cur], Nall[j]) / (nrm[cur] * nrm[j]); if (cs2 > bc) { bc = cs2; bestj = j; } }
+      if (bestj < 0) break;
+      cur = bestj;
+    }
+    const slots = new Array(uls.length);
+    const step = () => {                               // one ULS combination; warm start from the previous one
+      const ix = order[next++], c = uls[ix], Ne = Nall[ix];
+      let ncomp = 0;
+      eids.forEach((e, j) => { if (Ne[j] < 0) ncomp += -Ne[j] * fa.members[e].L; });
+      if (ncomp <= 1e-9) { slots[ix] = { id: c.id, label: c.label, alpha: [], alpha_cr: null }; return; }
+      const mulG = assembleG(Ne), sol = bucklingKrylov(nf, solveK, mulK, mulG, 1, warm && warm.map((x) => ({ x, kx: mulK(x) })), rnd);
+      warm = sol.warm;
+      const keep = positive(sol), alpha = keep.map((i) => 1 / sol.mu[i]);
+      slots[ix] = { id: c.id, label: c.label, alpha, alpha_cr: alpha.length ? alpha[0] : null };
+      if (alpha.length && (!best || alpha[0] < best.alpha[0] || (alpha[0] === best.alpha[0] && ix < best.ix))) best = { id: c.id, ix, alpha, Ne, mulG, warm: sol.warm };
+    };
+    const finish = () => {
+      res.combos = slots.filter(Boolean);
+      if (!best) { res.warnings.push("No ULS combination puts members in compression: there is nothing to buckle."); return res; }
+      // the governing combination once more, to a tighter residual, for its mode shapes
+      const sol = bucklingKrylov(nf, solveK, mulK, best.mulG, k, best.warm.map((x) => ({ x, kx: mulK(x) })), rnd, 2e-8), keep = positive(sol);
+      res.governing = best.id; res.alpha = keep.map((i) => 1 / sol.mu[i]);
+      res.combos.find((cc) => cc.id === best.id).alpha = res.alpha.slice();
+      res.combos.find((cc) => cc.id === best.id).alpha_cr = res.alpha[0];
+      eids.forEach((e, j) => { res.axial[e] = best.Ne[j]; });
+      for (const i of keep) {
+        const x = sol.X[i], v = new Float64Array(fa.ndof);
+        free.forEach((d, j) => { v[d] = x[j]; });
+        let mx = 0; for (const t of v) mx = Math.max(mx, Math.abs(t));
+        for (let q = 0; q < v.length; q++) v[q] /= mx;
+        normaliseSign(v);
+        res.modes.push(v);
+      }
+      const a = res.alpha[0];
+      if (a < 1) res.warnings.push(`α_cr = ${a.toFixed(2)} < 1: the frame buckles under the design loads.`);
+      else if (a < 10) res.warnings.push(`α_cr = ${a.toFixed(2)} < 10: second-order effects are significant; first-order results are amplified by about 1/(1 − 1/α_cr) = ${(1 / (1 - 1 / a)).toFixed(2)} (EN 1993-1-1 5.2.1(3), EN 1992-1-1 5.8.2(6)).`);
+      return res;
+    };
+    return { total: uls.length, done: () => next, step: () => { if (next < uls.length) step(); return next >= uls.length; }, finish };
+  }
+  function buckling(model, opts = {}) {
+    const job = bucklingJob(model, opts);
+    while (!job.step());
+    return job.finish();
+  }
+
   T.runDynamics = function (model, fa, cases, cs) {
     const mr = modal(model, model.dynamics);
     const warnings = mr.warnings.slice();
@@ -530,7 +801,7 @@
     }
     return { modal: mr, seismic: sr, combos: cs, warnings };
   };
-  Object.assign(T, { modal, refine, memberShape, designSpectrum, cqcRho, driftCheck, SPECTRUM, CASE_E, CASE_E2, elementMassLocal, releaseTransform });
+  Object.assign(T, { modal, refine, memberShape, designSpectrum, cqcRho, driftCheck, SPECTRUM, CASE_E, CASE_E2, elementMassLocal, releaseTransform, buckling, bucklingJob, geometricStiffnessLocal, symEig });
   T.driftCheck = driftCheck;
   if (typeof module !== "undefined" && module.exports) module.exports = T;
 })(typeof window !== "undefined" ? window : globalThis);

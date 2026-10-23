@@ -164,3 +164,48 @@ def _d08():
         Comparison("base moment |M_y| at the foot", float(res.seismic.members["C"]["My"][0]), mt * Sd * h, "kNm", rel_tol=1e-9),
         Comparison("elastic drift d_r,e", d["dre_x"] * 1000, Sd / w ** 2 * 1000, "mm", rel_tol=1e-9),
     ]
+
+
+# ===================================================================== linear buckling (tragwerk.buckling)
+def _column(L, base, top, P=1000.0, b=400, h=400):
+    d = {"schema": "tragwerk3d/0.1", "materials": MAT, "sections": {"S": dict(SQ, b_mm=b, h_mm=h)},
+         "nodes": [{"id": "A", "x": 0, "y": 0, "z": 0}, {"id": "B", "x": 0, "y": 0, "z": L}],
+         "members": [{"id": "C1", "i": "A", "j": "B", "section": "S"}],
+         "supports": [dict({"node": "A"}, **base)] + ([dict({"node": "B"}, **top)] if top else []),
+         "load_cases": [{"id": "G", "type": "permanent", "self_weight": False, "loads": [{"type": "nodal", "node": "B", "fz": -P}]}]}
+    return parse_model3d(d)
+
+
+@benchmark("D12", "Dynamics", "Linear buckling: Euler columns and a sway portal frame (elastic critical load factor α_cr)",
+           "Euler: P_cr = π²EI/(βL)², β = 1 (pinned), 2 (cantilever), 0.5 (fixed–fixed), 0.699 (fixed–pinned, π² · 2.046); "
+           "fixed-base portal with a rigid beam: P_cr = π²EI/h² per column; α_cr = P_cr/P_Ed with P_Ed = 1.35 G")
+def _d12():
+    from ..buckling import buckling
+    out = []
+    PIN = {"ux": True, "uy": True, "uz": True, "rz": True}
+    FIX = {"ux": True, "uy": True, "uz": True, "rx": True, "ry": True, "rz": True}
+    L, P = 5.0, 1000.0
+    for name, base, top, beta in (("pinned–pinned", PIN, {"ux": True, "uy": True}, 1.0), ("cantilever", FIX, None, 2.0),
+                                  ("fixed–fixed", FIX, {"ux": True, "uy": True, "rx": True, "ry": True}, 0.5),
+                                  ("fixed–pinned", FIX, {"ux": True, "uy": True}, 1 / math.sqrt(2.045752))):
+        m = _column(L, base, top, P)
+        sec = m.sections["S"]
+        EI = analysis_modulus3d(sec) * sec.stiffness_factor * 0.4 ** 4 / 12
+        br = buckling(m, modes=2, segments=8)
+        out.append(Comparison(f"{name}: α_cr", br.alpha_cr, math.pi ** 2 * EI / (beta * L) ** 2 / (1.35 * P), "", rel_tol=2e-3))
+    # portal frame in the x-z plane, columns 400×400 h = 4 m, beam 400×3000 (practically rigid), out-of-plane restrained
+    h, span = 4.0, 6.0
+    d = {"schema": "tragwerk3d/0.1", "materials": MAT, "sections": {"C": dict(SQ), "B": dict(SQ, b_mm=400, h_mm=3000)},
+         "nodes": [{"id": "A", "x": 0, "y": 0, "z": 0}, {"id": "B", "x": 0, "y": 0, "z": h}, {"id": "C", "x": span, "y": 0, "z": h}, {"id": "D", "x": span, "y": 0, "z": 0}],
+         "members": [{"id": "c1", "i": "A", "j": "B", "section": "C"}, {"id": "b", "i": "B", "j": "C", "section": "B"}, {"id": "c2", "i": "D", "j": "C", "section": "C"}],
+         "supports": [dict({"node": "A"}, **FIX), dict({"node": "D"}, **FIX), {"node": "B", "uy": True}, {"node": "C", "uy": True}],
+         "load_cases": [{"id": "G", "type": "permanent", "self_weight": False,
+                         "loads": [{"type": "nodal", "node": "B", "fz": -P}, {"type": "nodal", "node": "C", "fz": -P}]}]}
+    m = parse_model3d(d)
+    sec = m.sections["C"]
+    EI = analysis_modulus3d(sec) * sec.stiffness_factor * 0.4 ** 4 / 12
+    br = buckling(m, modes=2, segments=8)
+    out.append(Comparison("portal, rigid beam: sway α_cr", br.alpha_cr, math.pi ** 2 * EI / h ** 2 / (1.35 * P), "", rel_tol=1e-2))
+    out.append(Comparison("amplification 1/(1 − 1/α_cr) reported for α_cr < 10", 1.0 if (br.alpha_cr >= 10 or any("amplified" in w for w in br.warnings)) else 0.0,
+                          1.0, "", abs_tol=0.0))
+    return out

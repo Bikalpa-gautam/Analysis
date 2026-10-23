@@ -3,15 +3,17 @@
  * A port of tragwerk/fe2d.py (same meshes, node numbering, quadrature and stress
  * recovery; the test suite compares both to round-off). Notation of the ETH
  * Method of Finite Elements I course: x = Σ N_i x_i, J = ∂x/∂ξ, B = ∂N/∂x,
- * k_e = Σ_g w_g Bᵀ C B t det J. Elements T3, T6, Q4, Q8. Units: m, kN, MPa.
+ * k_e = Σ_g w_g Bᵀ C B t det J. Elements T3, T6, Q4, Q8, Q8R. Units: m, kN, MPa.
  */
 (function (root) {
   "use strict";
   const T = root.Tragwerk || (root.Tragwerk = {});
   const SCHEMA_FE = "tragwerk-fe/0.1";
-  const TYPES = ["T3", "T6", "Q4", "Q8"];
-  const NN = { T3: 3, T6: 6, Q4: 4, Q8: 8 };
+  const TYPES = ["T3", "T6", "Q4", "Q8", "Q8R"];
+  const NN = { T3: 3, T6: 6, Q4: 4, Q8: 8, Q8R: 8 };
   const EDGES = { T3: [[0, 1], [1, 2], [2, 0]], T6: [[0, 3, 1], [1, 4, 2], [2, 5, 0]], Q4: [[0, 1], [1, 2], [2, 3], [3, 0]], Q8: [[0, 4, 1], [1, 5, 2], [2, 6, 3], [3, 7, 0]] };
+  EDGES.Q8R = EDGES.Q8;
+  const QUADRATIC = ["T6", "Q8", "Q8R"];
   const Q4N = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
   const Q8N = [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [1, 0], [0, 1], [-1, 0]];
   const G2 = 1 / Math.sqrt(3), G3 = Math.sqrt(0.6);
@@ -30,7 +32,7 @@
     if (et === "Q4") {
       return { N: Q4N.map(([a, b]) => 0.25 * (1 + xi * a) * (1 + eta * b)), dN: [Q4N.map(([a, b]) => 0.25 * a * (1 + eta * b)), Q4N.map(([a, b]) => 0.25 * b * (1 + xi * a))] };
     }
-    if (et === "Q8") {
+    if (et === "Q8" || et === "Q8R") {
       const N = new Array(8), d0 = new Array(8), d1 = new Array(8);
       Q8N.forEach(([a, b], i) => {
         if (i < 4) {
@@ -48,8 +50,8 @@
     throw new FEError(`unknown element type ${et}`);
   }
   function gauss(et, purpose = "stiffness") {
-    if (et === "Q4" || et === "Q8") {
-      const two = et === "Q4" && purpose === "stiffness";
+    if (et === "Q4" || et === "Q8" || et === "Q8R") {
+      const two = (et === "Q4" || et === "Q8R") && purpose === "stiffness";
       const p = two ? [-G2, G2] : [-G3, 0, G3], w = two ? [1, 1] : [5 / 9, 8 / 9, 5 / 9];
       const out = [];
       for (let j = 0; j < p.length; j++) for (let i = 0; i < p.length; i++) out.push([p[i], p[j], w[i] * w[j]]);
@@ -119,6 +121,7 @@
     return { pts: [[-G2, -G2], [G2, -G2], [G2, G2], [-G2, G2]], E: Q4N.map(([a, b]) => shape("Q4", a * r3, b * r3).N) };
   }
   const MIDS = { T6: [[3, 0, 1], [4, 1, 2], [5, 2, 0]], Q8: [[4, 0, 1], [5, 1, 2], [6, 2, 3], [7, 3, 0]], T3: [], Q4: [] };
+  MIDS.Q8R = MIDS.Q8;
 
   // ------------------------------------------------------------ meshes
   function lines(breaks, h) {
@@ -130,12 +133,12 @@
     return out;
   }
   function assembleGrid(point, keep, nx, ny, et) {
-    const quad = et === "T6" || et === "Q8", conn = [];
+    const quad = QUADRATIC.includes(et), conn = [];
     const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
     for (const [i, j] of keep) {
       const a = [2 * i, 2 * j], b = [2 * i + 2, 2 * j], c = [2 * i + 2, 2 * j + 2], d = [2 * i, 2 * j + 2];
       if (et === "Q4") conn.push([a, b, c, d]);
-      else if (et === "Q8") conn.push([a, b, c, d, mid(a, b), mid(b, c), mid(c, d), mid(d, a)]);
+      else if (et === "Q8" || et === "Q8R") conn.push([a, b, c, d, mid(a, b), mid(b, c), mid(c, d), mid(d, a)]);
       else {
         const tris = (i + j) % 2 === 0 ? [[a, b, c], [a, c, d]] : [[a, b, d], [b, c, d]];
         for (const [p, q, r] of tris) conn.push(quad ? [p, q, r, mid(p, q), mid(q, r), mid(r, p)] : [p, q, r]);
@@ -177,12 +180,27 @@
     for (let i = 0; i < nt; i++) for (let j = 0; j < nR; j++) keep.push([j, i]);
     return assembleGrid((p, q) => point(q, p), keep, nR, nt, et);
   }
+  function meshRing(a, b, nTheta, nR, et, grading = 1.0) {
+    if (!(a > 0 && a < b)) throw new FEError("the inner radius must be smaller than the outer radius");
+    const nt = nTheta, rs = (j) => (j / nR) ** grading;
+    const point = (p, q) => {
+      const th = (Math.PI / 2) * p / (2 * nt);
+      const s = q % 2 === 0 ? rs(q / 2) : 0.5 * (rs((q - 1) / 2) + rs((q + 1) / 2)), r = a + (b - a) * s;
+      if (p === 0) return [r, 0];
+      if (p === 2 * nt) return [0, r];
+      return [r * Math.cos(th), r * Math.sin(th)];
+    };
+    const keep = [];
+    for (let i = 0; i < nt; i++) for (let j = 0; j < nR; j++) keep.push([j, i]);
+    return assembleGrid((p, q) => point(q, p), keep, nR, nt, et);
+  }
   function edgeSets(nodes, elements, et, geometry) {
     let lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
     for (const [x, y] of nodes) { lo = [Math.min(lo[0], x), Math.min(lo[1], y)]; hi = [Math.max(hi[0], x), Math.max(hi[1], y)]; }
     const tol = 1e-9 * Math.max(hi[0] - lo[0], hi[1] - lo[1], 1);
     const on = { left: (p) => Math.abs(p[0] - lo[0]) < tol, right: (p) => Math.abs(p[0] - hi[0]) < tol, bottom: (p) => Math.abs(p[1] - lo[1]) < tol, top: (p) => Math.abs(p[1] - hi[1]) < tol };
     if (geometry.type === "plate_hole") { const a = geometry.a; on.hole = (p) => Math.abs(Math.hypot(p[0], p[1]) - a) < 1e-7 * a; }
+    if (geometry.type === "ring") { const ra = geometry.a, rb = geometry.b; on.inner = (p) => Math.abs(Math.hypot(p[0], p[1]) - ra) < 1e-7 * rb; on.outer = (p) => Math.abs(Math.hypot(p[0], p[1]) - rb) < 1e-7 * rb; }
     const out = Object.fromEntries(Object.keys(on).map((k) => [k, []]));
     for (const e of elements) for (const ed of EDGES[et]) {
       const ids = ed.map((k) => e[k]);
@@ -200,25 +218,35 @@
     const tol = 1e-9 * Math.max(mx - mn, 1);
     return edges.filter((ed) => ed.every((i) => lo - tol <= nodes[i][c] && nodes[i][c] <= hi + tol));
   }
+  const SUPPORT_KEYS = ["edge", "at", "ux", "uy", "from", "to", "label"];
+  const LOAD_KEYS = ["edge", "at", "qx", "qy", "p", "fx", "fy", "case", "profile", "P", "dir", "from", "to", "label"];
+  function known(spec, keys, what) {
+    const bad = Object.keys(spec).filter((k) => !keys.includes(k));
+    if (bad.length) throw new FEError(`${what}: unknown key '${bad[0]}' (allowed: ${keys.join(", ")})`);
+  }
   function nearest(nodes, at) {
     let best = 0, bd = Infinity;
     nodes.forEach(([x, y], i) => { const d = Math.hypot(x - at[0], y - at[1]); if (d < bd) { bd = d; best = i; } });
     return best;
   }
   const GL5 = [[-0.906179845938664, 0.236926885056189], [-0.538469310105683, 0.478628670499366], [0, 0.568888888888889], [0.538469310105683, 0.478628670499366], [0.906179845938664, 0.236926885056189]];
-  function edgeLoad(nodes, edge, qfun) {
+  function edgeLoad(nodes, edge, qfun, p = 0) {
     const pts = edge.map((i) => nodes[i]), out = edge.map(() => [0, 0]);
     if (edge.length === 2) {
       for (const [s, w] of [[-G3, 5 / 9], [0, 8 / 9], [G3, 5 / 9]]) {
-        const N = [(1 - s) / 2, (1 + s) / 2], ds = Math.hypot(0.5 * (pts[1][0] - pts[0][0]), 0.5 * (pts[1][1] - pts[0][1]));
-        const x = N[0] * pts[0][0] + N[1] * pts[1][0], y = N[0] * pts[0][1] + N[1] * pts[1][1], [qx, qy] = qfun(x, y);
+        const N = [(1 - s) / 2, (1 + s) / 2], dx = 0.5 * (pts[1][0] - pts[0][0]), dy = 0.5 * (pts[1][1] - pts[0][1]), ds = Math.hypot(dx, dy);
+        const x = N[0] * pts[0][0] + N[1] * pts[1][0], y = N[0] * pts[0][1] + N[1] * pts[1][1];
+        let [qx, qy] = qfun(x, y);
+        qx = qx - p * dy / ds; qy = qy + p * dx / ds;
         N.forEach((Nk, k) => { out[k][0] += w * Nk * qx * ds; out[k][1] += w * Nk * qy * ds; });
       }
     } else {
       for (const [s, w] of GL5) {
         const N = [s * (s - 1) / 2, 1 - s * s, s * (s + 1) / 2], dN = [s - 0.5, -2 * s, s + 0.5];
         const dx = dN.reduce((t, d, k) => t + d * pts[k][0], 0), dy = dN.reduce((t, d, k) => t + d * pts[k][1], 0), ds = Math.hypot(dx, dy);
-        const x = N.reduce((t, v, k) => t + v * pts[k][0], 0), y = N.reduce((t, v, k) => t + v * pts[k][1], 0), [qx, qy] = qfun(x, y);
+        const x = N.reduce((t, v, k) => t + v * pts[k][0], 0), y = N.reduce((t, v, k) => t + v * pts[k][1], 0);
+        let [qx, qy] = qfun(x, y);
+        qx = qx - p * dy / ds; qy = qy + p * dx / ds;
         N.forEach((Nk, k) => { out[k][0] += w * Nk * qx * ds; out[k][1] += w * Nk * qy * ds; });
       }
     }
@@ -230,6 +258,74 @@
     return x;
   }
 
+  // ------------------------------------------------------------ material, reinforcement, design
+  function concreteProps(fck) {
+    const fcm = fck + 8, fctm = fck <= 50 ? 0.30 * fck ** (2 / 3) : 2.12 * Math.log(1 + fcm / 10);
+    return { fcm, fctm, fctk005: 0.7 * fctm, Ecm: 22000 * (fcm / 10) ** 0.3 };
+  }
+  function parseDesign(d) {
+    const member = d.member ?? "wall";
+    if (!["wall", "deep_beam", "none"].includes(member)) throw new FEError("design.member: wall, deep_beam or none");
+    return { gamma_G: num(d.gamma_G ?? 1.35, "design.gamma_G", 0), gamma_Q: num(d.gamma_Q ?? 1.5, "design.gamma_Q", 0), psi2: num(d.psi2 ?? 0.3, "design.psi2", 0, 1),
+      gamma_c: num(d.gamma_c ?? 1.5, "design.gamma_c", 1), gamma_s: num(d.gamma_s ?? 1.15, "design.gamma_s", 1), alpha_cc: num(d.alpha_cc ?? 1.0, "design.alpha_cc", 0.5, 1), member,
+      w_max_mm: num(d.w_max_mm ?? 0.3, "design.w_max_mm", 0.01) };
+  }
+  function parseMaterial(mat, analysis, design, reinf) {
+    const model = mat.model ?? "elastic";
+    if (!["elastic", "j2", "rc"].includes(model)) throw new FEError("material.model must be elastic, j2 or rc");
+    const out = { model };
+    if (model === "j2") { out.fy = num(mat.fy_MPa ?? 355, "material.fy_MPa", 1e-3) * 1000; out.H = num(mat.H_MPa ?? 0, "material.H_MPa", 0) * 1000; }
+    if (model === "rc") {
+      if (analysis !== "plane_stress") throw new FEError("the reinforced concrete model is a plane stress (membrane) model");
+      const fck = num(mat.fck_MPa ?? 30, "material.fck_MPa", 12, 90), cp = concreteProps(fck), values = mat.values ?? "design";
+      if (!["design", "mean"].includes(values)) throw new FEError("material.values must be design or mean");
+      const fyk = reinf.fyk;
+      let fc, fct, fy;
+      if (values === "design") { fc = design.alpha_cc * fck / design.gamma_c; fct = cp.fctk005 / design.gamma_c; fy = fyk / design.gamma_s; }
+      else { fc = cp.fcm; fct = cp.fctm; fy = 1.1 * fyk; }
+      const soft = mat.softening ?? "mcft";
+      if (!["mcft", "ec2"].includes(soft)) throw new FEError("material.softening must be mcft or ec2");
+      const tension = mat.tension ?? "stiffening";
+      if (!["stiffening", "none"].includes(tension)) throw new FEError("material.tension must be stiffening or none");
+      const Es = reinf.Es, eud = 0.9 * reinf.euk;
+      Object.assign(out, { fck, values, fc: fc * 1000, fct: fct * 1000, eps_c0: num(mat.eps_c0 ?? 0.002, "material.eps_c0", 1e-4, 0.01), softening: soft, tension, nu_ec2: 0.6 * (1 - fck / 250),
+        Gf: num(mat.Gf_Nmm ?? 0.073 * cp.fcm ** 0.18, "material.Gf_Nmm", 1e-3), fy: fy * 1000, Es: Es * 1000, Esh: (reinf.k - 1) * fy * 1000 / Math.max(eud - fy / Es, 1e-6), eud });
+    }
+    return out;
+  }
+  function parseReinforcement(r) {
+    const out = { cover_mm: num(r.cover_mm ?? 30, "reinforcement.cover_mm", 0), fyk: num(r.fyk_MPa ?? 500, "reinforcement.fyk_MPa", 100, 1000), Es: num(r.Es_MPa ?? 200000, "reinforcement.Es_MPa", 1e3),
+      k: num(r.k ?? 1.08, "reinforcement.k", 1, 1.5), euk: num(r.euk ?? 0.05, "reinforcement.euk", 0.01, 0.2), layers: [] };
+    (r.layers || []).forEach((L, k) => {
+      const w = `reinforcement.layers[${k}]`, d = L.dir;
+      if (d !== "x" && d !== "y") throw new FEError(`${w}.dir must be x or y`);
+      const dia = num(L.dia_mm, `${w}.dia_mm`, 4, 50), area = Math.PI * dia * dia / 4, region = L.region || L.band;
+      let reg = null;
+      if (region) {
+        reg = Object.fromEntries(["x0", "y0", "x1", "y1"].map((q) => [q, num(region[q] ?? (q === "x0" || q === "y0" ? -1e9 : 1e9), `${w}.region.${q}`)]));
+        if (reg.x1 <= reg.x0 || reg.y1 <= reg.y0) throw new FEError(`${w}: region needs x1 > x0 and y1 > y0`);
+      }
+      let As;
+      if ("n" in L) {
+        if (!reg) throw new FEError(`${w}: a tie of n bars needs its band (region)`);
+        const width = d === "x" ? reg.y1 - reg.y0 : reg.x1 - reg.x0;
+        As = num(L.n, `${w}.n`, 1, 200) * area / width;
+      } else As = num(L.faces ?? 2, `${w}.faces`, 1, 2) * area * 1000 / num(L.spacing_mm, `${w}.spacing_mm`, 25, 1000);
+      out.layers.push({ dir: d, dia, As, region: reg, label: L.label || "" });
+    });
+    return out;
+  }
+  function elementCentroids(m) { return m.elements.map((e) => { let x = 0, y = 0; for (const i of e) { x += m.nodes[i][0]; y += m.nodes[i][1]; } return [x / e.length, y / e.length]; }); }
+  function elementReinforcement(m) {
+    const c = elementCentroids(m), ne = m.elements.length, Asx = new Float64Array(ne), Asy = new Float64Array(ne), dx = new Float64Array(ne), dy = new Float64Array(ne);
+    for (const L of m.reinforcement.layers) for (let q = 0; q < ne; q++) {
+      const r = L.region;
+      if (r && !(c[q][0] >= r.x0 && c[q][0] <= r.x1 && c[q][1] >= r.y0 && c[q][1] <= r.y1)) continue;
+      if (L.dir === "x") { Asx[q] += L.As; dx[q] = Math.max(dx[q], L.dia); } else { Asy[q] += L.As; dy[q] = Math.max(dy[q], L.dia); }
+    }
+    return { Asx, Asy, diax: dx, diay: dy };
+  }
+
   // ------------------------------------------------------------ model
   function parseFE(data) {
     if (data.schema !== SCHEMA_FE) throw new FEError(`expected schema '${SCHEMA_FE}'`);
@@ -239,11 +335,14 @@
     const E = num(mat.E_MPa ?? 30000, "material.E_MPa", 1e-6) * 1000, nu = num(mat.nu ?? 0.2, "material.nu", 0, 0.499);
     const t = num(mat.thickness_m ?? 0.25, "material.thickness_m", 1e-6), gamma = num(mat.density_kNm3 ?? 25, "material.density_kNm3", 0);
     const C = constitutive(E, nu, analysis);
+    const design = parseDesign(data.design || {}), reinforcement = parseReinforcement(data.reinforcement || {});
+    design.fck = num(mat.fck_MPa ?? 30, "material.fck_MPa", 12, 90);
+    const material = parseMaterial(mat, analysis, design, reinforcement);
     const g = data.geometry || {}, kind = g.type || "rectangle";
     let mesh;
     if (kind === "rectangle") {
       const Lx = num(g.Lx, "geometry.Lx", 1e-6), Ly = num(g.Ly, "geometry.Ly", 1e-6), h = num(g.h ?? Math.min(Lx, Ly) / 8, "geometry.h", 1e-6);
-      if ((Lx / h) * (Ly / h) > MAX_NODES / (et === "T6" || et === "Q8" ? 4 : 1)) throw new FEError("mesh too fine: increase the element size h");
+      if ((Lx / h) * (Ly / h) > MAX_NODES / (QUADRATIC.includes(et) ? 4 : 1)) throw new FEError("mesh too fine: increase the element size h");
       const openings = (g.openings || []).map((o, k) => {
         const q = Object.fromEntries(["x0", "y0", "x1", "y1"].map((key) => [key, num(o[key], `geometry.openings[${k}].${key}`)]));
         if (q.x1 <= q.x0 || q.y1 <= q.y0) throw new FEError(`opening ${k + 1}: x1 > x0 and y1 > y0 required`);
@@ -254,16 +353,21 @@
       const W = num(g.W, "geometry.W", 1e-6), a = num(g.a, "geometry.a", 1e-6);
       const nt = Math.trunc(num(g.n_theta ?? 8, "geometry.n_theta", 1, 200)), nr = Math.trunc(num(g.n_r ?? 8, "geometry.n_r", 1, 200));
       mesh = meshPlateHole(W, a, nt, nr, et, num(g.grading ?? 1.6, "geometry.grading", 1, 4));
+    } else if (kind === "ring") {
+      const a = num(g.a, "geometry.a", 1e-6), b = num(g.b, "geometry.b", 1e-6);
+      const nt = Math.trunc(num(g.n_theta ?? 8, "geometry.n_theta", 1, 200)), nr = Math.trunc(num(g.n_r ?? 6, "geometry.n_r", 1, 200));
+      mesh = meshRing(a, b, nt, nr, et, num(g.grading ?? 1.0, "geometry.grading", 1, 4));
     } else if (kind === "mesh") {
       const nodes = (g.nodes || []).map((p) => [num(p[0], "node x"), num(p[1], "node y")]), elements = g.elements || [];
       if (!elements.length || elements.some((e) => e.length !== NN[et] || e.some((i) => !(i >= 0 && i < nodes.length) || i !== Math.trunc(i)))) throw new FEError(`geometry.elements must list ${NN[et]} valid node indices per ${et} element`);
       mesh = { nodes, elements: elements.map((e) => e.slice()) };
-    } else throw new FEError(`geometry.type must be rectangle, plate_hole or mesh, not ${kind}`);
+    } else throw new FEError(`geometry.type must be rectangle, plate_hole, ring or mesh, not ${kind}`);
     const { nodes, elements } = mesh;
     if (nodes.length > MAX_NODES) throw new FEError(`${nodes.length} nodes: at most ${MAX_NODES}`);
     const edges = edgeSets(nodes, elements, et, kind === "mesh" ? {} : g);
     const n = nodes.length, fixed = new Map();
     (data.supports || []).forEach((s, k) => {
+      known(s, SUPPORT_KEYS, `supports[${k}]`);
       let ids;
       if ("edge" in s) {
         if (!(s.edge in edges)) throw new FEError(`supports[${k}]: unknown edge '${s.edge}' (one of ${Object.keys(edges).join(", ")})`);
@@ -278,13 +382,17 @@
       });
     });
     if (!fixed.size) throw new FEError("the model has no supports");
-    const f = new Float64Array(2 * n);
+    const f = new Float64Array(2 * n), fq = new Float64Array(2 * n);
     (data.loads || []).forEach((ld, k) => {
+      known(ld, LOAD_KEYS, `loads[${k}]`);
+      const lcase = ld.case ?? "G";
+      if (lcase !== "G" && lcase !== "Q") throw new FEError(`loads[${k}].case must be G (permanent) or Q (variable)`);
+      const add = (i, fx, fy) => { f[2 * i] += fx; f[2 * i + 1] += fy; if (lcase === "Q") { fq[2 * i] += fx; fq[2 * i + 1] += fy; } };
       if ("edge" in ld) {
         if (!edges[ld.edge] || !edges[ld.edge].length) throw new FEError(`loads[${k}]: unknown or empty edge '${ld.edge}'`);
         const eds = inRange(nodes, edges[ld.edge], ld.edge, ld, `loads[${k}]`);
         if (!eds.length) throw new FEError(`loads[${k}]: no element edges on '${ld.edge}' in the given range`);
-        let qfun;
+        let qfun, pr = 0;
         if (ld.profile === "parabolic") {
           const P = num(ld.P ?? 0, `loads[${k}].P`), c = (ld.dir || "y") === "y" ? 1 : 0;
           const ids = [...new Set(eds.flat())], xs = ids.map((i) => nodes[i][0]), ys = ids.map((i) => nodes[i][1]);
@@ -293,80 +401,117 @@
           qfun = (x, y) => { const s = sAx ? y : x, q = 6 * P * (s - lo) * (hi - s) / D ** 3; return c === 0 ? [q, 0] : [0, q]; };
         } else {
           const qx = num(ld.qx ?? 0, `loads[${k}].qx`), qy = num(ld.qy ?? 0, `loads[${k}].qy`);
+          pr = num(ld.p ?? 0, `loads[${k}].p`);
           qfun = () => [qx, qy];
         }
-        for (const ed of eds) for (const [i, fx, fy] of edgeLoad(nodes, ed, qfun)) { f[2 * i] += fx; f[2 * i + 1] += fy; }
+        for (const ed of eds) for (const [i, fx, fy] of edgeLoad(nodes, ed, qfun, pr)) add(i, fx, fy);
       } else if ("at" in ld) {
-        const i = nearest(nodes, ld.at);
-        f[2 * i] += num(ld.fx ?? 0, `loads[${k}].fx`); f[2 * i + 1] += num(ld.fy ?? 0, `loads[${k}].fy`);
+        add(nearest(nodes, ld.at), num(ld.fx ?? 0, `loads[${k}].fx`), num(ld.fy ?? 0, `loads[${k}].fy`));
       } else throw new FEError(`loads[${k}] needs an edge or a point 'at'`);
     });
-    return { name: String(data.name || ""), analysis, etype: et, E, nu, t, gamma, C, nodes, elements, fixed, forces: f, selfWeight: !!data.self_weight, geometry: Object.assign({}, g), edges, raw: data };
+    return { name: String(data.name || ""), analysis, etype: et, E, nu, t, gamma, C, nodes, elements, fixed, forces: f, forcesQ: fq, selfWeight: !!data.self_weight,
+      geometry: Object.assign({}, g), edges, material, reinforcement, design, raw: data };
+  }
+  function combinationFactors(m, combo) {
+    if (combo == null || combo === "char") return [1, 1];
+    if (combo === "uls") return [m.design.gamma_G, m.design.gamma_Q];
+    if (combo === "qp") return [1, m.design.psi2];
+    throw new FEError("combination must be one of char, uls, qp");
+  }
+  function selfWeightVector(m) {
+    const f = new Float64Array(2 * m.nodes.length);
+    if (m.selfWeight && m.gamma > 0) m.elements.forEach((e) => {
+      const fb = bodyForce(m.etype, e.map((i) => m.nodes[i]), [0, -m.gamma], m.t);
+      e.forEach((i, k) => { f[2 * i] += fb[2 * k]; f[2 * i + 1] += fb[2 * k + 1]; });
+    });
+    return f;
+  }
+  function loadVector(m, combo) {
+    const [aG, aQ] = combinationFactors(m, combo), sw = selfWeightVector(m), out = new Float64Array(sw.length);
+    for (let d = 0; d < out.length; d++) out[d] = aG * (m.forces[d] - m.forcesQ[d] + sw[d]) + aQ * m.forcesQ[d];
+    return out;
   }
 
-  // ------------------------------------------------------------ profile Cholesky
-  function solveSystem(m, prescribed) {
-    const n2 = 2 * m.nodes.length, et = m.etype, C = m.C;
-    const fixed = new Map(m.fixed);
-    if (prescribed) for (const [d, v] of prescribed) fixed.set(d, v);
-    const eq = new Int32Array(n2).fill(-1);
+  // ------------------------------------------------------------ profile (skyline) LDLᵀ
+  const dofsOf = (e) => { const d = new Int32Array(2 * e.length); e.forEach((i, k) => { d[2 * k] = 2 * i; d[2 * k + 1] = 2 * i + 1; }); return d; };
+  function makeProfile(m, fixed) {
+    const n2 = 2 * m.nodes.length, eq = new Int32Array(n2).fill(-1);
     let nf = 0;
     for (let d = 0; d < n2; d++) if (!fixed.has(d)) eq[d] = nf++;
-    const u = new Float64Array(n2);
-    for (const [d, v] of fixed) u[d] = v;
-    const dofsOf = (e) => { const d = new Int32Array(2 * e.length); e.forEach((i, k) => { d[2 * k] = 2 * i; d[2 * k + 1] = 2 * i + 1; }); return d; };
     const first = new Int32Array(nf);
     for (let q = 0; q < nf; q++) first[q] = q;
     for (const e of m.elements) {
-      let mn = Infinity;
       const d = dofsOf(e);
+      let mn = Infinity;
       for (const x of d) if (eq[x] >= 0) mn = Math.min(mn, eq[x]);
       for (const x of d) if (eq[x] >= 0 && mn < first[eq[x]]) first[eq[x]] = mn;
     }
-    const ptr = new Float64Array(nf + 1);       // row q stores columns first[q] .. q
+    const ptr = new Float64Array(nf + 1);                   // row q stores columns first[q] .. q
     for (let q = 0; q < nf; q++) ptr[q + 1] = ptr[q] + (q - first[q] + 1);
-    const A = new Float64Array(ptr[nf]);
-    const f = Float64Array.from(m.forces);
+    return { n2, nf, eq, first, ptr, A: new Float64Array(ptr[nf]), diag0: new Float64Array(nf), neg: 0 };
+  }
+  function profileAdd(P, d, k) {
+    const { eq, ptr, first, A } = P;
+    for (let a = 0; a < d.length; a++) {
+      const ra = eq[d[a]];
+      if (ra < 0) continue;
+      const base = ptr[ra] - first[ra], row = k[a];
+      for (let b = 0; b < d.length; b++) { const cb = eq[d[b]]; if (cb >= 0 && cb <= ra) A[base + cb] += row[b]; }
+    }
+  }
+  function profileFactor(P, requirePositive = true) {
+    // LDLᵀ by rows: g_ij = a_ij − Σ_k L_jk g_ik, L_ij = g_ij / D_j, D_i = a_ii − Σ_j L_ij g_ij
+    const { nf, first, ptr, A, diag0 } = P;
+    let neg = 0;
+    for (let i = 0; i < nf; i++) {
+      const fi = first[i], pi = ptr[i] - fi;
+      diag0[i] = A[pi + i];
+      for (let j = fi; j < i; j++) {
+        const fj = first[j], pj = ptr[j] - fj, k0 = Math.max(fi, fj);
+        let s = A[pi + j];
+        for (let k = k0; k < j; k++) s -= A[pj + k] * A[pi + k];
+        A[pi + j] = s;
+      }
+      let d = A[pi + i];
+      for (let j = fi; j < i; j++) { const g = A[pi + j], L = g / A[ptr[j] - first[j] + j]; A[pi + j] = L; d -= L * g; }
+      if (!(Math.abs(d) > 1e-11 * Math.abs(diag0[i])) || (requirePositive && d <= 0))
+        throw new FEError("the structure is a mechanism: add supports so that it cannot move as a rigid body");
+      if (d < 0) neg++;
+      A[pi + i] = d;
+    }
+    P.neg = neg;
+    return neg;
+  }
+  function profileSolve(P, b) {
+    const { nf, first, ptr, A } = P, x = Float64Array.from(b);
+    for (let i = 0; i < nf; i++) { const fi = first[i], pi = ptr[i] - fi; let s = x[i]; for (let k = fi; k < i; k++) s -= A[pi + k] * x[k]; x[i] = s; }
+    for (let i = 0; i < nf; i++) x[i] /= A[ptr[i] - first[i] + i];
+    for (let i = nf - 1; i >= 0; i--) { const fi = first[i], pi = ptr[i] - fi, v = x[i]; for (let k = fi; k < i; k++) x[k] -= A[pi + k] * v; }
+    return x;
+  }
+
+  function solveSystem(m, prescribed, combo) {
+    const et = m.etype, C = m.C, fixed = new Map(m.fixed);
+    if (prescribed) for (const [d, v] of prescribed) fixed.set(d, v);
+    const P = makeProfile(m, fixed), { n2, nf, eq } = P;
+    const u = new Float64Array(n2);
+    for (const [d, v] of fixed) u[d] = v;
+    const fApplied = loadVector(m, combo), rhs = new Float64Array(nf);
+    for (let d = 0; d < n2; d++) if (eq[d] >= 0) rhs[eq[d]] = fApplied[d];
     const elemK = [];
     for (const e of m.elements) {
       const xy = e.map((i) => m.nodes[i]), { k } = elementStiffness(et, xy, C, m.t), d = dofsOf(e);
       elemK.push(k);
-      if (m.selfWeight && m.gamma > 0) { const fb = bodyForce(et, xy, [0, -m.gamma], m.t); d.forEach((x, a) => { f[x] += fb[a]; }); }
-      for (let a = 0; a < d.length; a++) {
-        const ra = eq[d[a]];
-        for (let b = 0; b < d.length; b++) {
-          const cb = eq[d[b]];
-          if (ra >= 0 && cb >= 0) { if (cb <= ra) A[ptr[ra] + cb - first[ra]] += k[a][b]; }
-          else if (ra >= 0 && cb < 0) f[d[a]] -= k[a][b] * u[d[b]];
-        }
-      }
+      profileAdd(P, d, k);
+      for (let a = 0; a < d.length; a++) { const ra = eq[d[a]]; if (ra < 0) continue; for (let b = 0; b < d.length; b++) if (eq[d[b]] < 0 && u[d[b]]) rhs[ra] -= k[a][b] * u[d[b]]; }
     }
-    // Cholesky L Lᵀ in place (row envelope)
-    for (let i = 0; i < nf; i++) {
-      const fi = first[i], pi = ptr[i] - fi;
-      for (let j = fi; j <= i; j++) {
-        const fj = first[j], pj = ptr[j] - fj, k0 = Math.max(fi, fj);
-        let s = A[pi + j];
-        for (let k = k0; k < j; k++) s -= A[pi + k] * A[pj + k];
-        if (j < i) A[pi + j] = s / A[pj + j];
-        else {
-          if (!(s > 1e-11 * A[pi + i])) throw new FEError("the structure is a mechanism: add supports so that it cannot move as a rigid body");
-          A[pi + i] = Math.sqrt(s);
-        }
-      }
-    }
-    const rhs = new Float64Array(nf);
-    for (let d = 0; d < n2; d++) if (eq[d] >= 0) rhs[eq[d]] = f[d];
-    for (let i = 0; i < nf; i++) { const fi = first[i], pi = ptr[i] - fi; let s = rhs[i]; for (let k = fi; k < i; k++) s -= A[pi + k] * rhs[k]; rhs[i] = s / A[pi + i]; }
-    for (let i = nf - 1; i >= 0; i--) { const fi = first[i], pi = ptr[i] - fi; rhs[i] /= A[pi + i]; const v = rhs[i]; for (let k = fi; k < i; k++) rhs[k] -= A[pi + k] * v; }
-    for (let d = 0; d < n2; d++) if (eq[d] >= 0) u[d] = rhs[eq[d]];
-    // reactions R = K u − f at restrained dofs (f without the prescribed-displacement terms)
-    const fApplied = Float64Array.from(m.forces);
+    profileFactor(P, true);
+    const x = profileSolve(P, rhs);
+    for (let d = 0; d < n2; d++) if (eq[d] >= 0) u[d] = x[eq[d]];
     const Ku = new Float64Array(n2);
     m.elements.forEach((e, q) => {
       const d = dofsOf(e), k = elemK[q];
       for (let a = 0; a < d.length; a++) { let s = 0; for (let b = 0; b < d.length; b++) s += k[a][b] * u[d[b]]; Ku[d[a]] += s; }
-      if (m.selfWeight && m.gamma > 0) { const xy = e.map((i) => m.nodes[i]), fb = bodyForce(et, xy, [0, -m.gamma], m.t); d.forEach((x, a) => { fApplied[x] += fb[a]; }); }
     });
     const R = new Float64Array(n2);
     let energy = 0;
@@ -404,9 +549,9 @@
     if (name === "mises") { const sz = m.analysis === "plane_strain" ? m.nu * (sx + sy) : 0; return Math.sqrt(0.5 * ((sx - sy) ** 2 + (sy - sz) ** 2 + (sz - sx) ** 2) + 3 * txy * txy); }
     throw new FEError(`unknown field ${name}`);
   }
-  function solveFE(m, prescribed) {
+  function solveFE(m, prescribed, combo) {
     const t0 = (typeof performance !== "undefined" ? performance : Date).now();
-    const sol = solveSystem(m, prescribed), t1 = (typeof performance !== "undefined" ? performance : Date).now();
+    const sol = solveSystem(m, prescribed, combo), t1 = (typeof performance !== "undefined" ? performance : Date).now();
     const rec = recover(m, sol.u);
     const n = m.nodes.length, U = Array.from({ length: n }, (_, i) => [sol.u[2 * i], sol.u[2 * i + 1]]), R = Array.from({ length: n }, (_, i) => [sol.R[2 * i], sol.R[2 * i + 1]]);
     const res = { model: m, u: U, reactions: R, f: sol.f, energy: sol.energy, nodal: rec.nodal, elemNodal: rec.elemNodal, gp: rec.gp, dofs: 2 * n, free: sol.nf,
@@ -460,8 +605,9 @@
   }
   const heywoodKt = (r) => (2 + (1 - r) ** 3) / (1 - r);
 
-  T.FE = { SCHEMA_FE, TYPES, NN, EDGES, MIDS, FEError, shape, gauss, constitutive, gaussPoint, elementStiffness, elementMass, bodyForce, extrapolation,
-    meshRectangle, meshPlateHole, parseFE, solveFE, recover, fieldOf, elementDetails, symEig, timoshenkoCantilever, heywoodKt,
+  T.FE = { SCHEMA_FE, TYPES, NN, EDGES, MIDS, QUADRATIC, FEError, shape, gauss, constitutive, gaussPoint, elementStiffness, elementMass, bodyForce, extrapolation,
+    meshRectangle, meshPlateHole, meshRing, parseFE, solveFE, recover, fieldOf, elementDetails, symEig, timoshenkoCantilever, heywoodKt,
+    concreteProps, elementCentroids, elementReinforcement, combinationFactors, selfWeightVector, loadVector, dofsOf, makeProfile, profileAdd, profileFactor, profileSolve, num,
     run: (data) => solveFE(parseFE(data)) };
   if (typeof module !== "undefined" && module.exports) module.exports = T;
 })(typeof window !== "undefined" ? window : globalThis);
