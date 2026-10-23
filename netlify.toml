@@ -1,0 +1,5 @@
+# The browser studio is a single generated file (see web/build.py). Build it and serve it as
+# the site's index page.
+[build]
+  command = "python3 web/build.py && cp dist/tragwerk-studio.html dist/index.html && cp docs/verification.html dist/verification.html"
+  publish = "dist"
