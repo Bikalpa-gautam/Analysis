@@ -7,6 +7,7 @@ no script errors occur. Skipped when Playwright, Chromium or the three.js file
 are not available (CI installs them: see .github/workflows/ci.yml).
 """
 import importlib.util
+import json
 import math
 import os
 from pathlib import Path
@@ -57,6 +58,51 @@ def test_default_building_matches_python(page):
     assert not errors, errors
 
 
+def test_workspace_controls_preserve_the_model(page):
+    """Layout, theme, guide and export must not change the engineering model."""
+    pg, errors = page
+    before = pg.evaluate("window.TragwerkStudio3D.S.data")
+    pg.click("#studio-focus")
+    assert not pg.locator("#mode-3d .editor").is_visible()
+    assert not pg.locator("#mode-3d .results").is_visible()
+    assert pg.locator("#mode-3d .draw").is_visible()
+    pg.click("#studio-focus")
+    assert pg.locator("#mode-3d .editor").is_visible()
+    theme = pg.locator("html").get_attribute("data-theme")
+    pg.click("#studio-theme")
+    assert pg.locator("html").get_attribute("data-theme") != theme
+    pg.click("#studio-theme")
+    pg.click(".top-help")
+    assert pg.locator("#studio-guide").is_visible()
+    pg.keyboard.press("Escape")
+    assert not pg.locator("#studio-guide").is_visible()
+    pg.click("#studio-export")
+    with pg.expect_download() as download:
+        pg.locator("#b-drawer").get_by_role("button", name="Download JSON").click()
+    assert json.loads(Path(download.value.path()).read_text()) == before
+    pg.keyboard.press("Escape")
+    assert pg.locator("#studio-export").evaluate("el => el === document.activeElement")
+    assert pg.evaluate("window.TragwerkStudio3D.S.data") == before
+    assert not errors, errors
+
+
+@pytest.mark.parametrize("width", [360, 390, 768])
+def test_compact_workspaces_keep_every_panel_accessible(page, width):
+    pg, errors = page
+    pg.set_viewport_size({"width": width, "height": 844})
+    try:
+        for mode in ("2d", "fe", "3d"):
+            pg.click(f".studio-nav [data-mode='{mode}']")
+            for panel in ("editor", "results", "draw"):
+                pg.click(f".mobile-panels [data-panel='{panel}']")
+                for candidate in ("editor", "results", "draw"):
+                    assert pg.locator(f"#mode-{mode} .{candidate}").is_visible() == (candidate == panel)
+                assert pg.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        assert not errors, errors
+    finally:
+        pg.set_viewport_size({"width": 1400, "height": 900})
+
+
 def test_viewer_selection_and_edit(page):
     pg, errors = page
     ok = pg.evaluate("window.TragwerkStudio3D.V.ok")
@@ -72,9 +118,9 @@ def test_viewer_selection_and_edit(page):
     assert pg.evaluate("window.TragwerkStudio3D.S.result.summary.status") == "fail"   # transfer beams fail without the column
     for show in ("My", "Mz", "N", "def", "model", "util"):
         pg.click(f"[data-show={show}]")
-    pg.click("#mode-3d [data-mode='2d']")
+    pg.click(".studio-nav [data-mode='2d']")
     assert pg.locator("#mode-2d").is_visible() and not pg.locator("#mode-3d").is_visible()
-    pg.click("#mode-2d [data-mode='3d']")
+    pg.click(".studio-nav [data-mode='3d']")
     assert not errors, errors
 
 
@@ -177,7 +223,7 @@ def test_fe_lab_matches_python(page):
     """The FE workspace solves the default wall like tragwerk.fe2d, and shows element matrices."""
     from tragwerk.fe2d import run_fe
     pg, errors = page
-    pg.click("#mode-3d [data-mode='fe']")
+    pg.click(".studio-nav [data-mode='fe']")
     pg.wait_for_function("window.TragwerkFE && window.TragwerkFE.S.res", timeout=30000)
     for key in ("wall", "deep", "cantilever", "kirsch"):
         pg.select_option("#f-preset", key)
@@ -195,7 +241,7 @@ def test_fe_lab_matches_python(page):
         assert pg.locator("#f-results .mat").count() >= 5
     for f in ("mesh", "umag", "sxx", "s1", "mises"):
         pg.click(f"[data-field={f}]")
-    pg.click("#mode-fe [data-mode='3d']")
+    pg.click(".studio-nav [data-mode='3d']")
     assert not errors, errors
 
 
@@ -207,7 +253,7 @@ def test_buckling_matches_python(page):
     pg, errors = page
     J = "window.TragwerkStudio3D"
     if pg.locator("#mode-fe").is_visible():
-        pg.click("#mode-fe [data-mode='3d']")
+        pg.click(".studio-nav [data-mode='3d']")
     pg.select_option("#b-preset", "office")
     _idle(pg)
     pg.wait_for_function(f"{J}.S.buckRes && !{J}.S.buckProg", timeout=120000)
@@ -232,7 +278,7 @@ def test_fe_nonlinear_matches_python(page):
     from tragwerk.fe2d_nl import NLOptions, run_nonlinear
     pg, errors = page
     if pg.locator("#mode-3d").is_visible():
-        pg.click("#mode-3d [data-mode='fe']")
+        pg.click(".studio-nav [data-mode='fe']")
     pg.wait_for_function("window.TragwerkFE && window.TragwerkFE.S.res", timeout=30000)
     names = {f.name for f in fields(NLOptions)}
     for key in ("panel", "hill", "elastica"):
@@ -255,7 +301,7 @@ def test_fe_nonlinear_matches_python(page):
     for f in ("crack", "s2", "umag") if pg.locator("[data-field=crack]").count() else ("umag",):
         if pg.locator(f"[data-field={f}]").count():
             pg.click(f"[data-field={f}]")
-    pg.click("#mode-fe [data-mode='3d']")
+    pg.click(".studio-nav [data-mode='3d']")
     assert not errors, errors
 
 
@@ -263,7 +309,7 @@ def test_bridge_matches_python(page):
     """The bridge presets in the studio give the same results as the Python core."""
     pg, errors = page
     J = "window.TragwerkStudio3D"
-    pg.click("#mode-fe [data-mode='3d']") if pg.locator("#mode-fe").is_visible() else None
+    pg.click(".studio-nav [data-mode='3d']") if pg.locator("#mode-fe").is_visible() else None
     for key in ("bridge", "bridge4"):
         pg.select_option("#b-preset", key)
         pg.wait_for_function(f"document.getElementById('b-busy').hidden && {J}.S.result", timeout=120000)

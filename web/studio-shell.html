@@ -1,0 +1,34 @@
+<a class="skip-link" href="#studio-main">Skip to workspace</a>
+<div class="studio-shell">
+  <aside class="studio-rail" aria-label="Studio navigation">
+    <div class="studio-monogram" aria-label="Tragwerk"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 25V7h22v18M5 7l22 18M16 7v18"/></svg></div>
+    <div class="rail-label">STUDIO</div>
+    <nav class="studio-nav modes" role="tablist" aria-label="Workspace">
+      <button role="tab" data-mode="3d" aria-selected="true" title="3D structures"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9M8 5.3l8 4.5v9"/></svg><span>3D frame</span></button>
+      <button role="tab" data-mode="2d" aria-selected="false" title="2D frames"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V5h16v15M4 5l8 8 8-8M12 13v7M2 20h4m4 0h4m4 0h4"/></svg><span>2D frame</span></button>
+      <button role="tab" data-mode="fe" aria-selected="false" title="Finite element plates"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 4l16 16M4 12h16M12 4v16M4 20 20 4"/></svg><span>FE plate</span></button>
+    </nav>
+    <div class="rail-bottom"><button class="rail-help" data-help title="Workspace guide" aria-label="Workspace guide"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4m0 3h.01"/></svg></button><span class="rail-version">0.4</span></div>
+  </aside>
+  <div class="studio-main" id="studio-main" tabindex="-1">
+    <header class="studio-topbar">
+      <div class="studio-wordmark">Tragwerk<span>Studio</span></div>
+      <span class="topbar-divider"></span><span class="workspace-caption">Structural analysis</span>
+      <div class="topbar-actions">
+        <button class="quiet-button focus-toggle" id="studio-focus" aria-pressed="false" title="Expand the model viewport"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>Focus view</span></button>
+        <button class="quiet-button" id="studio-theme" aria-label="Switch to dark theme" title="Switch theme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10z"/></svg></button>
+        <button class="quiet-button top-help" data-help aria-label="Workspace guide"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4m0 3h.01"/></svg></button>
+        <button class="export-button" id="studio-export"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg><span>Model data</span></button>
+      </div>
+    </header>
+    <div class="workspace-intro"><div class="workspace-breadcrumb"><span>WORKSPACE</span><span>/</span><b id="workspace-label">3D structures</b></div><span class="workspace-note">Model. Analyse. Understand.</span></div>
+    <div class="mobile-panels" role="group" aria-label="Workspace panels"><button data-panel="editor" aria-pressed="false">Model setup</button><button data-panel="draw" aria-pressed="true">Viewport</button><button data-panel="results" aria-pressed="false">Results</button></div>
+    <dialog class="studio-guide" id="studio-guide" aria-labelledby="guide-title">
+      <div class="guide-top"><span class="eyebrow">TRAGWERK STUDIO</span><button class="quiet-button" id="guide-close" aria-label="Close guide">✕</button></div>
+      <h2 id="guide-title">A clear view of your structure.</h2><p>Three workspaces, one place to build your model and understand its behaviour.</p>
+      <div class="guide-step"><span>01</span><div><h3>Define your model</h3><p>Choose an example, then adjust geometry, sections and loads in Model setup. Linear results update as you edit.</p></div></div>
+      <div class="guide-step"><span>02</span><div><h3>Explore the response</h3><p>Use the viewport controls to show forces, displacement or utilisation. In 3D, drag to orbit, right-drag to pan and scroll to zoom.</p></div></div>
+      <div class="guide-step"><span>03</span><div><h3>Inspect the details</h3><p>Select a member or element to see its results. Open a design check to trace the equations, values and code references.</p></div></div>
+      <div class="guide-shortcuts"><span><kbd>Shift</kbd> Multi-select</span><span><kbd>Ctrl / ⌘ Z</kbd> Undo in 3D</span><span><kbd>Esc</kbd> Close or cancel</span></div>
+      <p class="guide-footnote">Tragwerk is a working analysis prototype. Results require independent verification before use on real projects.</p>
+    </dialog>

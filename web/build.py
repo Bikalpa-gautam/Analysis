@@ -20,6 +20,9 @@ def _parts_2d(html: str) -> tuple[str, str, str]:
 
 def build(out: Path | None = None) -> Path:
     page = (ROOT / "web" / "app3d.html").read_text(encoding="utf-8")
+    studio_css = (ROOT / "web" / "studio.css").read_text(encoding="utf-8")
+    studio_js = (ROOT / "web" / "studio.js").read_text(encoding="utf-8")
+    studio_shell = (ROOT / "web" / "studio-shell.html").read_text(encoding="utf-8")
     css2d, markup2d, app2d = _parts_2d((ROOT / "web" / "app.html").read_text(encoding="utf-8"))
     engine = (ROOT / "web" / "engine.js").read_text(encoding="utf-8")
     engine3d = (ROOT / "web" / "engine3d.js").read_text(encoding="utf-8")
@@ -54,6 +57,9 @@ def build(out: Path | None = None) -> Path:
     page = page.replace("/*__APPFE__*/", safe(fe_app))
     page = page.replace("/*__EXAMPLES__*/", safe("window.TRAGWERK_EXAMPLES = " + json.dumps(ex2) + ";\nwindow.TRAGWERK_EXAMPLES3D = " + json.dumps(ex3) + ";\nwindow.TRAGWERK_EXAMPLES_FE = " + json.dumps(exfe) + ";"))
     page = page.replace("/*__APP2D__*/", safe(app2d))
+    page = page.replace("<!--__STUDIO_SHELL__-->", studio_shell)
+    page = page.replace("/*__STUDIO_CSS__*/", studio_css)
+    page = page.replace("/*__STUDIO_JS__*/", safe(studio_js))
     assert "__" not in re.sub(r"(__proto__|__new|__init__|__version__)", "", "".join(re.findall(r"/\*__\w+__\*/|<!--__\w+__-->", page))), "unfilled placeholder"
     out = out or ROOT / "dist" / "tragwerk-studio.html"
     out.parent.mkdir(parents=True, exist_ok=True)

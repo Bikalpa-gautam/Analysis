@@ -161,7 +161,7 @@
 <div class="drawer" id="f-drawer" hidden>
   <div class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="f-drawer-title">
     <div class="row" style="justify-content:space-between"><h2 id="f-drawer-title">FE model JSON</h2><button class="btn" id="f-drawer-close">Close</button></div>
-    <p class="hint">The open <span class="num">tragwerk-fe/0.1</span> format. Run it with <span class="num">tragwerk run model.json --json results.json</span> or POST it to <span class="num">/v1/analyze</span>; paste a model here to load it.</p>
+    <p class="hint">Your complete finite element model. Download a copy to keep your work, or paste a saved FE model below and load it.</p>
     <textarea id="f-json-text" spellcheck="false" aria-label="FE model JSON"></textarea>
     <div class="row"><button class="btn primary" id="f-json-copy">Copy</button><button class="btn" id="f-json-load">Load pasted model</button><span class="hint" id="f-json-msg"></span></div>
   </div>
@@ -1372,7 +1372,7 @@
   // ------------------------------------------------------------ plot
   const P = (function () {
     const canvas = () => $("canvas.fe"), box = () => $("#f-canvas");
-    let tris = null, view = null, dpr = 1, colors = {}, R = null;
+    let tris = null, view = null, viewportSize = null, dpr = 1, colors = {}, R = null;
     const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888";
     function readColors() { colors = { bg: css("--sheet"), ink: css("--ink"), ink2: css("--ink-2"), ink3: css("--ink-3"), rule: css("--rule"), pos: css("--plot-pos"), neg: css("--plot-neg"), mark: css("--mark"), def: css("--plot-def"), dark: css("--sheet").toLowerCase() !== "#ffffff" }; }
     function turbo(t) {
@@ -1487,8 +1487,17 @@
     }
     function resize() {
       const c = canvas(), b = box();
+      const width = b.clientWidth, height = b.clientHeight;
+      if (!width || !height) return; // Hidden mobile panels retain their view.
+      if (view && viewportSize) {
+        const scale = Math.min(width / viewportSize[0], height / viewportSize[1]);
+        view.ox = width / 2 + (view.ox - viewportSize[0] / 2) * scale;
+        view.oy = height / 2 + (view.oy - viewportSize[1] / 2) * scale;
+        view.s *= scale;
+      }
+      viewportSize = [width, height];
       dpr = Math.min(window.devicePixelRatio || 1, 2);
-      c.width = Math.max(10, Math.round(b.clientWidth * dpr)); c.height = Math.max(10, Math.round(b.clientHeight * dpr));
+      c.width = Math.max(10, Math.round(width * dpr)); c.height = Math.max(10, Math.round(height * dpr));
       if (!view) fit(); else requestDraw();
     }
     function bounds() {
@@ -1503,6 +1512,7 @@
       if (!bb) return;
       const Wd = b.clientWidth, H = b.clientHeight, padT = 92, padL = 34, padBt = $("#f-timeline").hidden ? 56 : 64;
       if (Wd < 40 || H < 40) { view = null; return; }
+      viewportSize = [Wd, H];
       const tb = $("#f-title"), tbW = (tb.offsetWidth || 0) + 20, tbH = (tb.offsetHeight || 0) + 20;
       const dx = Math.max(bb.hi[0] - bb.lo[0], 1e-9), dy = Math.max(bb.hi[1] - bb.lo[1], 1e-9);
       const sA = Math.min((Wd - padL - 34) / dx, (H - padT - Math.max(tbH, padBt)) / dy), sB = Math.min((Wd - padL - tbW) / dx, (H - padT - padBt) / dy);
