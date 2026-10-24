@@ -1,8 +1,15 @@
-<title>Tragwerk Studio</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Tragwerk Studio: an integrated workspace for structural modelling, finite element analysis and transparent design checks.">
+<meta name="theme-color" content="#122b32">
+<title>Tragwerk Studio · Structural analysis</title>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('tragwerk.theme') === 'dark' ? 'dark' : 'light'; } catch (e) {}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /*__CSS2D__*/
 </style>
@@ -124,7 +131,10 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
 }
 </style>
 
-<div id="mode-3d" class="mode">
+</head>
+<body>
+<!--__STUDIO_SHELL__-->
+<div id="mode-3d" class="mode" data-panel="draw">
 <header class="bar">
   <div class="brand"><b>Tragwerk</b><span id="b-ver">v0.3</span></div>
   <div class="modes" role="tablist" aria-label="Workspace"><button role="tab" data-mode="3d" aria-selected="true">3D</button><button role="tab" data-mode="2d" aria-selected="false">2D frame</button><button role="tab" data-mode="fe" aria-selected="false">FE plate</button></div>
@@ -210,21 +220,25 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
 <div class="drawer" id="b-drawer" hidden>
   <div class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="b-drawer-title">
     <div class="row" style="justify-content:space-between"><h2 id="b-drawer-title">Model JSON</h2><button class="btn" id="b-drawer-close">Close</button></div>
-    <p class="hint">The open <span class="num">tragwerk3d/0.1</span> format used by the Python package and the HTTP API, with your edits applied. Copy it to produce the full calculation report with <span class="num">tragwerk run model.json --pdf report.pdf</span>, or paste a 3D model here and load it.</p>
+    <p class="hint">Your complete 3D model, including current edits. Download a copy to keep your work, or paste a saved 3D model below and choose Load pasted model.</p>
     <textarea id="b-json-text" spellcheck="false" aria-label="Model JSON"></textarea>
     <div class="row"><button class="btn primary" id="b-json-copy">Copy</button><button class="btn" id="b-json-load">Load pasted model</button><span class="hint" id="b-json-msg"></span></div>
   </div>
 </div>
 </div>
 
-<div id="mode-2d" class="mode" hidden>
+<div id="mode-2d" class="mode" data-panel="draw" hidden>
 <!--__MARKUP2D__-->
 </div>
 
-<div id="mode-fe" class="mode" hidden>
+<div id="mode-fe" class="mode" data-panel="draw" hidden>
 <!--__MARKUPFE__-->
 </div>
 
+<footer class="studio-status"><span><i class="status-dot"></i> Computed in your browser</span><span id="studio-stats">Preparing workspace</span><span class="status-units">kN · m · MPa</span></footer>
+</div>
+</div>
+<style>/*__STUDIO_CSS__*/</style>
 <script>
 /*__ENGINE__*/
 </script>
@@ -309,7 +323,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
 
   const S = {
     spec: null, gen: "building", base: null, extraSections: {}, edits: [], redo: [], data: null, result: null, error: null,
-    btab: "grid", rtab: "member", show: "util", source: "env", level: "all", look: "solid", slabs: true, animate: true,
+    btab: "grid", rtab: "member", show: "model", source: "env", level: "all", look: "solid", slabs: true, animate: true,
     sel: null, selNode: null, selM: new Set(), selN: new Set(), openCheck: null, critFilter: "all", defInfo: null,
     tool: "select", plane: { kind: "XY", at: 0, step: 1.0 }, draw: null, activeSection: null, memberType: "auto", supportKind: "fixed",
     formLoad: { kind: "udl", w: 5, p: 20, a: 1.0, caseId: null, dir: "global_z" }, formNodal: [0, 0, -50, 0, 0, 0], formFloor: { z: null, q: 3, dist: "two_way" },
@@ -1222,7 +1236,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
   function memberPanel() {
     const r = S.result, mid = S.sel;
     if (!mid || !S.data || !S.data.members.some((m) => m.id === mid)) {
-      return `<div class="empty"><b>Click a member or node in the 3D view</b> to see its forces, every design check with the calculation steps, and to edit it. Shift-click or the box tool select several for the Model tab.<br><br>${r ? `Or open the <button class="link-btn" data-rt="critical">critical members</button>.` : ""}</div>`;
+      return `<div class="inspector-empty"><div class="empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 8-6 1.5L10 20z"/></svg></div><h3>Inspect a member</h3><p>Select a member in the model to explore its forces, design checks and calculation steps.</p>${r ? `<button class="link-btn" data-rt="critical">Review critical members ↗</button>` : ""}<p style="margin-top:18px;font-size:10px">Shift-click to select multiple members.</p></div>`;
     }
     if (!r || !r.model.members[mid]) {
       const dm = S.data.members.find((m) => m.id === mid);
@@ -1453,9 +1467,9 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
     function readColors() {
       const dark = (css("--sheet").toLowerCase() !== "#ffffff");
       colors = {
-        bg: css("--sheet"), ink: css("--ink"), ink3: css("--ink-3"), rule: css("--rule"), pos: css("--plot-pos"), neg: css("--plot-neg"), def: css("--plot-def"),
+        bg: css("--viewport"), ink: css("--ink"), ink3: css("--ink-3"), rule: css("--rule"), pos: css("--plot-pos"), neg: css("--plot-neg"), def: css("--plot-def"),
         mark: css("--mark"), ok: css("--ok"), bad: css("--bad"), dark,
-        concrete: dark ? "#6f7d8c" : "#c5ccd4", column: dark ? "#7b8999" : "#b7c0ca", edge: dark ? "#1b242e" : "#5f6c7a", slab: dark ? "#8aa0b8" : "#9db1c6",
+        concrete: dark ? "#8caaa7" : "#a9c4bf", column: dark ? "#8caaa7" : "#97b6b0", edge: dark ? "#243f43" : "#4a746d", slab: dark ? "#8aa0b8" : "#b4c7c3",
         load: dark ? "#f0a35c" : "#b4520f", grid: dark ? "#3a4757" : "#cfd8e2",
       };
     }
@@ -2289,7 +2303,7 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
     function renderLegend() {
       const el = $("#b-legend"), r = S.result;
       const err = S.error && S.data && S.data.members.length ? `<span class="toolhint" style="color:var(--bad)">${esc(S.error)}</span>` : "";
-      if (!v.ok && v.reason) { el.innerHTML = `<b>${esc(v.reason)}.</b> Showing a plain drawing; results and checks are complete.`; return; }
+      if (!v.ok && v.reason) { el.innerHTML = `<span class="fallback-notice" title="${esc(v.reason)}. The interactive WebGL viewer needs graphics support in your browser.">Static preview · WebGL unavailable</span><br>Model and utilisation views · full numerical results in the inspector`; return; }
       let html;
       if (S.show === "loads") {
         const li = v.loadInfo || {};
@@ -2335,13 +2349,16 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
       const P = (p) => [p[0] * Math.cos(az) - p[1] * Math.sin(az), (p[0] * Math.sin(az) + p[1] * Math.cos(az)) * Math.sin(el) + p[2] * Math.cos(el)];
       const pts = g.flatMap((m) => [P(m.a), P(m.b)]);
       const x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0])), y0 = Math.min(...pts.map((p) => p[1])), y1 = Math.max(...pts.map((p) => p[1]));
-      const s = Math.min((W - 80) / Math.max(x1 - x0, 1e-6), (H - 120) / Math.max(y1 - y0, 1e-6));
-      const X = (p) => 40 + (p[0] - x0) * s, Y = (p) => H - 60 - (p[1] - y0) * s;
+      const s = Math.min((W - 120) / Math.max(x1 - x0, 1e-6), (H - 180) / Math.max(y1 - y0, 1e-6));
+      const X = (p) => (W - 25 - (x1 - x0) * s) / 2 + (p[0] - x0) * s;
+      const Y = (p) => (H + (y1 - y0) * s) / 2 - (p[1] - y0) * s;
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", "Static structural model preview. Click a member to inspect it.");
       svg.innerHTML = g.map((m) => {
         const a = P(m.a), b = P(m.b), { u, st } = memberUtil(m.id);
-        const col = S.show === "util" && u != null ? (st === "fail" || u > 1 ? "var(--bad)" : u > 0.8 ? "var(--nc)" : "var(--ok)") : "var(--ink-2)";
+        const col = S.show === "util" && u != null ? (st === "fail" || u > 1 ? "var(--bad)" : u > 0.8 ? "var(--nc)" : "var(--ok)") : "var(--accent)";
         const sel = S.selM.has(m.id);
-        return `<line x1="${X(a)}" y1="${Y(a)}" x2="${X(b)}" y2="${Y(b)}" stroke="${sel ? "var(--mark)" : col}" stroke-width="${sel ? 6 : 2}" data-fb="${esc(m.id)}" style="cursor:pointer"/>`;
+        return `<line x1="${X(a)}" y1="${Y(a)}" x2="${X(b)}" y2="${Y(b)}" stroke="${sel ? "var(--mark)" : col}" stroke-width="${sel ? 6 : 2.5}" stroke-linecap="round" data-fb="${esc(m.id)}" style="cursor:pointer"/>`;
       }).join("");
       svg.querySelectorAll("[data-fb]").forEach((l) => l.addEventListener("click", () => select(l.dataset.fb, true)));
     }
@@ -2495,3 +2512,6 @@ table.data tr.on td { background: color-mix(in srgb, var(--mark) 26%, transparen
   setMode(m);
 })();
 </script>
+<script>/*__STUDIO_JS__*/</script>
+</body>
+</html>
